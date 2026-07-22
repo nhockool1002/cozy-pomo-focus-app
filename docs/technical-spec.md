@@ -198,22 +198,25 @@ Repo là monorepo (app + backend) nên trigger là **tạo GitHub Release với 
 
 Cả hai workflow có `workflow_dispatch` để chạy thử tay (build không cần ký/không cần deploy thật) — dùng khi setup secrets lần đầu để xác minh workflow chạy được trước khi tạo release thật.
 
-### 4.4 Endpoint REST tương ứng Function List (mục 3)
+### 4.4 Endpoint REST tương ứng Function List (mục 3) — ✅ đã build & test thật
 
-Base path `/api/v1`, auth bằng header `Authorization: Bearer <JWT>` (trừ `/auth/*`).
+Base path `/api/v1`, auth bằng header `Authorization: Bearer <JWT>` (trừ `/auth/*`, `GET /species`, `GET /egg-types`, `GET /shop-items`, `GET /health`).
 
-| Nhóm | Endpoint mẫu |
+| Nhóm | Endpoint thật (đã curl-test với 10 tài khoản tester) |
 |---|---|
-| Auth | `POST /auth/register` (email+mật khẩu), `POST /auth/login`, `POST /auth/refresh`. *(Sau này thêm `POST /auth/google` khi làm Sign in with Google)* |
-| Sessions | `POST /sessions` (tạo), `PATCH /sessions/:id/complete`, `PATCH /sessions/:id/give-up`, `GET /sessions?from=&to=` |
-| Eggs | `GET /egg-types`, `POST /eggs/:eggTypeId/roll` |
-| Collection | `GET /collection`, `GET /species/:id`, `PATCH /collection/:speciesId/favorite` |
-| Currency | `GET /currency/balance`, `GET /currency/ledger` |
-| Shop | `GET /shop-items?category=`, `POST /shop-items/:id/purchase`, `GET /inventory` |
-| Stats | `GET /stats/daily?date=`, `GET /stats/range?start=&end=` |
+| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`. *(Sau này thêm `POST /auth/google`)* |
+| Species | `GET /species?category=&rarity=`, `GET /species/:id` |
+| Eggs | `GET /egg-types`, `GET /egg-types/:id`, `GET /egg-types/:id/odds` (tỉ lệ % theo cấp bậc — minh bạch cho người chơi) |
+| Sessions | `POST /sessions`, `PATCH /sessions/:id/complete` (roll loài theo `egg_drop_table`×`rarity_weights`, cộng Xu Lá, cập nhật `user_collection`, **idempotent** — gọi lại không cộng trùng), `PATCH /sessions/:id/give-up`, `GET /sessions?from=&to=&status=` |
+| Collection | `GET /collection?category=&rarity=`, `GET /collection/progress`, `PATCH /collection/:speciesId/favorite` |
+| Currency | `GET /currency/balance`, `GET /currency/ledger?from=&to=` |
+| Shop | `GET /shop-items?category=`, `POST /shop-items/:id/purchase` (trứng cộng dồn `quantity`, bình/nhạc chỉ mua 1 lần → 403 nếu mua lại), `GET /inventory`, `PATCH /inventory/:id/equip` |
+| Stats | `GET /stats/daily?date=`, `GET /stats/range?start=&end=`, `GET /stats/summary` (streak + tổng phút) — tính trực tiếp từ `sessions`, chưa cần bảng rollup riêng ở quy mô hiện tại |
 | Settings | `GET /settings`, `PATCH /settings` |
-| Sync (outbox từ app) | `POST /sync/batch` — app gửi hàng loạt sự kiện tích lại lúc offline (phiên hoàn thành, giao dịch) theo thứ tự, backend xử lý idempotent theo `clientEventId` để tránh cộng Xu Lá 2 lần nếu gửi trùng |
-| Admin | phục vụ qua UI AdminJS (`/admin`), không cần tự viết endpoint riêng |
+| Sync (outbox từ app) | `POST /sync/batch` — mảng event `{clientEventId, type, payload}`, xử lý tuần tự, mỗi event có `status: 'ok'\|'error'` riêng, idempotent theo `clientEventId` |
+| Admin | UI đầy đủ tại `/admin` (AdminJS), không cần tự viết endpoint riêng |
+
+**Chưa build:** không còn — toàn bộ Function List ở mục 3 đã có endpoint thật tương ứng.
 
 ### 4.5 Repo layout (monorepo)
 
@@ -227,6 +230,14 @@ cozy-pomo-focus-app/
 ### 4.6 Checklist chuẩn bị
 
 Checklist đầy đủ (GitHub / aaPanel / domain, có thể tick theo tiến độ) đã tách ra [`docs/setup-checklist.md`](./setup-checklist.md).
+
+### 4.7 Trang quản trị (AdminJS)
+
+`/admin`, đăng nhập bằng `ADMIN_EMAIL`/`ADMIN_PASSWORD` trong `.env` (chưa gắn với bảng `users` — admin là tài khoản riêng, không phải người chơi). Nhóm **Nội dung game** (Species/EggType/EggDropEntry/RarityWeight/ShopItem) cho CRUD đầy đủ để chỉnh tỉ lệ rơi, giá, thêm loài mới không cần deploy lại app. Nhóm **Người dùng** (User/UserSettings/Session/LedgerEntry/CollectionEntry/InventoryItem) chỉ xem — sửa dữ liệu người dùng phải đi qua API để không phá vỡ tính toàn vẹn ledger/collection. Cảnh báo còn tồn: session store admin đang dùng MemoryStore (Express mặc định) — đủ cho demo/1 process, cần đổi sang `connect-pg-simple` hoặc Redis trước khi chạy nhiều instance ở production.
+
+### 4.8 Seed dữ liệu demo
+
+`backend/prisma/seed.ts` (`npm run prisma:seed`) nạp toàn bộ 175 loài (khớp chính xác Creature Atlas), 4 loại trứng + bảng tỉ lệ, 10 vật phẩm cửa hàng, và **10 tài khoản tester** (`tester01`…`tester10@cozypomo.dev`, mật khẩu `Tester123!`) với 14–32 phiên/tài khoản, lịch sử Xu Lá và bộ sưu tập thật — dùng để demo UI hoặc test app Android mà không cần thao tác tay. Script xoá sạch dữ liệu trước khi nạp lại nên **chỉ chạy trên DB dev/demo**.
 
 ---
 

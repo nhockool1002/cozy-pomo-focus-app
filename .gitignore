@@ -16,6 +16,7 @@ app/.cxx/
 # Node / NestJS (backend/)
 backend/node_modules/
 backend/dist/
+backend/tsconfig.build.tsbuildinfo
 backend/.env
 backend/.env.*
 !backend/.env.example
@@ -25,3 +26,4 @@ backend/.env.*
 *.log
 *.hprof
 .claude/
+backend/.adminjs/
