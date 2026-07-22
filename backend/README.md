@@ -25,7 +25,10 @@ Xoá sạch và nạp lại: 175 loài (khớp Creature Atlas), 4 loại trứng
 
 **Đã hoàn chỉnh (test end-to-end thật với Postgres + Docker, không phải chỉ compile được):**
 - Toàn bộ module API: Auth, Species, Eggs (kèm xem tỉ lệ nở `/egg-types/:id/odds`), Sessions (tạo/hoàn thành có roll loài + cộng Xu + cập nhật bộ sưu tập/hoàn thành idempotent, bỏ cuộc), Collection, Currency, Shop (mua vật phẩm — trứng cộng dồn số lượng, bình/nhạc chỉ mua 1 lần), Stats, Settings, Sync (outbox đồng bộ offline, idempotent theo `clientEventId`)
-- **AdminJS** tại `/admin` — quản lý Species/EggType/EggDropEntry/RarityWeight/ShopItem (CRUD đầy đủ), xem User/Session/LedgerEntry/CollectionEntry/InventoryItem (chỉ đọc, sửa phải qua API để giữ đúng nghiệp vụ)
+- **AdminJS** tại `/admin` — theme màu/branding CozyPomo riêng (xem `src/admin/admin.module.ts` → `branding.theme`); quản lý Species/EggType/EggDropEntry/RarityWeight/ShopItem (CRUD đầy đủ), xem User/Session/LedgerEntry/CollectionEntry/InventoryItem (chỉ đọc, sửa phải qua API để giữ đúng nghiệp vụ)
+- Resource **Species** có giao diện riêng (`src/admin/components/`): trang List dạng lưới thẻ có ảnh SVG sinh theo archetype/palette (cùng thuật toán Creature Atlas) + lọc theo nhóm/cấp bậc + tìm kiếm; trang Show có ảnh lớn + layout gọn thay vì form mặc định
 - Seed script tạo dữ liệu demo phong phú cho 10 tài khoản tester
+
+**Lưu ý deploy:** Dockerfile **cố ý không set** `NODE_ENV=production` — ở chế độ đó AdminJS phục vụ `components.bundle.js` như file tĩnh được ghi bất đồng bộ sau khi server đã nhận request, gây 404 chập chờn ngay sau khi container khởi động (đã tự phát hiện và fix qua test thật, xem comment trong `Dockerfile`).
 
 **Còn TODO:** viết lore cho từng loài (hiện để trống), session store cho AdminJS đang dùng MemoryStore (cảnh báo không hợp production — cân nhắc `connect-pg-simple`/Redis khi lên production thật), test tự động (unit/e2e).
