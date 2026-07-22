@@ -1,0 +1,24 @@
+# Android (app/)
+app/*.iml
+app/.gradle/
+app/build/
+app/local.properties
+app/.idea/
+app/captures/
+app/.externalNativeBuild/
+app/.cxx/
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# Node / NestJS (backend/)
+backend/node_modules/
+backend/dist/
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# General
+.DS_Store
+*.log
