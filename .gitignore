@@ -1,8 +1,9 @@
 # Android (app/)
 app/*.iml
 app/.gradle/
-app/build/
+app/**/build/
 app/local.properties
+app/keystore.properties
 app/.idea/
 app/captures/
 app/.externalNativeBuild/
@@ -22,3 +23,5 @@ backend/.env.*
 # General
 .DS_Store
 *.log
+*.hprof
+.claude/

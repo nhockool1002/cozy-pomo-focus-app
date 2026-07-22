@@ -1,0 +1,33 @@
+# Production: dùng trên server aaPanel. Image được build & đẩy lên bởi
+# .github/workflows/backend-deploy.yml khi tạo release tag "backend-v*".
+# api/db chỉ bind 127.0.0.1 — site Nginx của aaPanel reverse-proxy vào api,
+# không mở cổng nào ra Internet trực tiếp.
+services:
+  api:
+    image: ghcr.io/nhockool1002/cozy-pomo-focus-app/backend:latest
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cozypomo
+      POSTGRES_USER: cozypomo
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cozypomo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db_data:

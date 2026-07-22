@@ -186,13 +186,17 @@ volumes:
 
 Chủ đích để `api` và `db` chỉ bind vào `127.0.0.1` — không mở port ra Internet trực tiếp; toàn bộ traffic vào qua site Nginx mà aaPanel tạo (aaPanel tự xin SSL Let's Encrypt miễn phí cho domain).
 
-### 4.3 Luồng auto-deploy
+### 4.3 Luồng auto-deploy (đã triển khai)
 
-1. Push code lên nhánh `main` trên GitHub.
-2. **GitHub Actions**: build Docker image → đẩy lên **GitHub Container Registry** (`ghcr.io`, miễn phí, cùng tài khoản GitHub, không cần Docker Hub).
-3. Action SSH vào server (dùng deploy key riêng, không phải key cá nhân) → chạy `docker compose pull && docker compose up -d`.
-4. aaPanel: vào App Store cài **Docker** (một cú click), tạo site (domain) trỏ Nginx reverse-proxy về `127.0.0.1:3000`, bật SSL miễn phí. aaPanel dùng để **xem log/trạng thái container và quản lý domain/SSL**, không phải nơi chứa logic deploy.
-5. (Tuỳ chọn an toàn hơn, không cần SSH key trong CI) chạy thêm container **Watchtower** trên server, tự động kéo image mới khi GitHub Actions publish — bỏ hẳn bước 3, đổi lại mất kiểm soát thời điểm deploy chính xác.
+Repo là monorepo (app + backend) nên trigger là **tạo GitHub Release với tag đặt tên theo quy ước**, không phải push thường — tránh một commit chạm `backend/` vô tình build/deploy production, và tách biệt lifecycle release của app Android (App Store/Play Store) khỏi backend.
+
+1. Tạo Release trên GitHub với tag `backend-v1.0.0` (VD).
+2. `.github/workflows/backend-deploy.yml` khớp điều kiện `startsWith(tag, 'backend-v')` → build Docker image từ `backend/Dockerfile` → đẩy lên **ghcr.io** (`ghcr.io/nhockool1002/cozy-pomo-focus-app/backend`), gắn tag theo tên release và `latest`.
+3. Job kế tiếp SSH vào server bằng `DEPLOY_SSH_KEY` → `cd $DEPLOY_PATH && docker compose -f docker-compose.prod.yml pull && up -d`.
+4. aaPanel: App Store cài **Docker**, tạo site (domain) trỏ Nginx reverse-proxy về `127.0.0.1:3000`, bật SSL miễn phí. aaPanel dùng để **xem log/trạng thái container và quản lý domain/SSL**, không chứa logic deploy.
+5. Tương tự, tag `app-v1.0.0` kích hoạt `.github/workflows/android-release.yml` — build AAB + APK ký sẵn, đính kèm vào chính Release đó (không đụng tới server).
+
+Cả hai workflow có `workflow_dispatch` để chạy thử tay (build không cần ký/không cần deploy thật) — dùng khi setup secrets lần đầu để xác minh workflow chạy được trước khi tạo release thật.
 
 ### 4.4 Endpoint REST tương ứng Function List (mục 3)
 

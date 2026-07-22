@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+enum SpeciesCategory {
+  FOREST
+  SEA
+  PLANT
+  MYTHIC
+}
+
+enum Rarity {
+  B
+  A
+  S
+  SS
+  SSR
+}
+
+enum ShopCategory {
+  EGG
+  JAR_SKIN
+  MUSIC
+}
+
+enum SessionStatus {
+  RUNNING
+  COMPLETED
+  GIVEN_UP
+}
+
+enum LedgerReason {
+  SESSION_REWARD
+  PURCHASE
+  REFUND
+  ADMIN_ADJUST
+}
+
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  passwordHash String?
+  authProvider AuthProvider @default(LOCAL)
+  displayName  String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  settings   UserSettings?
+  sessions   Session[]
+  ledger     LedgerEntry[]
+  collection CollectionEntry[]
+  inventory  InventoryItem[]
+
+  @@map("users")
+}
+
+model UserSettings {
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String  @id
+  focusMinutes      Int     @default(25)
+  breakMinutes      Int     @default(5)
+  strictModeEnabled Boolean @default(true)
+  soundTheme        String  @default("default")
+
+  @@map("user_settings")
+}
+
+model Species {
+  id         String          @id @default(uuid())
+  name       String
+  category   SpeciesCategory
+  archetype  String
+  paletteIdx Int
+  rarity     Rarity
+  lore       String?
+  isActive   Boolean         @default(true)
+
+  eggDrops       EggDropEntry[]
+  collectionRows CollectionEntry[]
+
+  @@map("species")
+}
+
+model EggType {
+  id        String @id @default(uuid())
+  name      String
+  colorHex  String
+  priceCoin Int    @default(0)
+
+  drops    EggDropEntry[]
+  sessions Session[]
+
+  @@map("egg_types")
+}
+
+model EggDropEntry {
+  id        String  @id @default(uuid())
+  eggType   EggType @relation(fields: [eggTypeId], references: [id], onDelete: Cascade)
+  eggTypeId String
+  species   Species @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+  speciesId String
+  weight    Int     @default(1)
+
+  @@unique([eggTypeId, speciesId])
+  @@map("egg_drop_table")
+}
+
+model RarityWeight {
+  rarity Rarity @id
+  weight Int
+
+  @@map("rarity_weights")
+}
+
+model ShopItem {
+  id        String       @id @default(uuid())
+  name      String
+  category  ShopCategory
+  priceCoin Int
+  isActive  Boolean      @default(true)
+
+  inventory InventoryItem[]
+
+  @@map("shop_items")
+}
+
+model InventoryItem {
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  shopItem   ShopItem @relation(fields: [shopItemId], references: [id], onDelete: Cascade)
+  shopItemId String
+  acquiredAt DateTime @default(now())
+  equipped   Boolean  @default(false)
+
+  @@unique([userId, shopItemId])
+  @@map("user_inventory")
+}
+
+model Session {
+  id              String        @id @default(uuid())
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  eggType         EggType       @relation(fields: [eggTypeId], references: [id])
+  eggTypeId       String
+  plannedMin      Int
+  strictMode      Boolean       @default(true)
+  status          SessionStatus @default(RUNNING)
+  startedAt       DateTime      @default(now())
+  endedAt         DateTime?
+  resultSpeciesId String?
+  clientEventId   String?       @unique
+
+  @@index([userId, startedAt])
+  @@map("sessions")
+}
+
+model LedgerEntry {
+  id            String       @id @default(uuid())
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  amount        Int
+  reason        LedgerReason
+  refSessionId  String?
+  refShopItemId String?
+  clientEventId String?      @unique
+  createdAt     DateTime     @default(now())
+
+  @@index([userId, createdAt])
+  @@map("currency_ledger")
+}
+
+model CollectionEntry {
+  id             String   @id @default(uuid())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  species        Species  @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+  speciesId      String
+  hatchCount     Int      @default(0)
+  isFavorite     Boolean  @default(false)
+  firstHatchedAt DateTime @default(now())
+  lastHatchedAt  DateTime @default(now())
+
+  @@unique([userId, speciesId])
+  @@map("user_collection")
+}

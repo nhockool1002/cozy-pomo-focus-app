@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Placeholder — thay bằng icon bình ấp thật theo Brand Field Guide trước khi phát hành. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#F4D160"
+        android:pathData="M39,25 L69,25 A6,6 0 0 1 69,37 L39,37 A6,6 0 0 1 39,25 Z" />
+    <path
+        android:fillColor="#A8D08D"
+        android:pathData="M33,40 L75,40 A12,12 0 0 1 87,52 L87,78 A12,12 0 0 1 75,90 L33,90 A12,12 0 0 1 21,78 L21,52 A12,12 0 0 1 33,40 Z" />
+    <path
+        android:fillColor="#6D594E"
+        android:pathData="M54,58 m-8,0 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0" />
+</vector>

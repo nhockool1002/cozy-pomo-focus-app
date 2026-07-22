@@ -1,0 +1,82 @@
+name: Android Release Build
+
+# Chạy khi tạo GitHub Release với tag bắt đầu bằng "app-v" (VD: app-v0.1.0).
+# Cũng có thể chạy tay qua workflow_dispatch để test mà không cần tạo release thật.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Tag giả lập để test (không tạo release thật)"
+        required: false
+        default: "app-v0.0.0-test"
+
+jobs:
+  build:
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'app-v') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install required SDK packages
+        run: sdkmanager "platforms;android-36" "build-tools;36.1.0"
+
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          build-root-directory: app
+
+      - name: Decode release keystore
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        working-directory: app
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
+
+      - name: Build AAB + APK (release)
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        working-directory: app
+        env:
+          KEYSTORE_PATH: keystore.jks
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew :app:bundleRelease :app:assembleRelease --no-daemon
+
+      - name: Build debug APK only (workflow_dispatch test run, no signing secrets touched)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        working-directory: app
+        run: ./gradlew :app:assembleDebug --no-daemon
+
+      - name: Clean up keystore
+        if: always()
+        working-directory: app
+        run: rm -f keystore.jks
+
+      - name: Upload build artifacts (test run)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cozypomo-debug-apk
+          path: app/app/build/outputs/apk/debug/*.apk
+
+      - name: Upload AAB + APK to release
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: |
+            app/app/build/outputs/bundle/release/*.aab
+            app/app/build/outputs/apk/release/*.apk
