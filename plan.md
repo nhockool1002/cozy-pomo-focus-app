@@ -10,25 +10,14 @@
 |---|---|---|
 | Backend API (NestJS) | ✅ Hoàn chỉnh, đã test thật | Toàn bộ endpoint theo Function List đã có |
 | Trang quản trị AdminJS | ✅ Hoàn chỉnh, đã Việt hoá + brand hoá | Species/EggType có UI card riêng, có trang liệt kê API |
-| Dữ liệu seed | ✅ 175 loài + 4 loại trứng + 10 tài khoản tester | `backend/prisma/seed.ts` |
-| CI/CD workflows | ✅ Đã viết, ⬜ chưa test chạy thật trên server | Cần Secrets + xử lý ghcr visibility, xem `docs/deploy_backend.md` |
-| Branding (icon/favicon/logo) | ✅ Hoàn chỉnh | `docs/branding/` |
+| Dữ liệu seed | ✅ 175 loài + 4 loại trứng + 10 tài khoản tester | Đã seed cả local lẫn **production** |
+| CI/CD workflows | ✅ Đã viết **và xác nhận chạy thật thành công** | `backend-v1.20260723.001` — pipeline Release→build→push→SSH deploy chạy tự động end-to-end, không lỗi |
+| Branding (icon/favicon/logo) | ✅ Hoàn chỉnh, đã deploy | `docs/branding/`, hiện trên `/admin` thật |
+| Backend production | ✅ **Đang chạy thật** tại `https://cozyapi.nhutnm.id.vn` | Domain + SSL + Reverse Proxy + Docker trên aaPanel, đã verify `/health` `/docs` `/admin` |
 | Android app | 🟥 Chỉ mới scaffold điều hướng | Toàn bộ 13 màn hình trong Screen List còn là placeholder |
 | Test suite (backend + Android) | ⬜ Chưa có | 0 file test ở cả 2 phía |
-| Hạ tầng thật (server/domain/SSL) | ⬜ Việc của bạn, Claude không có quyền truy cập | Theo `docs/deploy_backend.md` |
-| Có thay đổi chưa commit | 🟡 Có | Xem mục "Việc cần dọn ngay" bên dưới |
-
----
-
-## 🟡 Việc cần dọn ngay (ưu tiên cao nhất, làm trước mọi task khác)
-
-### T-000. Commit các thay đổi phiên làm việc gần nhất
-**Mô tả:** Các file sau đang ở trạng thái uncommitted trong working tree — cần review rồi commit trước khi tiếp tục, tránh mất việc hoặc lẫn lộn với các thay đổi tiếp theo:
-- Sửa: `app/app/src/main/res/drawable/ic_launcher_background.xml`, `ic_launcher_foreground.xml` (icon app thật thay placeholder)
-- Sửa: `backend/src/admin/admin.module.ts`, `main.ts`, `admin/components/SpeciesList.tsx`, `SpeciesShow.tsx`, `SpeciesThumbnail.tsx`, `species-art.ts` (hiệu ứng vầng hào quang theo wireframe, brand hoá, Việt hoá)
-- Mới: `backend/src/admin/admin-i18n.ts`, `components/ApiExplorer.tsx`, `components/EggTypeList.tsx`, `components/egg-art.ts`, `backend/public/` (favicon+logo), `docs/branding/`
-- Sửa: `docs/setup-checklist.md` (bổ sung mục ghcr.io package visibility)
-**Việc cần làm:** Review diff (`git status`, `git diff`), xác nhận không dính secret, rồi commit theo từng nhóm logic hoặc gộp 1 commit tuỳ bạn.
+| Android release (keystore/secrets/Play Store) | ⬜ Chưa làm | Cần app chạy được trước (xem Nhóm A) |
+| Working tree | ✅ Sạch, mọi thứ đã commit + push lên `main` | — |
 
 ---
 
@@ -72,6 +61,16 @@
 - **T-027 — Khung điều hướng.** Compose + Hilt + Navigation Compose, 4 tab Bottom Nav (Trang chủ/Khu rừng/Cửa hàng/Thống kê), theme đúng Brand Guide (`ui/theme/`).
 - **T-028 — Tầng network.** Retrofit `ApiService`, `AuthInterceptor` tự gắn JWT, `TokenProvider`, DI qua Hilt (`data/network/di/NetworkModule.kt`).
 
+### Deploy production — backend đang chạy thật (2026-07-23)
+- **T-059 — Đẩy code thật lên GitHub.** Phát hiện `origin/main` trên GitHub trước đó chỉ có đúng commit scaffold ban đầu — 3 commit chứa toàn bộ backend/Android/CI workflow chưa từng được push. Đã push (fast-forward, không xung đột).
+- **T-060 — Xử lý ghcr.io package visibility.** Image build lần đầu qua `GITHUB_TOKEN` mặc định ở chế độ Private dù repo Public, khiến `docker compose pull` trên server lỗi `denied`. Xử lý bằng `docker login ghcr.io` trên server bằng Personal Access Token.
+- **T-061 — Đổi port tránh xung đột trên server.** Server đã có sẵn service khác chiếm `127.0.0.1:5432`; sau đó đổi tiếp cả cụm port để tránh xung đột khác: `api` `3000→3012`, `db` `5432→5433→5437` (host-side only, port nội bộ container không đổi). Cập nhật `docker-compose.prod.yml` + `docs/deploy_backend.md`.
+- **T-062 — Cấu hình SSH deploy key.** Tạo cặp key riêng `deploy_cozypomo`, thêm public key vào `authorized_keys` trên server, xác nhận `DEPLOY_HOST`/`DEPLOY_USER`/`DEPLOY_SSH_KEY`/`DEPLOY_PATH` hoạt động đúng qua GitHub Actions (job `deploy` SSH thành công).
+- **T-063 — Domain + SSL + Reverse Proxy thật.** Domain cuối cùng: `cozyapi.nhutnm.id.vn` (đổi từ `cozy_api...` do dấu gạch dưới không hợp lệ cho Let's Encrypt). DNS A record, site aaPanel, SSL Let's Encrypt, Reverse Proxy → `127.0.0.1:3012` — đã verify `curl https://cozyapi.nhutnm.id.vn/health` trả `{"status":"ok"}`.
+- **T-064 — Seed dữ liệu production.** Phát hiện image production build bằng `npm ci --omit=dev` nên thiếu `ts-node`/`typescript` (cần để chạy `prisma/seed.ts`) — xử lý bằng cài tạm 2 gói đó ngay trong container trước khi `npx prisma db seed`. Đã cập nhật hướng dẫn đúng trong `docs/deploy_backend.md`.
+- **T-065 — Cập nhật `API_BASE_URL`.** `app/app/build.gradle.kts` — build `release` giờ trỏ `https://cozyapi.nhutnm.id.vn/api/v1/` (build `debug` vẫn giữ `10.0.2.2:3000` cho emulator gọi backend local, không đổi).
+- **T-066 — Release đầu tiên `backend-v1.20260723.001`.** Xác nhận toàn bộ pipeline `GitHub Release → build-and-push (ghcr.io) → SSH deploy (pull + up -d)` chạy tự động thành công, không cần thao tác tay trên server (sau khi sửa xong T-060 → T-062). Đây là lần đầu tiên quy trình auto-deploy hoạt động end-to-end đúng như thiết kế.
+
 ---
 
 ## ⬜ Chưa làm
@@ -106,17 +105,12 @@ Hiện tại 4 file màn hình (`HomeScreen.kt`, `ForestScreen.kt`, `ShopScreen.
 - **T-046 — Test tầng logic.** Theo tech-spec đề xuất JUnit5 + Turbine (test Flow) cho Repository, đặc biệt `TimerRepository` (đếm giờ dễ lệch) và rarity-roll phía app nếu có logic client-side.
 - **T-047 — Compose UI Test + Robolectric.** Cho các màn hình sau khi build xong ở Nhóm A.
 
-### Nhóm D — Hạ tầng thật (việc của bạn, Claude không có quyền truy cập)
+### Nhóm D — Hạ tầng thật còn lại (việc của bạn, Claude không có quyền truy cập)
 
-Chi tiết từng bước đã có ở [`docs/deploy_backend.md`](docs/deploy_backend.md) và [`docs/setup-checklist.md`](docs/setup-checklist.md), tóm tắt:
+~~T-048 GitHub Secrets backend~~, ~~T-049 ghcr.io visibility~~, ~~T-050 aaPanel+Docker~~, ~~T-051 `.env` production~~, ~~T-052 Domain+SSL~~ — **đã xong**, xem T-059→T-066 ở mục Đã hoàn thành. Còn lại:
 
-- **T-048 — GitHub Secrets cho backend deploy.** `DEPLOY_HOST`/`DEPLOY_USER`/`DEPLOY_SSH_KEY`/`DEPLOY_PATH`.
-- **T-049 — Xử lý ghcr.io package visibility.** Đổi Public hoặc `docker login` trên server — nếu bỏ qua, `docker compose pull` sẽ lỗi 401.
-- **T-050 — Cài aaPanel + Docker trên VPS thật.**
-- **T-051 — Tạo `.env` production trên server** với secret thật (JWT, admin, DB password) — không copy `.env.example` nguyên văn.
-- **T-052 — Domain + SSL cho API.** Trỏ A record, tạo site aaPanel, bật Let's Encrypt, Reverse Proxy vào `127.0.0.1:3000`.
 - **T-053 — GitHub Secrets cho Android release.** `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` — cần có keystore `.jks` release trước (tự tạo bằng `keytool`, giữ bí mật, mất là không update được app cũ trên Play Store).
-- **T-054 — Test trigger cả 2 workflow thật** trên server/tài khoản Play Console thật.
+- **T-054 — Test trigger workflow Android** (`android-release.yml`) trên tài khoản Play Console thật — workflow backend đã xác nhận chạy tốt (T-066), workflow Android vẫn chưa test lần nào.
 
 ### Nhóm E — Chuẩn bị phát hành Play Store
 
@@ -129,9 +123,11 @@ Chi tiết từng bước đã có ở [`docs/deploy_backend.md`](docs/deploy_ba
 
 ## Đề xuất thứ tự ưu tiên tiếp theo
 
-1. **T-000** — commit dọn dẹp (vài phút, tránh mất việc)
-2. **T-029 → T-030 → T-031** — Room DB + TimerRepository + màn Trang chủ thật (lõi sản phẩm, mọi màn khác phụ thuộc vào đây)
-3. **T-041** — màn Đăng nhập (chặn mọi API cần JWT)
-4. Các màn còn lại theo thứ tự Screen List (T-032 → T-039)
-5. Song song lúc rảnh: **T-044** (Swagger summary), **T-048–T-052** (hạ tầng thật, bạn tự làm theo `docs/deploy_backend.md`)
+Backend đã deploy production hoàn chỉnh (T-059→T-066) — trọng tâm tiếp theo chuyển hẳn sang Android:
+
+1. **T-029 → T-030 → T-031** — Room DB + TimerRepository + màn Trang chủ thật (lõi sản phẩm, mọi màn khác phụ thuộc vào đây)
+2. **T-041** — màn Đăng nhập (chặn mọi API cần JWT, backend đã sẵn sàng nhận request thật ở `https://cozyapi.nhutnm.id.vn`)
+3. Các màn còn lại theo thứ tự Screen List (T-032 → T-039)
+4. Song song lúc rảnh: **T-044** (Swagger summary)
+5. **T-053 → T-054** — chỉ làm khi app đã chạy được, để build release Android có ý nghĩa
 6. Test suite (Nhóm B/C) và chuẩn bị Play Store (Nhóm E) làm cuối, khi app đã chạy được end-to-end
