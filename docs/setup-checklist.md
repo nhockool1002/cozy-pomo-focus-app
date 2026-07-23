@@ -39,7 +39,10 @@ Cả 2 workflow đều có nút **Run workflow** (workflow_dispatch) để test 
 ## 2. aaPanel (trên VPS)
 
 - [ ] Cài aaPanel lên server nếu chưa có (https://www.aapanel.com)
-- [ ] Đăng nhập aaPanel → App Store → cài **Docker** (kèm Docker Compose)
+- [ ] Đăng nhập aaPanel → App Store → cài **Docker** (kèm Docker Compose) — kiểm tra `docker compose version` chạy được (Compose v2, không phải lệnh `docker-compose` cũ)
+- [ ] **Quan trọng — image ghcr.io mặc định ở chế độ Private** khi mới publish lần đầu bằng `GITHUB_TOKEN`, dù repo đang Public. `docker-compose.prod.yml` chỉ chạy `docker compose pull` (không có bước `docker login`), nên nếu image vẫn Private, cả lần chạy thủ công đầu tiên lẫn deploy tự động sau này sẽ pull lỗi 401/denied. Chọn 1 trong 2 cách trước khi chạy `up -d` lần đầu:
+  - Cách 1 (khuyến nghị, đơn giản nhất): sau khi workflow `backend-deploy.yml` chạy build-and-push lần đầu (bấm **Run workflow** thủ công) → vào `github.com/nhockool1002?tab=packages` → package `backend` → **Package settings** → **Change visibility** → **Public**
+  - Cách 2: trên server, `docker login ghcr.io -u <username> -p <PAT có scope read:packages>` một lần (PAT cần tạo riêng, không dùng `GITHUB_TOKEN` vì token đó chỉ tồn tại trong phiên Actions)
 - [ ] Tạo cặp khoá SSH riêng cho deploy — chạy trên máy bạn: `ssh-keygen -t ed25519 -C "deploy-cozypomo"`; thêm public key vào `~/.ssh/authorized_keys` trên server; private key dán vào GitHub Secret `DEPLOY_SSH_KEY`
 - [ ] Tạo thư mục đúng bằng giá trị secret `DEPLOY_PATH`, VD `/www/wwwroot/cozypomo-backend/`
 - [ ] Copy 2 file từ `backend/` trong repo lên đúng thư mục đó: `docker-compose.prod.yml` và `.env` (tạo `.env` từ `backend/.env.example`, điền giá trị thật — **không copy `.env.example` nguyên văn**)

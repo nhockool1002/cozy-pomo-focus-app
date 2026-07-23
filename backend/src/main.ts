@@ -1,10 +1,15 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as path from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Favicon/logo cho trang quản trị AdminJS (xem docs/branding).
+  app.useStaticAssets(path.join(process.cwd(), 'public'), { prefix: '/branding' });
 
   app.setGlobalPrefix('api/v1', { exclude: ['health'] });
   app.useGlobalPipes(
