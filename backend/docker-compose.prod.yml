@@ -20,7 +20,10 @@ services:
       POSTGRES_USER: cozypomo
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "127.0.0.1:5432:5432"
+      # 5433 ở host (không phải 5432) — tránh đụng Postgres/service khác đã chiếm 5432 sẵn trên
+      # server. Container "api" vẫn nối "db" qua mạng nội bộ Docker ở cổng 5432 như thường
+      # (xem DATABASE_URL trong .env), đổi cổng host không ảnh hưởng gì tới việc đó.
+      - "127.0.0.1:5433:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
