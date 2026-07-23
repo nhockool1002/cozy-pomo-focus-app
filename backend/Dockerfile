@@ -26,6 +26,8 @@ COPY --from=builder /app/dist ./dist
 # AdminJS bundles các component tuỳ biến (.tsx) bằng webpack riêng của nó lúc khởi động —
 # cần có source gốc trong image, không phải bản đã qua tsc.
 COPY src/admin/components ./src/admin/components
+# Favicon/logo cho AdminJS — xem useStaticAssets trong main.ts.
+COPY public ./public
 
 EXPOSE 3000
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
