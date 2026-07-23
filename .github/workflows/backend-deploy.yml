@@ -12,6 +12,14 @@ on:
         description: "Deploy lên server sau khi build? (cần đã cấu hình secrets)"
         type: boolean
         default: false
+      reseed:
+        description: "[HUỶ DIỆT] Xoá sạch DB production và chạy lại prisma/seed.ts — mất toàn bộ user/session/ledger thật. Chỉ chạy khi confirm_reseed khớp."
+        type: boolean
+        default: false
+      confirm_reseed:
+        description: "Gõ đúng chữ RESEED để xác nhận (chỉ cần khi reseed=true)"
+        type: string
+        default: ""
 
 env:
   IMAGE: ghcr.io/${{ github.repository }}/backend
@@ -75,3 +83,24 @@ jobs:
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d
             docker image prune -f
+
+  reseed-production:
+    # Chạy tay riêng, KHÔNG gắn với release/deploy tự động — xoá sạch user/session/ledger
+    # thật trên production rồi seed lại dữ liệu demo (175 loài, 4 loại trứng economy v2,
+    # 10 tài khoản tester). Chỉ dùng khi sản phẩm còn ở giai đoạn phát triển, chưa có
+    # người dùng thật cần giữ lại. Cổng an toàn kép: input `reseed` phải bật VÀ
+    # `confirm_reseed` phải gõ đúng "RESEED" — thiếu 1 trong 2 thì job tự bỏ qua.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.reseed == true && inputs.confirm_reseed == 'RESEED' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reseed via SSH (cài tạm ts-node/typescript trong container rồi chạy prisma db seed)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            CID=$(docker compose -f docker-compose.prod.yml ps -q api)
+            docker exec "$CID" npm install --no-save ts-node typescript
+            docker exec "$CID" npx prisma db seed
