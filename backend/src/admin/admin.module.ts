@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as path from 'path';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
+import { ADMIN_VI_TRANSLATIONS } from './admin-i18n';
 
 // Bảng màu CozyPomo chính thức — xem docs/technical-spec.md / Brand Field Guide.
 const BRAND_COLORS = {
@@ -35,6 +36,8 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
   const componentLoader = new ComponentLoader();
   const SpeciesList = componentLoader.add('SpeciesList', path.join(COMPONENTS_DIR, 'SpeciesList'));
   const SpeciesShow = componentLoader.add('SpeciesShow', path.join(COMPONENTS_DIR, 'SpeciesShow'));
+  const EggTypeList = componentLoader.add('EggTypeList', path.join(COMPONENTS_DIR, 'EggTypeList'));
+  const ApiExplorer = componentLoader.add('ApiExplorer', path.join(COMPONENTS_DIR, 'ApiExplorer'));
 
   // Các bảng dữ liệu người dùng chỉ xem, không sửa/xoá qua admin — tránh làm hỏng
   // tính toàn vẹn ledger/collection (sửa trực tiếp nên đi qua API để giữ đúng nghiệp vụ).
@@ -54,10 +57,16 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
       adminJsOptions: {
         rootPath: '/admin',
         componentLoader,
+        locale: {
+          language: 'vi',
+          availableLanguages: ['vi'],
+          translations: { vi: ADMIN_VI_TRANSLATIONS },
+        },
         branding: {
           companyName: 'CozyPomo Admin',
           softwareBrothers: false,
-          logo: false,
+          logo: '/branding/logo.png',
+          favicon: '/branding/favicon.png',
           theme: {
             colors: {
               primary100: BRAND_COLORS.primary,
@@ -104,7 +113,12 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
           },
           {
             resource: { model: getModelByName('EggType'), client: prisma },
-            options: { navigation: { name: 'Nội dung game' } },
+            options: {
+              navigation: { name: 'Nội dung game' },
+              actions: {
+                list: { component: EggTypeList },
+              },
+            },
           },
           {
             resource: { model: getModelByName('EggDropEntry'), client: prisma },
@@ -147,6 +161,11 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
             options: { navigation: { name: 'Người dùng' }, ...readOnly },
           },
         ],
+        pages: {
+          'api-explorer': {
+            component: ApiExplorer,
+          },
+        },
       },
       auth: {
         authenticate: async (email: string, password: string) => {

@@ -33,6 +33,124 @@ export const RARITY_COLORS: Record<string, string> = {
   SSR: GOLD,
 };
 
+export const RARITY_BADGE: Record<string, { fg: string; bg: string }> = {
+  B: { fg: '#7A6C5C', bg: '#EFE4C8' },
+  A: { fg: '#3F5C2E', bg: '#E9F2E0' },
+  S: { fg: '#8A6A10', bg: '#FBF0CE' },
+  SS: { fg: '#B23F22', bg: '#FBE0D7' },
+  SSR: { fg: GOLD, bg: '#2A1F16' },
+};
+
+const FLAME = '#FF8A3D';
+const EMBER = '#E76F51';
+const AURA_COLOR: Record<string, string> = { B: '#B7A896', A: '#A8D08D', S: '#F4D160', SS: EMBER };
+// Bán kính chọn sao cho kể cả ở đỉnh hiệu ứng phồng (breathe, tối đa x1.16) vẫn nằm gọn
+// trong viewBox 0 0 100 100 (tâm 50,50) — tránh tràn ra ngoài khung thẻ như bản trước.
+const AURA_RINGS: Record<string, [number, number, number][]> = {
+  B: [[38, 1.1, 0.16]],
+  A: [[38, 1.3, 0.2]],
+  S: [[39, 1.5, 0.26], [32, 0.9, 0.17]],
+  // SS: nhiều vòng hơn, dày & rực hơn hẳn B/A/S — báo hiệu cận kề cấp huyền thoại.
+  SS: [[40, 2.6, 0.55], [33, 1.7, 0.4], [27, 1.1, 0.26]],
+};
+
+/** CSS dùng chung cho hiệu ứng thẻ loài (float + vầng hào quang) — bơm 1 lần / trang qua thẻ <style>. */
+export const CARD_FX_CSS = `
+.sp-icon-wrap { position: relative; overflow: hidden; }
+.sp-icon-wrap svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.sp-aura { z-index: 0; }
+.sp-aura.ssr { filter: drop-shadow(0 0 3px rgba(244,209,96,0.55)) drop-shadow(0 0 7px rgba(231,111,81,0.4)); }
+.sp-icon-wrap svg.sp-anim { z-index: 1; }
+.sp-badge { position: absolute; top: -4px; left: -4px; font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 999px; z-index: 2; letter-spacing: 0.02em; }
+@media (prefers-reduced-motion: no-preference) {
+  .sp-anim { animation: sp-float 3.4s ease-in-out infinite; }
+  .sp-aura-ring.gold, .sp-aura-ring.gold-rev, .sp-pulse, .sp-pulse-strong, .sp-flicker, .sp-flicker-hot, .sp-blaze, .sp-core, .sp-ring-hot { transform-box: fill-box; transform-origin: center; }
+  .sp-aura-ring.gold { animation: sp-spin 3.2s linear infinite; }
+  .sp-aura-ring.gold-rev { animation: sp-spin-rev 4.2s linear infinite; }
+  .sp-pulse { animation: sp-breathe 2.6s ease-in-out infinite; }
+  .sp-pulse-strong { animation: sp-breathe-strong 1.7s ease-in-out infinite; }
+  .sp-ring-hot { animation: sp-breathe-hot 1.15s ease-in-out infinite; }
+  .sp-flicker { animation: sp-flicker 0.9s ease-in-out infinite; }
+  .sp-flicker-hot { animation: sp-flicker-hot 0.6s ease-in-out infinite; }
+  .sp-blaze { animation: sp-blaze 1.3s ease-in-out infinite; filter: blur(2.5px); }
+  .sp-core { animation: sp-core-pulse 0.7s ease-in-out infinite; filter: blur(1px); }
+}
+@keyframes sp-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes sp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes sp-spin-rev { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+@keyframes sp-breathe { 0%, 100% { opacity: 0.55; transform: scale(0.96); } 50% { opacity: 1; transform: scale(1.05); } }
+@keyframes sp-breathe-strong { 0%, 100% { opacity: 0.55; transform: scale(0.92); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes sp-breathe-hot { 0%, 100% { opacity: 0.7; transform: scale(0.88); } 50% { opacity: 1; transform: scale(1.16); } }
+@keyframes sp-flicker { 0%, 100% { opacity: 0.5; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1.15); } }
+@keyframes sp-flicker-hot { 0%, 100% { opacity: 0.55; transform: scale(0.75) rotate(0deg); } 50% { opacity: 1; transform: scale(1.35) rotate(12deg); } }
+@keyframes sp-blaze { 0%, 100% { opacity: 0.65; transform: scale(0.92); } 50% { opacity: 1; transform: scale(1.18); } }
+@keyframes sp-core-pulse { 0%, 100% { opacity: 0.75; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.35); } }
+`;
+
+function sparkles(n: number, colors: string[] = [GOLD], opts: { hot?: boolean; scale?: number } = {}): string {
+  const pts: Array<[number, number]> = [[26, 22], [74, 26], [70, 74], [22, 70], [50, 14], [50, 86], [12, 46], [88, 54]];
+  const cls = opts.hot ? 'sp-flicker-hot' : 'sp-flicker';
+  const scale = opts.scale ?? 1;
+  let s = '';
+  for (let i = 0; i < n; i++) {
+    const [x, y] = pts[i % pts.length];
+    const color = colors[i % colors.length];
+    const r = (3.4 + (i % 3) * 0.7) * scale;
+    const delay = (-(i * 0.23)).toFixed(2);
+    s += `<path class="${cls}" style="animation-delay:${delay}s" d="M${x} ${y - r} L${x + r * 0.4} ${y} L${x} ${y + r} L${x - r * 0.4} ${y} Z" fill="${color}"/>`;
+  }
+  return s;
+}
+
+/**
+ * Vầng hào quang phía sau ảnh loài — cùng thuật toán với wireframe, tăng cường cho SS/SSR:
+ * B/A: vòng mạch đập nhẹ. S: 2 vòng. SS: 3 vòng dày & rực.
+ * SSR: hẳn một cấp bậc trên SS — hào quang rực lửa nhiều lớp: quầng sáng cộng hưởng (mix-blend
+ * screen) + lõi lửa chớp nhanh + vòng ngoài phồng mạnh + 2 vòng nét đứt xoay ngược chiều nhau
+ * (nét đứt để phép xoay thực sự nhìn thấy được, khác với vòng tròn đặc xoay vô hình) + tia lửa
+ * lớn nhiều màu. Toàn bộ hình học nằm gọn trong viewBox kể cả ở đỉnh hiệu ứng phồng.
+ */
+export function renderAura(rarity: string, seed = 'x'): string {
+  if (rarity === 'SSR') {
+    const gid = `ssrBlaze${Math.abs(hashStr(seed)).toString(36)}`;
+    const gid2 = `ssrCore${Math.abs(hashStr(seed + 'core')).toString(36)}`;
+    const glow = `<defs>
+        <radialGradient id="${gid}" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="${GOLD}" stop-opacity="1"/>
+          <stop offset="35%" stop-color="${FLAME}" stop-opacity="0.8"/>
+          <stop offset="100%" stop-color="${EMBER}" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="${gid2}" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#FFF6DE" stop-opacity="1"/>
+          <stop offset="100%" stop-color="${GOLD}" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle class="sp-blaze" cx="50" cy="50" r="40" fill="url(#${gid})" style="mix-blend-mode:screen"/>
+      <circle class="sp-core" cx="50" cy="50" r="15" fill="url(#${gid2})" style="mix-blend-mode:screen"/>`;
+    const rings = `<circle class="sp-ring-hot" cx="50" cy="50" r="39" fill="none" stroke="${GOLD}" stroke-width="3.6" opacity="0.95"/>
+      <g class="sp-aura-ring gold">
+        <circle cx="50" cy="50" r="34" fill="none" stroke="${FLAME}" stroke-width="2.2" opacity="0.85" stroke-dasharray="7 6" stroke-linecap="round"/>
+      </g>
+      <g class="sp-aura-ring gold-rev">
+        <circle cx="50" cy="50" r="25" fill="none" stroke="${EMBER}" stroke-width="1.8" opacity="0.7" stroke-dasharray="5 5" stroke-linecap="round"/>
+      </g>`;
+    const spark = sparkles(7, [GOLD, FLAME, EMBER, '#FFF3C4'], { hot: true, scale: 1.3 });
+    return `<svg class="sp-aura ssr" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${glow}${rings}${spark}</svg>`;
+  }
+  const c = AURA_COLOR[rarity];
+  const rings = AURA_RINGS[rarity];
+  if (!c || !rings) return '';
+  const pulseClass = rarity === 'SS' ? 'sp-pulse-strong' : 'sp-pulse';
+  const circles = rings
+    .map(([rad, w, op], i) => {
+      const delay = rarity === 'SS' ? ` style="animation-delay:${(-(i * 0.22)).toFixed(2)}s"` : '';
+      return `<circle class="${pulseClass}"${delay} cx="50" cy="50" r="${rad}" fill="none" stroke="${c}" stroke-width="${w}" opacity="${op}"/>`;
+    })
+    .join('');
+  const emberSparks = rarity === 'SS' ? sparkles(3, [EMBER, FLAME]) : '';
+  return `<svg class="sp-aura" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${circles}${emberSparks}</svg>`;
+}
+
 function hashStr(s: string): number {
   let h = 1779033703;
   for (let i = 0; i < s.length; i++) {
@@ -50,7 +168,7 @@ function mulberry32(a: number) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-const rndFor = (seed: string) => mulberry32(hashStr(seed));
+export const rndFor = (seed: string) => mulberry32(hashStr(seed));
 const n1 = (v: number) => v.toFixed(1);
 
 function starPoints(cx: number, cy: number, rOuter: number, rInner: number, points: number, rot: number) {
@@ -236,9 +354,5 @@ export function renderSpeciesArt(params: {
   else if (category === 'PLANT') body = plantSvg(archetype, paletteIdx, name);
   else body = mythicSvg(archetype, paletteIdx, name);
 
-  let aura = '';
-  if (category === 'MYTHIC') {
-    aura = `<circle cx="50" cy="55" r="46" fill="none" stroke="${GOLD}" stroke-width="2" opacity="0.5"/><circle cx="50" cy="55" r="38" fill="none" stroke="${GOLD}" stroke-width="1.2" opacity="0.35"/>`;
-  }
-  return `<svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">${aura}${body}</svg>`;
+  return `<svg class="sp-anim" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
 }

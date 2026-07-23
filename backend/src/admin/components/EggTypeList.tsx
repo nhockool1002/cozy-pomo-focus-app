@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ApiClient } from 'adminjs';
 import type { ActionProps, RecordJSON } from 'adminjs';
-import SpeciesThumbnail from './SpeciesThumbnail.js';
-import { CARD_FX_CSS, RARITY_BADGE } from './species-art.js';
+import { CARD_FX_CSS } from './species-art.js';
+import { renderEggArt, renderEggAura, eggTierForPrice, EGG_TIER_LABEL, EGG_TIER_BADGE, EggTier } from './egg-art.js';
 
 const api = new ApiClient();
 
@@ -13,17 +13,16 @@ const BRAND = {
   inkSoft: '#95816F',
   primary: '#A8D08D',
   primaryInk: '#3F5C2E',
+  accentInk: '#8A6A10',
   border: 'rgba(109,89,78,0.16)',
 };
 
-const CATEGORIES = [
+const TIERS: Array<{ value: '' | EggTier; label: string }> = [
   { value: '', label: 'Tất cả' },
-  { value: 'FOREST', label: 'Thú rừng' },
-  { value: 'SEA', label: 'Sinh vật biển' },
-  { value: 'PLANT', label: 'Thực vật' },
-  { value: 'MYTHIC', label: 'Thần thú' },
+  { value: 'common', label: 'Thường' },
+  { value: 'rare', label: 'Hiếm' },
+  { value: 'legendary', label: 'Huyền thoại' },
 ];
-const RARITIES = ['', 'B', 'A', 'S', 'SS', 'SSR'];
 
 const pillStyle = (active: boolean): React.CSSProperties => ({
   fontSize: 12.5,
@@ -37,11 +36,10 @@ const pillStyle = (active: boolean): React.CSSProperties => ({
   whiteSpace: 'nowrap',
 });
 
-const SpeciesList: React.FC<ActionProps> = ({ resource }) => {
+const EggTypeList: React.FC<ActionProps> = ({ resource }) => {
   const [records, setRecords] = useState<RecordJSON[]>([]);
   const [loading, setLoading] = useState(true);
-  const [category, setCategory] = useState('');
-  const [rarity, setRarity] = useState('');
+  const [tier, setTier] = useState<'' | EggTier>('');
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -58,19 +56,19 @@ const SpeciesList: React.FC<ActionProps> = ({ resource }) => {
 
   const filtered = useMemo(() => {
     return records.filter((r) => {
-      if (category && r.params.category !== category) return false;
-      if (rarity && r.params.rarity !== rarity) return false;
+      const priceCoin = Number(r.params.priceCoin) || 0;
+      if (tier && eggTierForPrice(priceCoin) !== tier) return false;
       if (search && !String(r.params.name).toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
-  }, [records, category, rarity, search]);
+  }, [records, tier, search]);
 
   return (
     <div style={{ background: BRAND.bg, padding: '24px', fontFamily: 'inherit' }}>
       <style>{CARD_FX_CSS}</style>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: BRAND.ink, margin: 0 }}>
-          Danh sách loài <span style={{ color: BRAND.inkSoft, fontWeight: 400 }}>({filtered.length}/{records.length})</span>
+          Danh sách trứng <span style={{ color: BRAND.inkSoft, fontWeight: 400 }}>({filtered.length}/{records.length})</span>
         </h1>
         <a
           href={`/admin/resources/${resource.id}/actions/new`}
@@ -79,7 +77,7 @@ const SpeciesList: React.FC<ActionProps> = ({ resource }) => {
             background: BRAND.primary, color: BRAND.primaryInk, textDecoration: 'none',
           }}
         >
-          + Tạo loài mới
+          + Tạo loại trứng mới
         </a>
       </div>
 
@@ -94,17 +92,10 @@ const SpeciesList: React.FC<ActionProps> = ({ resource }) => {
         }}
       />
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-        {CATEGORIES.map((c) => (
-          <span key={c.value} style={pillStyle(category === c.value)} onClick={() => setCategory(c.value)}>
-            {c.label}
-          </span>
-        ))}
-      </div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
-        {RARITIES.map((r) => (
-          <span key={r || 'all'} style={pillStyle(rarity === r)} onClick={() => setRarity(r)}>
-            {r || 'Mọi cấp bậc'}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+        {TIERS.map((t) => (
+          <span key={t.value || 'all'} style={pillStyle(tier === t.value)} onClick={() => setTier(t.value)}>
+            {t.label}
           </span>
         ))}
       </div>
@@ -120,10 +111,14 @@ const SpeciesList: React.FC<ActionProps> = ({ resource }) => {
           }}
         >
           {filtered.map((record) => {
-            const cardRarity = String(record.params.rarity);
-            const badge = RARITY_BADGE[cardRarity];
-            const isSs = cardRarity === 'SS';
-            const cardGlow = isSs ? '0 0 0 1px rgba(231,111,81,0.5), 0 0 14px 2px rgba(231,111,81,0.28)' : undefined;
+            const name = String(record.params.name);
+            const colorHex = String(record.params.colorHex);
+            const priceCoin = Number(record.params.priceCoin) || 0;
+            const cardTier = eggTierForPrice(priceCoin);
+            const badge = EGG_TIER_BADGE[cardTier];
+            const isLegendary = cardTier === 'legendary';
+            const icon = renderEggArt({ colorHex, name });
+            const aura = renderEggAura(colorHex, priceCoin);
             return (
               <a
                 key={record.id}
@@ -140,25 +135,22 @@ const SpeciesList: React.FC<ActionProps> = ({ resource }) => {
                   textDecoration: 'none',
                   color: 'inherit',
                   position: 'relative',
-                  boxShadow: cardGlow,
+                  boxShadow: isLegendary ? '0 0 0 1px #F4D160' : undefined,
                 }}
               >
-                {badge ? (
-                  <span className="sp-badge" style={{ background: badge.bg, color: badge.fg }}>
-                    {cardRarity}
-                  </span>
-                ) : null}
-                <SpeciesThumbnail
-                  category={String(record.params.category)}
-                  archetype={String(record.params.archetype)}
-                  paletteIdx={Number(record.params.paletteIdx)}
-                  name={String(record.params.name)}
-                  rarity={cardRarity}
-                  size={72}
+                <span className="sp-badge" style={{ background: badge.bg, color: badge.fg }}>
+                  {EGG_TIER_LABEL[cardTier]}
+                </span>
+                <div
+                  className="sp-icon-wrap"
+                  style={{ width: 72, height: 72 }}
+                  // eslint-disable-next-line react/no-danger
+                  dangerouslySetInnerHTML={{ __html: aura + icon }}
                 />
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: BRAND.ink, textAlign: 'center', lineHeight: 1.3 }}>
-                  {record.params.name}
+                  {name}
                 </span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: BRAND.accentInk }}>{priceCoin} Xu Lá</span>
               </a>
             );
           })}
@@ -168,4 +160,4 @@ const SpeciesList: React.FC<ActionProps> = ({ resource }) => {
   );
 };
 
-export default SpeciesList;
+export default EggTypeList;

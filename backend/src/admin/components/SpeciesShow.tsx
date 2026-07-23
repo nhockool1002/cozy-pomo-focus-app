@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ActionProps } from 'adminjs';
-import { renderSpeciesArt, RARITY_COLORS } from './species-art.js';
+import { renderSpeciesArt, renderAura, RARITY_COLORS, CARD_FX_CSS } from './species-art.js';
 
 const BRAND = {
   bg: '#F9F6F0',
@@ -30,21 +30,29 @@ const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, ch
 const SpeciesShow: React.FC<ActionProps> = ({ record, resource }) => {
   if (!record) return null;
   const { name, category, archetype, paletteIdx, rarity, lore, isActive } = record.params as Record<string, any>;
-  const svg = renderSpeciesArt({ category, archetype, paletteIdx: Number(paletteIdx), name });
+  const icon = renderSpeciesArt({ category, archetype, paletteIdx: Number(paletteIdx), name });
+  const aura = renderAura(rarity, name);
   const ringColor = RARITY_COLORS[rarity] ?? '#B7A896';
+  const extraGlow = rarity === 'SS' ? ', 0 0 16px 3px rgba(231,111,81,0.35)' : '';
 
   return (
     <div style={{ background: BRAND.bg, padding: 24, maxWidth: 480 }}>
+      <style>{CARD_FX_CSS}</style>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <div
           style={{
             width: 160, height: 160, borderRadius: '50%', background: BRAND.surface,
             border: `4px solid ${ringColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 16px rgba(109,89,78,0.12)',
+            boxShadow: `0 4px 16px rgba(109,89,78,0.12)${extraGlow}`, position: 'relative',
           }}
-          // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{ __html: svg }}
-        />
+        >
+          <div
+            className="sp-icon-wrap"
+            style={{ width: 96, height: 96 }}
+            // eslint-disable-next-line react/no-danger
+            dangerouslySetInnerHTML={{ __html: aura + icon }}
+          />
+        </div>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: BRAND.ink, margin: 0, textAlign: 'center' }}>{name}</h1>
         <span
           style={{
@@ -57,10 +65,10 @@ const SpeciesShow: React.FC<ActionProps> = ({ record, resource }) => {
       </div>
 
       <div style={{ background: BRAND.surface, border: `1px solid ${BRAND.border}`, borderRadius: 14, padding: '4px 16px' }}>
-        <Row label="Archetype">{archetype}</Row>
-        <Row label="Palette Idx">{paletteIdx}</Row>
+        <Row label="Kiểu dáng">{archetype}</Row>
+        <Row label="Bảng màu #">{paletteIdx}</Row>
         <Row label="Đang hoạt động">{isActive ? 'Có' : 'Không'}</Row>
-        {lore ? <Row label="Lore">{lore}</Row> : null}
+        {lore ? <Row label="Câu chuyện">{lore}</Row> : null}
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>

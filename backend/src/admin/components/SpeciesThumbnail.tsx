@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderSpeciesArt, RARITY_COLORS } from './species-art.js';
+import { renderSpeciesArt, renderAura } from './species-art.js';
 
 type Props = {
   category: string;
@@ -10,26 +10,20 @@ type Props = {
   size?: number;
 };
 
-/** Ảnh loài sinh bằng SVG (đồng bộ với Creature Atlas), kèm viền màu theo cấp bậc. */
+/**
+ * Ảnh loài sinh bằng SVG (đồng bộ với Creature Atlas / wireframe), có vầng hào quang
+ * theo cấp bậc phía sau và hiệu ứng lơ lửng nhẹ — y hệt thẻ loài trong wireframe.
+ * Trang cha cần bơm sẵn `CARD_FX_CSS` (SpeciesList/SpeciesShow làm việc này).
+ */
 const SpeciesThumbnail: React.FC<Props> = ({ category, archetype, paletteIdx, name, rarity, size = 64 }) => {
-  const svg = renderSpeciesArt({ category, archetype, paletteIdx, name });
-  const ringColor = RARITY_COLORS[rarity] ?? '#B7A896';
+  const icon = renderSpeciesArt({ category, archetype, paletteIdx, name });
+  const aura = renderAura(rarity, name);
   return (
     <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: '#FFFBF2',
-        border: `2px solid ${ringColor}`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-        flexShrink: 0,
-      }}
+      className="sp-icon-wrap"
+      style={{ width: size, height: size, flexShrink: 0 }}
       // eslint-disable-next-line react/no-danger
-      dangerouslySetInnerHTML={{ __html: svg }}
+      dangerouslySetInnerHTML={{ __html: aura + icon }}
     />
   );
 };
