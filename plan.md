@@ -70,6 +70,7 @@
 - **T-064 — Seed dữ liệu production.** Phát hiện image production build bằng `npm ci --omit=dev` nên thiếu `ts-node`/`typescript` (cần để chạy `prisma/seed.ts`) — xử lý bằng cài tạm 2 gói đó ngay trong container trước khi `npx prisma db seed`. Đã cập nhật hướng dẫn đúng trong `docs/deploy_backend.md`.
 - **T-065 — Cập nhật `API_BASE_URL`.** `app/app/build.gradle.kts` — build `release` giờ trỏ `https://cozyapi.nhutnm.id.vn/api/v1/` (build `debug` vẫn giữ `10.0.2.2:3000` cho emulator gọi backend local, không đổi).
 - **T-066 — Release đầu tiên `backend-v1.20260723.001`.** Xác nhận toàn bộ pipeline `GitHub Release → build-and-push (ghcr.io) → SSH deploy (pull + up -d)` chạy tự động thành công, không cần thao tác tay trên server (sau khi sửa xong T-060 → T-062). Đây là lần đầu tiên quy trình auto-deploy hoạt động end-to-end đúng như thiết kế.
+- **T-067 — Fix `Dockerfile` thiếu `COPY public/`.** Sau khi deploy, favicon/logo AdminJS bị vỡ ảnh trên production dù cấu hình đúng — do giai đoạn `runner` của `Dockerfile` chưa từng copy thư mục `public/` (chỉ copy `dist/`, `prisma/`, `src/admin/components/`) nên `useStaticAssets` không có gì để phục vụ trong container thật, dù chạy đúng khi test từ source local. Đã thêm `COPY public ./public`, build thử local xác nhận file có mặt trong image trước khi release `backend-v1.20260723.002` — đã verify `/branding/favicon.png` và `/branding/logo.png` trả `200` qua domain thật.
 
 ---
 
