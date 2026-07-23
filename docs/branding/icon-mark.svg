@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="432" height="432">
+  <defs>
+    <radialGradient id="eggGrad" cx="38%" cy="32%" r="75%">
+      <stop offset="0%" stop-color="#FFF3C4"/>
+      <stop offset="45%" stop-color="#F4D160"/>
+      <stop offset="100%" stop-color="#E8935A"/>
+    </radialGradient>
+  </defs>
+
+  <!-- nen -->
+  <rect width="108" height="108" fill="#A8D08D"/>
+
+  <!-- noi dung chinh, thu nho ~0.85 quanh tam de nam gon trong safe-zone adaptive icon -->
+  <g transform="translate(54,54) scale(0.85) translate(-54,-54)">
+    <!-- vau hao quang phia sau trung -->
+    <circle cx="54" cy="70" r="21" fill="none" stroke="#F4D160" stroke-width="1.4" opacity="0.45"/>
+    <circle cx="54" cy="70" r="26" fill="none" stroke="#F4D160" stroke-width="1" opacity="0.3"/>
+
+    <!-- than binh (thuy tinh) -->
+    <path d="M25 50 a19 19 0 0 1 19 -8 h20 a19 19 0 0 1 19 8 v22 a16 16 0 0 1 -16 16 h-26 a16 16 0 0 1 -16 -16 z"
+          fill="#FBF8F0" stroke="#6D594E" stroke-width="3.2"/>
+
+    <!-- co binh -->
+    <rect x="41" y="34" width="26" height="10" rx="3" fill="#FBF8F0" stroke="#6D594E" stroke-width="3.2"/>
+
+    <!-- nap binh (go) -->
+    <rect x="43" y="26" width="22" height="10" rx="4" fill="#6D594E"/>
+
+    <!-- la nho tren nap -->
+    <path d="M54 26 C50 20 44 19 41 21 C44 24 49 26 54 26 Z" fill="#7FA968"/>
+    <path d="M54 26 C58 19 64 18 67 20 C64 24 59 26 54 26 Z" fill="#8FBB78"/>
+
+    <!-- qua trung phat sang -->
+    <ellipse cx="54" cy="70" rx="15.5" ry="18.5" fill="url(#eggGrad)"/>
+    <ellipse cx="48.5" cy="61" rx="4.5" ry="6" fill="#FFF9E6" opacity="0.65"/>
+  </g>
+</svg>

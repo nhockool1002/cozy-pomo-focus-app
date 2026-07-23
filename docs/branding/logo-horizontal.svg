@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 140" width="920" height="280">
+  <defs>
+    <radialGradient id="eggGrad" cx="38%" cy="32%" r="75%">
+      <stop offset="0%" stop-color="#FFF3C4"/>
+      <stop offset="45%" stop-color="#F4D160"/>
+      <stop offset="100%" stop-color="#E8935A"/>
+    </radialGradient>
+  </defs>
+
+  <!-- huy hieu binh -->
+  <g transform="translate(6,6)">
+    <circle cx="64" cy="64" r="64" fill="#A8D08D"/>
+    <g transform="translate(64,64) scale(0.85) translate(-64,-64)">
+      <circle cx="64" cy="80" r="21" fill="none" stroke="#F4D160" stroke-width="1.4" opacity="0.45"/>
+      <circle cx="64" cy="80" r="26" fill="none" stroke="#F4D160" stroke-width="1" opacity="0.3"/>
+      <path d="M35 60 a19 19 0 0 1 19 -8 h20 a19 19 0 0 1 19 8 v22 a16 16 0 0 1 -16 16 h-26 a16 16 0 0 1 -16 -16 z"
+            fill="#FBF8F0" stroke="#6D594E" stroke-width="3.2"/>
+      <rect x="51" y="44" width="26" height="10" rx="3" fill="#FBF8F0" stroke="#6D594E" stroke-width="3.2"/>
+      <rect x="53" y="36" width="22" height="10" rx="4" fill="#6D594E"/>
+      <path d="M64 36 C60 30 54 29 51 31 C54 34 59 36 64 36 Z" fill="#7FA968"/>
+      <path d="M64 36 C68 29 74 28 77 30 C74 34 69 36 64 36 Z" fill="#8FBB78"/>
+      <ellipse cx="64" cy="80" rx="15.5" ry="18.5" fill="url(#eggGrad)"/>
+      <ellipse cx="58.5" cy="71" rx="4.5" ry="6" fill="#FFF9E6" opacity="0.65"/>
+    </g>
+  </g>
+
+  <!-- chu -->
+  <text x="152" y="87" font-family="Arial Rounded MT Bold, ui-rounded, sans-serif" font-size="58" fill="#6D594E">CozyPomo</text>
+</svg>

@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Nền icon app — màu matcha xanh chính thức (xem Brand Field Guide / docs/branding). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:fillColor="#F9F6F0"
+        android:fillColor="#A8D08D"
         android:pathData="M0,0h108v108h-108z" />
 </vector>
