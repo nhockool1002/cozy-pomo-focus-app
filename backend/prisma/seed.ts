@@ -7,7 +7,9 @@
  */
 import {
   AuthProvider,
+  CurrencyType,
   LedgerReason,
+  OwnedEggStatus,
   PrismaClient,
   Rarity,
   SessionStatus,
@@ -108,6 +110,7 @@ async function main() {
   await prisma.collectionEntry.deleteMany();
   await prisma.inventoryItem.deleteMany();
   await prisma.session.deleteMany();
+  await prisma.ownedEgg.deleteMany();
   await prisma.userSettings.deleteMany();
   await prisma.user.deleteMany();
   await prisma.shopItem.deleteMany();
@@ -115,6 +118,10 @@ async function main() {
   await prisma.eggType.deleteMany();
   await prisma.species.deleteMany();
   await prisma.rarityWeight.deleteMany();
+  await prisma.gameSettings.deleteMany();
+
+  console.log('Nạp cấu hình kinh tế (game_settings)...');
+  await prisma.gameSettings.create({ data: { id: 1, coinsPerFocusMinute: 1 } });
 
   console.log('Nạp rarity_weights...');
   await prisma.rarityWeight.createMany({
@@ -145,10 +152,19 @@ async function main() {
   const allSpecies = [...forestSpecies, ...seaSpecies, ...plantSpecies, ...mythicSpecies];
 
   console.log('Nạp 4 loại trứng + bảng tỉ lệ nở...');
-  const eggForest = await prisma.eggType.create({ data: { name: 'Trứng Rừng', colorHex: PALETTE_HEX[2], priceCoin: 30 } });
-  const eggSea = await prisma.eggType.create({ data: { name: 'Trứng Biển', colorHex: PALETTE_HEX[9], priceCoin: 30 } });
-  const eggPlant = await prisma.eggType.create({ data: { name: 'Trứng Hoa', colorHex: PALETTE_HEX[4], priceCoin: 30 } });
-  const eggMystery = await prisma.eggType.create({ data: { name: 'Trứng Bí Ẩn', colorHex: PALETTE_HEX[12], priceCoin: 100 } });
+  // hatchDurationMin/priceHours/priceCoin chỉ là giá trị khởi tạo — admin chỉnh trực tiếp qua AdminJS.
+  const eggForest = await prisma.eggType.create({
+    data: { name: 'Trứng Rừng', colorHex: PALETTE_HEX[2], priceCoin: 70, priceHours: 90, hatchDurationMin: 180 },
+  });
+  const eggSea = await prisma.eggType.create({
+    data: { name: 'Trứng Biển', colorHex: PALETTE_HEX[9], priceCoin: 50, priceHours: 60, hatchDurationMin: 120 },
+  });
+  const eggPlant = await prisma.eggType.create({
+    data: { name: 'Trứng Hoa', colorHex: PALETTE_HEX[4], priceCoin: 30, priceHours: 30, hatchDurationMin: 60 },
+  });
+  const eggMystery = await prisma.eggType.create({
+    data: { name: 'Trứng Bí Ẩn', colorHex: PALETTE_HEX[12], priceCoin: 150, priceHours: 150, hatchDurationMin: 300 },
+  });
 
   await prisma.eggDropEntry.createMany({
     data: [
@@ -223,8 +239,13 @@ async function main() {
     });
 
     const sessionCount = 12 + i * 2; // 14..32 phiên/tester — độ "dày" dữ liệu tăng dần theo tester
-    let balance = 0;
+    let balance = 0; // Xu Lá — dùng để mô phỏng mua sắm bên dưới
     let cursor = new Date(); // đi ngược thời gian từ hiện tại
+    // Mỗi loại trứng có 1 quả đang ấp tại 1 thời điểm — ấp đủ `hatchDurationMin` (cộng dồn qua
+    // nhiều phiên) thì nở, sau đó phiên tiếp theo chọn loại đó sẽ tạo trứng mới để ấp tiếp.
+    const activeEggId: Record<string, string | null> = {};
+    for (const pool of eggPools) activeEggId[pool.egg.id] = null;
+
     for (let j = 0; j < sessionCount; j++) {
       // Giãn cách 8-30 tiếng giữa các phiên để trải dài trên nhiều ngày, giống người dùng thật
       cursor = new Date(cursor.getTime() - (8 + rnd() * 22) * 3600 * 1000);
@@ -234,34 +255,88 @@ async function main() {
       const isCompleted = rnd() < 0.85;
 
       if (isCompleted) {
-        const resultSpecies = rollFromPool(pool.species, rnd);
+        const incubationRatio = Math.round((0.4 + rnd() * 0.6) * 100) / 100; // 40-100% dành cho ấp trứng
+        const minutesIncubated = Math.round(plannedMin * incubationRatio);
+        const minutesAccumulated = plannedMin - minutesIncubated;
+
+        let ownedEggId = activeEggId[pool.egg.id];
+        if (!ownedEggId) {
+          const newEgg = await prisma.ownedEgg.create({
+            data: { userId: user.id, eggTypeId: pool.egg.id, acquiredAt: cursor },
+          });
+          ownedEggId = newEgg.id;
+          activeEggId[pool.egg.id] = ownedEggId;
+        }
+
+        const eggRow = await prisma.ownedEgg.findUniqueOrThrow({ where: { id: ownedEggId } });
+        const newIncubated = eggRow.incubatedMin + minutesIncubated;
+        let resultSpecies: (typeof allSpecies)[number] | null = null;
+        if (newIncubated >= pool.egg.hatchDurationMin) {
+          resultSpecies = rollFromPool(pool.species, rnd);
+          await prisma.ownedEgg.update({
+            where: { id: ownedEggId },
+            data: {
+              incubatedMin: pool.egg.hatchDurationMin,
+              status: OwnedEggStatus.HATCHED,
+              hatchedAt: cursor,
+              resultSpeciesId: resultSpecies.id,
+            },
+          });
+          activeEggId[pool.egg.id] = null; // lần sau chọn loại này sẽ tạo trứng mới
+        } else {
+          await prisma.ownedEgg.update({ where: { id: ownedEggId }, data: { incubatedMin: newIncubated } });
+        }
+
         const session = await prisma.session.create({
           data: {
             userId: user.id,
-            eggTypeId: pool.egg.id,
+            ownedEggId,
+            incubationRatio,
             plannedMin,
             strictMode: true,
             status: SessionStatus.COMPLETED,
             startedAt: cursor,
             endedAt: new Date(cursor.getTime() + plannedMin * 60 * 1000),
-            resultSpeciesId: resultSpecies.id,
             coinsEarned: plannedMin,
+            minutesAccumulated,
+            minutesIncubated,
           },
         });
         balance += plannedMin;
         await prisma.ledgerEntry.create({
-          data: { userId: user.id, amount: plannedMin, reason: LedgerReason.SESSION_REWARD, refSessionId: session.id, createdAt: cursor },
+          data: {
+            userId: user.id,
+            amount: plannedMin,
+            currency: CurrencyType.COIN,
+            reason: LedgerReason.SESSION_REWARD,
+            refSessionId: session.id,
+            createdAt: cursor,
+          },
         });
-        await prisma.collectionEntry.upsert({
-          where: { userId_speciesId: { userId: user.id, speciesId: resultSpecies.id } },
-          create: { userId: user.id, speciesId: resultSpecies.id, hatchCount: 1, firstHatchedAt: cursor, lastHatchedAt: cursor },
-          update: { hatchCount: { increment: 1 }, lastHatchedAt: cursor },
-        });
+        if (minutesAccumulated > 0) {
+          await prisma.ledgerEntry.create({
+            data: {
+              userId: user.id,
+              amount: minutesAccumulated,
+              currency: CurrencyType.FOCUS_MINUTE,
+              reason: LedgerReason.SESSION_REWARD,
+              refSessionId: session.id,
+              createdAt: cursor,
+            },
+          });
+        }
+        if (resultSpecies) {
+          await prisma.collectionEntry.upsert({
+            where: { userId_speciesId: { userId: user.id, speciesId: resultSpecies.id } },
+            create: { userId: user.id, speciesId: resultSpecies.id, hatchCount: 1, firstHatchedAt: cursor, lastHatchedAt: cursor },
+            update: { hatchCount: { increment: 1 }, lastHatchedAt: cursor },
+          });
+        }
       } else {
         await prisma.session.create({
           data: {
             userId: user.id,
-            eggTypeId: pool.egg.id,
+            ownedEggId: activeEggId[pool.egg.id],
             plannedMin,
             strictMode: true,
             status: SessionStatus.GIVEN_UP,
@@ -277,7 +352,13 @@ async function main() {
       if (balance >= item.priceCoin && rnd() < 0.6) {
         balance -= item.priceCoin;
         await prisma.ledgerEntry.create({
-          data: { userId: user.id, amount: -item.priceCoin, reason: LedgerReason.PURCHASE, refShopItemId: item.id },
+          data: {
+            userId: user.id,
+            amount: -item.priceCoin,
+            currency: CurrencyType.COIN,
+            reason: LedgerReason.PURCHASE,
+            refShopItemId: item.id,
+          },
         });
         await prisma.inventoryItem.create({ data: { userId: user.id, shopItemId: item.id, quantity: 1 } });
       }

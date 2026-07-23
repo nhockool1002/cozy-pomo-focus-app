@@ -133,6 +133,18 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
             options: { navigation: { name: 'Nội dung game' } },
           },
           {
+            resource: { model: getModelByName('GameSettings'), client: prisma },
+            options: {
+              navigation: { name: 'Nội dung game' },
+              actions: {
+                // Chỉ 1 dòng cấu hình duy nhất (id=1) — không cho tạo thêm/xoá, chỉ sửa.
+                new: { isAccessible: false },
+                delete: { isAccessible: false },
+                bulkDelete: { isAccessible: false },
+              },
+            },
+          },
+          {
             resource: { model: getModelByName('User'), client: prisma },
             options: {
               navigation: { name: 'Người dùng' },
@@ -158,6 +170,10 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
           },
           {
             resource: { model: getModelByName('InventoryItem'), client: prisma },
+            options: { navigation: { name: 'Người dùng' }, ...readOnly },
+          },
+          {
+            resource: { model: getModelByName('OwnedEgg'), client: prisma },
             options: { navigation: { name: 'Người dùng' }, ...readOnly },
           },
         ],

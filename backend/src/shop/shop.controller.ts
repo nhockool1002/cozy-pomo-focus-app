@@ -24,7 +24,7 @@ export class ShopController {
     @Param('id') id: string,
     @Body() dto: PurchaseDto,
   ) {
-    return this.shopService.purchase(user.userId, id, dto.clientEventId);
+    return this.shopService.purchase(user.userId, id, dto.clientEventId, dto.payWith);
   }
 
   @ApiBearerAuth()

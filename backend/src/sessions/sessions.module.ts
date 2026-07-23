@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { SessionsController } from './sessions.controller';
 import { SessionsService } from './sessions.service';
-import { EggsModule } from '../eggs/eggs.module';
 import { CurrencyModule } from '../currency/currency.module';
-import { CollectionModule } from '../collection/collection.module';
+import { GameSettingsModule } from '../game-settings/game-settings.module';
+import { OwnedEggsModule } from '../owned-eggs/owned-eggs.module';
 
 @Module({
-  imports: [EggsModule, CurrencyModule, CollectionModule],
+  imports: [CurrencyModule, GameSettingsModule, OwnedEggsModule],
   controllers: [SessionsController],
   providers: [SessionsService],
   exports: [SessionsService],

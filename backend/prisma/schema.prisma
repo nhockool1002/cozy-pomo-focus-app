@@ -46,6 +46,18 @@ enum LedgerReason {
   ADMIN_ADJUST
 }
 
+/// Xu Lá (COIN) và Giờ tích luỹ (FOCUS_MINUTE, lưu bằng phút) — 2 loại tiền tệ độc lập,
+/// cùng dùng chung bảng ledger (LedgerEntry) để tái dùng logic earn/spend/balance.
+enum CurrencyType {
+  COIN
+  FOCUS_MINUTE
+}
+
+enum OwnedEggStatus {
+  INCUBATING
+  HATCHED
+}
+
 model User {
   id           String       @id @default(uuid())
   email        String       @unique
@@ -60,6 +72,7 @@ model User {
   ledger     LedgerEntry[]
   collection CollectionEntry[]
   inventory  InventoryItem[]
+  ownedEggs  OwnedEgg[]
 
   @@map("users")
 }
@@ -85,24 +98,58 @@ model Species {
   lore       String?
   isActive   Boolean         @default(true)
 
-  eggDrops       EggDropEntry[]
-  collectionRows CollectionEntry[]
-  sessionResults Session[]
+  eggDrops        EggDropEntry[]
+  collectionRows  CollectionEntry[]
+  ownedEggResults OwnedEgg[]
 
   @@map("species")
 }
 
 model EggType {
-  id        String @id @default(uuid())
-  name      String
-  colorHex  String
-  priceCoin Int    @default(0)
+  id               String @id @default(uuid())
+  name             String
+  colorHex         String
+  priceCoin        Int    @default(0)
+  /// Giá quy đổi bằng Giờ tích luỹ (đơn vị: phút) — người chơi trả bằng Xu Lá HOẶC Giờ tích luỹ.
+  priceHours       Int    @default(0)
+  /// Thời gian ấp cần thiết (phút) để trứng loại này nở — mỗi loại khác nhau, admin cấu hình.
+  hatchDurationMin Int    @default(60)
 
   drops     EggDropEntry[]
-  sessions  Session[]
   shopItems ShopItem[]
+  ownedEggs OwnedEgg[]
 
   @@map("egg_types")
+}
+
+/// 1 quả trứng cụ thể người chơi sở hữu (mua ở Shop) — có tiến độ ấp riêng, tích luỹ qua
+/// nhiều phiên tập trung cho tới khi đủ EggType.hatchDurationMin thì nở ra 1 Species.
+model OwnedEgg {
+  id              String         @id @default(uuid())
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  eggType         EggType        @relation(fields: [eggTypeId], references: [id])
+  eggTypeId       String
+  status          OwnedEggStatus @default(INCUBATING)
+  incubatedMin    Int            @default(0)
+  acquiredAt      DateTime       @default(now())
+  hatchedAt       DateTime?
+  resultSpecies   Species?       @relation(fields: [resultSpeciesId], references: [id])
+  resultSpeciesId String?
+
+  sessions Session[]
+
+  @@index([userId, status])
+  @@map("owned_eggs")
+}
+
+/// Cấu hình toàn cục do admin quản lý — 1 dòng duy nhất (id cố định = 1).
+model GameSettings {
+  id                  Int   @id @default(1)
+  /// Số Xu Lá nhận được cho mỗi phút tập trung hoàn thành.
+  coinsPerFocusMinute Float @default(1)
+
+  @@map("game_settings")
 }
 
 model EggDropEntry {
@@ -154,20 +201,25 @@ model InventoryItem {
 }
 
 model Session {
-  id              String        @id @default(uuid())
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId          String
-  eggType         EggType       @relation(fields: [eggTypeId], references: [id])
-  eggTypeId       String
-  plannedMin      Int
-  strictMode      Boolean       @default(true)
-  status          SessionStatus @default(RUNNING)
-  startedAt       DateTime      @default(now())
-  endedAt         DateTime?
-  resultSpecies   Species?      @relation(fields: [resultSpeciesId], references: [id])
-  resultSpeciesId String?
-  coinsEarned     Int?
-  clientEventId   String?       @unique
+  id                 String        @id @default(uuid())
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String
+  /// Trứng đang ấp trong phiên này — không bắt buộc, có thể tập trung mà không ấp trứng nào.
+  ownedEgg           OwnedEgg?     @relation(fields: [ownedEggId], references: [id])
+  ownedEggId         String?
+  /// Tỉ lệ % thời gian dành cho ấp trứng (phần còn lại vào Giờ tích luỹ) — chỉ có ý nghĩa khi có ownedEggId.
+  incubationRatio    Float?
+  plannedMin         Int
+  strictMode         Boolean       @default(true)
+  status             SessionStatus @default(RUNNING)
+  startedAt          DateTime      @default(now())
+  endedAt            DateTime?
+  coinsEarned        Int?
+  /// Số phút thực nhận vào Giờ tích luỹ sau khi hoàn thành (đã trừ phần dành cho ấp trứng, nếu có).
+  minutesAccumulated Int?
+  /// Số phút thực đưa vào ấp trứng (0 nếu không chọn trứng).
+  minutesIncubated   Int?
+  clientEventId      String?       @unique
 
   @@index([userId, startedAt])
   @@map("sessions")
@@ -178,13 +230,14 @@ model LedgerEntry {
   user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String
   amount        Int
+  currency      CurrencyType @default(COIN)
   reason        LedgerReason
   refSessionId  String?
   refShopItemId String?
   clientEventId String?      @unique
   createdAt     DateTime     @default(now())
 
-  @@index([userId, createdAt])
+  @@index([userId, currency, createdAt])
   @@map("currency_ledger")
 }
 

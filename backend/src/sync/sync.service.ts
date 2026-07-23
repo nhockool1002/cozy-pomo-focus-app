@@ -44,9 +44,15 @@ export class SyncService {
   private processOne(userId: string, event: SyncEventDto) {
     switch (event.type) {
       case 'session_create': {
-        const p = event.payload as { eggTypeId: string; plannedMin: number; strictMode?: boolean };
+        const p = event.payload as {
+          ownedEggId?: string;
+          incubationRatio?: number;
+          plannedMin: number;
+          strictMode?: boolean;
+        };
         return this.sessionsService.create(userId, {
-          eggTypeId: p.eggTypeId,
+          ownedEggId: p.ownedEggId,
+          incubationRatio: p.incubationRatio,
           plannedMin: p.plannedMin,
           strictMode: p.strictMode ?? true,
           clientEventId: event.clientEventId,
