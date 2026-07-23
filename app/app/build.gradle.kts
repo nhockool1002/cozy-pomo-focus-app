@@ -33,7 +33,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "API_BASE_URL", "\"https://api.cozypomo.app/api/v1/\"")
+        buildConfigField("String", "API_BASE_URL", "\"https://cozyapi.nhutnm.id.vn/api/v1/\"")
     }
 
     val hasReleaseSigning = envOrProp("KEYSTORE_PATH", "keystore.path") != null
