@@ -319,4 +319,8 @@ Checklist nhanh sau khi thấy job `deploy` xanh:
 - Bí danh image: `ghcr.io/nhockool1002/cozy-pomo-focus-app/backend:latest` (đổi trong `docker-compose.prod.yml` nếu fork repo khác owner)
 - Migration DB: tự động, xem `CMD` trong [`backend/Dockerfile`](../backend/Dockerfile)
 - Port nội bộ container `api`: `3000` (không đổi, do `PORT` trong `.env`) — bind ra host ở `127.0.0.1:3012`; container `db` nội bộ vẫn `5432`, bind ra host ở `127.0.0.1:5437`
-- Seed dữ liệu demo (tuỳ chọn, 175 loài + 10 tài khoản tester): xem `backend/README.md`, chạy `npm run prisma:seed` (cần Node/npm cài trên server hoặc chạy trong container bằng `docker compose exec api npm run prisma:seed`)
+- **Seed dữ liệu demo** (175 loài + 4 loại trứng + 10 tài khoản tester) — DB mới tạo (`up -d` lần đầu) chỉ có schema từ migration, **không tự có dữ liệu**, phải seed thủ công 1 lần. Image production build bằng `npm ci --omit=dev` nên thiếu `ts-node`/`typescript` (cần để chạy `prisma/seed.ts`) — phải cài tạm trước khi seed:
+  ```bash
+  docker compose -f docker-compose.prod.yml exec api sh -c "npm install --no-save ts-node typescript tsconfig-paths && npx prisma db seed"
+  ```
+  Cài tạm trong container đang chạy, không ghi vào image, mất khi container restart — không sao vì chỉ cần chạy 1 lần cho tới khi có nhu cầu seed lại (VD sau khi xoá volume `db_data`).
