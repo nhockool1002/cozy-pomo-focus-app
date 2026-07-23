@@ -26,6 +26,13 @@ class AuthRepository @Inject constructor(
     val isLoggedIn: Flow<Boolean> =
         dataStore.data.map { !it[AuthPreferencesKeys.ACCESS_TOKEN].isNullOrBlank() }
 
+    /** Cache tại lúc đăng nhập/đăng ký — tránh phải gọi GET /auth/me (dễ 401 vì JWT hết hạn 15 phút, chưa có refresh flow) chỉ để hiện email ở màn Cài đặt. */
+    val accountEmail: Flow<String?> =
+        dataStore.data.map { it[AuthPreferencesKeys.ACCOUNT_EMAIL] }
+
+    val accountId: Flow<String?> =
+        dataStore.data.map { it[AuthPreferencesKeys.ACCOUNT_ID] }
+
     suspend fun restoreSession() {
         val prefs = dataStore.data.first()
         tokenProvider.accessToken = prefs[AuthPreferencesKeys.ACCESS_TOKEN]
@@ -53,6 +60,8 @@ class AuthRepository @Inject constructor(
         dataStore.edit {
             it.remove(AuthPreferencesKeys.ACCESS_TOKEN)
             it.remove(AuthPreferencesKeys.REFRESH_TOKEN)
+            it.remove(AuthPreferencesKeys.ACCOUNT_EMAIL)
+            it.remove(AuthPreferencesKeys.ACCOUNT_ID)
         }
     }
 
@@ -62,6 +71,8 @@ class AuthRepository @Inject constructor(
         dataStore.edit {
             it[AuthPreferencesKeys.ACCESS_TOKEN] = response.accessToken
             it[AuthPreferencesKeys.REFRESH_TOKEN] = response.refreshToken
+            it[AuthPreferencesKeys.ACCOUNT_EMAIL] = response.user.email
+            it[AuthPreferencesKeys.ACCOUNT_ID] = response.user.id
         }
     }
 }

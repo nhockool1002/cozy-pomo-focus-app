@@ -58,7 +58,13 @@ fun RootNavHost() {
             )
         }
         composable(RootRoute.MAIN) {
-            CozyPomoNavHost()
+            CozyPomoNavHost(
+                onLogout = {
+                    navController.navigate(RootRoute.LOGIN) {
+                        popUpTo(RootRoute.MAIN) { inclusive = true }
+                    }
+                },
+            )
         }
     }
 }

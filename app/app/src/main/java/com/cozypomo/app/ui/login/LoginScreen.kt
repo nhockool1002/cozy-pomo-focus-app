@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -112,7 +113,7 @@ fun LoginScreen(
         ) {
             if (uiState.isLoading) {
                 CircularProgressIndicator(
-                    modifier = Modifier.height(20.dp),
+                    modifier = Modifier.size(20.dp),
                     color = MaterialTheme.colorScheme.onPrimary,
                     strokeWidth = 2.dp,
                 )
@@ -123,13 +124,23 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Row(horizontalArrangement = Arrangement.Center) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
                 text = if (isRegister) "Đã có tài khoản?" else "Chưa có tài khoản?",
                 style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                softWrap = false,
             )
             TextButton(onClick = viewModel::toggleMode) {
-                Text(if (isRegister) "Đăng nhập" else "Đăng ký")
+                Text(
+                    text = if (isRegister) "Đăng nhập" else "Đăng ký",
+                    maxLines = 1,
+                    softWrap = false,
+                )
             }
         }
     }

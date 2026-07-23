@@ -1,0 +1,201 @@
+package com.cozypomo.app.ui.settings
+
+import android.widget.Toast
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Eco
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.HourglassBottom
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.cozypomo.app.ui.common.CurrencyViewModel
+import com.cozypomo.app.ui.common.TesterCheatViewModel
+
+/** S-07 — Cài đặt: gom mọi chức năng cấu hình + tài khoản (kể cả đăng xuất) vào 1 màn riêng.
+ * Tester: chạm 5 lần vào "Phiên bản" bật/tắt bubble cheat nổi dùng chung toàn app (xem
+ * [TesterCheatViewModel] + CozyPomoNavHost — bubble/menu không còn sống trong màn này nữa). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(
+    onBack: () -> Unit,
+    onLoggedOut: () -> Unit,
+    currencyViewModel: CurrencyViewModel,
+    cheatViewModel: TesterCheatViewModel,
+    viewModel: SettingsViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val currencyState by currencyViewModel.uiState.collectAsState()
+    val cheatState by cheatViewModel.uiState.collectAsState()
+    val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Cài đặt") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+        ) {
+            SettingsSection(title = "Tài khoản") {
+                SettingsRow(icon = Icons.Filled.AccountCircle, label = uiState.email ?: "Đang tải…")
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            SettingsSection(title = "Số dư") {
+                SettingsBalanceRow(
+                    icon = Icons.Filled.Eco,
+                    label = "Xu Lá",
+                    value = currencyState.coinBalance?.toString() ?: "…",
+                    tint = MaterialTheme.colorScheme.secondary,
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                SettingsBalanceRow(
+                    icon = Icons.Filled.HourglassBottom,
+                    label = "Giờ tích luỹ",
+                    value = currencyState.focusMinutesBalance?.let { "$it phút" } ?: "…",
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            SettingsSection(title = "Thông tin ứng dụng") {
+                SettingsRow(
+                    icon = Icons.Filled.Info,
+                    label = "Phiên bản ${uiState.versionName}",
+                    onClick = if (cheatState.isTester) cheatViewModel::onVersionTapped else null,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Button(
+                onClick = { viewModel.logout(onLoggedOut) },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+            ) {
+                Icon(Icons.Filled.ExitToApp, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Đăng xuất")
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            uiState.userId?.let { userId ->
+                Text(
+                    text = userId,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            clipboard.setText(AnnotatedString(userId))
+                            Toast.makeText(context, "Đã sao chép ID", Toast.LENGTH_SHORT).show()
+                        }
+                        .padding(vertical = 8.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsSection(title: String, content: @Composable () -> Unit) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(bottom = 8.dp),
+    )
+    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+        Column(modifier = Modifier.fillMaxWidth()) { content() }
+    }
+}
+
+@Composable
+private fun SettingsRow(icon: ImageVector, label: String, onClick: (() -> Unit)? = null) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+/** Dòng số dư "tinh tế" cho Cài đặt — ghi rõ tên loại tiền tệ + số lượng, khác kiểu pill gọn ở Trang chủ. */
+@Composable
+private fun SettingsBalanceRow(icon: ImageVector, label: String, value: String, tint: Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Surface(shape = CircleShape, color = tint.copy(alpha = 0.15f), modifier = Modifier.size(36.dp)) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+            }
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = tint)
+    }
+}

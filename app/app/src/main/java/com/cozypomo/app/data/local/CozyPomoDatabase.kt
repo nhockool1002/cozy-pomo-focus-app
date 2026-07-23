@@ -10,7 +10,7 @@ import com.cozypomo.app.data.local.session.SessionEntity
  * (T-030). Các bảng khác (inventory trứng, collection, settings) sẽ thêm dần khi xây các
  * Repository tương ứng (T-032/T-035/T-039) thay vì tạo trước schema chưa dùng tới.
  */
-@Database(entities = [SessionEntity::class], version = 1, exportSchema = false)
+@Database(entities = [SessionEntity::class], version = 3, exportSchema = false)
 abstract class CozyPomoDatabase : RoomDatabase() {
     abstract fun sessionDao(): SessionDao
 }

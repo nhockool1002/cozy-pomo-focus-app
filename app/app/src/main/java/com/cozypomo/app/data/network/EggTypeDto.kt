@@ -8,4 +8,6 @@ data class EggTypeDto(
     val name: String,
     val colorHex: String,
     val priceCoin: Int,
+    val priceHours: Int = 0,
+    val hatchDurationMin: Int = 60,
 )

@@ -4,7 +4,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class CreateSessionRequest(
-    val eggTypeId: String,
+    val ownedEggId: String? = null,
+    val incubationRatio: Float? = null,
+    val rewardCurrency: String? = null,
     val plannedMin: Int,
     val strictMode: Boolean,
     val clientEventId: String? = null,
@@ -19,14 +21,17 @@ data class CompleteSessionRequest(
 data class SessionDto(
     val id: String,
     val userId: String,
-    val eggTypeId: String,
+    val ownedEggId: String? = null,
+    val incubationRatio: Float? = null,
+    val rewardCurrency: String? = null,
     val plannedMin: Int,
     val strictMode: Boolean,
     val status: String,
     val startedAt: String,
     val endedAt: String? = null,
-    val resultSpeciesId: String? = null,
     val coinsEarned: Int? = null,
+    val minutesAccumulated: Int? = null,
+    val minutesIncubated: Int? = null,
     val clientEventId: String? = null,
 )
 
@@ -45,6 +50,9 @@ data class SpeciesDto(
 @Serializable
 data class CompleteSessionResponse(
     val session: SessionDto,
-    val resultSpecies: SpeciesDto? = null,
     val coinsEarned: Int,
+    val minutesAccumulated: Int,
+    val ownedEgg: OwnedEggDto? = null,
+    val resultSpecies: SpeciesDto? = null,
+    val hatched: Boolean = false,
 )

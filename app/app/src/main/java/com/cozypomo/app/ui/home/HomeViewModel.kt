@@ -2,9 +2,10 @@ package com.cozypomo.app.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cozypomo.app.data.auth.AuthRepository
 import com.cozypomo.app.data.network.ApiService
-import com.cozypomo.app.data.network.EggTypeDto
-import com.cozypomo.app.data.timer.HatchResult
+import com.cozypomo.app.data.network.OwnedEggDto
+import com.cozypomo.app.data.timer.SessionCompletionResult
 import com.cozypomo.app.data.timer.SessionUiState
 import com.cozypomo.app.data.timer.TimerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,21 +18,32 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/** Kết quả để hiện modal — bọc thêm case Bỏ cuộc (không đến từ TimerRepository.completionEvents). */
+sealed interface SessionResultUi {
+    data class Completed(val result: SessionCompletionResult) : SessionResultUi
+    /** Bỏ cuộc KHÔNG làm mất/vỡ trứng — chỉ không nhận Xu Lá/Giờ tích luỹ phiên này. */
+    data class GaveUp(val eggTypeName: String?) : SessionResultUi
+}
+
 data class HomeUiState(
     val durationMin: Int = 25,
-    val eggTypes: List<EggTypeDto> = emptyList(),
-    val selectedEggType: EggTypeDto? = null,
+    val ownedEggs: List<OwnedEggDto> = emptyList(),
+    val selectedOwnedEgg: OwnedEggDto? = null,
+    /** % thời gian phiên dành cho ấp trứng — phần còn lại quy đổi theo [rewardCurrency]. Chỉ áp dụng khi có trứng chọn. */
+    val incubationRatio: Float = 1f,
+    /** "COIN" hoặc "FOCUS_MINUTE" — phần thời gian không dành cho ấp trứng chỉ nhận CHỈ 1 loại tiền này, người dùng chọn trước khi bắt đầu. */
+    val rewardCurrency: String = "COIN",
     val showEggPicker: Boolean = false,
     val showGiveUpConfirm: Boolean = false,
-    val coinBalance: Int? = null,
-    val lastHatch: HatchResult? = null,
+    val sessionResult: SessionResultUi? = null,
 )
 
-/** S-01 — bọc TimerRepository cho UI (T-031). Trứng/Xu Lá chỉ đọc thô qua ApiService vì
- * EggRepository/CurrencyRepository đầy đủ (chọn/khoá theo sở hữu, ledger) là T-032/T-034. */
+/** S-01 — bọc TimerRepository cho UI (T-031). Trứng sở hữu đọc qua GET /owned-eggs (T-032/Shop
+ * đầy đủ vẫn là việc riêng); Xu Lá/Giờ tích luỹ hiện qua bubble dùng chung [com.cozypomo.app.ui.common.CurrencyViewModel]. */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val timerRepository: TimerRepository,
+    private val authRepository: AuthRepository,
     private val apiService: ApiService,
 ) : ViewModel() {
 
@@ -43,61 +55,74 @@ class HomeViewModel @Inject constructor(
 
     init {
         viewModelScope.launch { timerRepository.ensureServiceRunningIfActive() }
-        loadEggTypes()
-        loadBalance()
+        loadOwnedEggs()
         viewModelScope.launch {
-            timerRepository.hatchEvents.collect { result ->
-                _uiState.update { it.copy(lastHatch = result) }
-                loadBalance()
+            timerRepository.completionEvents.collect { result ->
+                _uiState.update { it.copy(sessionResult = SessionResultUi.Completed(result)) }
+                loadOwnedEggs()
             }
         }
     }
 
-    private fun loadEggTypes() {
+    private fun loadOwnedEggs() {
         viewModelScope.launch {
-            runCatching { apiService.getEggTypes() }.onSuccess { types ->
+            runCatching { apiService.getOwnedEggs(status = "INCUBATING") }.onSuccess { eggs ->
                 _uiState.update { current ->
+                    val stillValid = current.selectedOwnedEgg?.let { sel -> eggs.any { it.id == sel.id } } == true
                     current.copy(
-                        eggTypes = types,
-                        selectedEggType = current.selectedEggType ?: types.firstOrNull(),
+                        ownedEggs = eggs,
+                        selectedOwnedEgg = if (stillValid) current.selectedOwnedEgg else null,
                     )
                 }
             }
         }
     }
 
-    private fun loadBalance() {
-        viewModelScope.launch {
-            runCatching { apiService.getBalance() }.onSuccess { response ->
-                _uiState.update { it.copy(coinBalance = response.balance) }
-            }
-        }
-    }
-
     fun onDurationChange(minutes: Int) = _uiState.update { it.copy(durationMin = minutes) }
+    fun onIncubationRatioChange(ratio: Float) = _uiState.update { it.copy(incubationRatio = ratio) }
+    fun onRewardCurrencyChange(currency: String) = _uiState.update { it.copy(rewardCurrency = currency) }
 
     fun openEggPicker() = _uiState.update { it.copy(showEggPicker = true) }
     fun closeEggPicker() = _uiState.update { it.copy(showEggPicker = false) }
-    fun selectEggType(eggType: EggTypeDto) =
-        _uiState.update { it.copy(selectedEggType = eggType, showEggPicker = false) }
+
+    /** null = tập trung không ấp trứng nào ("hoặc không chọn cũng được"). */
+    fun selectOwnedEgg(egg: OwnedEggDto?) =
+        _uiState.update { it.copy(selectedOwnedEgg = egg, showEggPicker = false) }
 
     fun requestGiveUp() = _uiState.update { it.copy(showGiveUpConfirm = true) }
     fun dismissGiveUp() = _uiState.update { it.copy(showGiveUpConfirm = false) }
 
     fun confirmGiveUp() {
         val current = sessionState.value
-        if (current is SessionUiState.Running) {
-            viewModelScope.launch { timerRepository.giveUpSession(current.sessionId) }
-        }
+        val egg = _uiState.value.selectedOwnedEgg
         _uiState.update { it.copy(showGiveUpConfirm = false) }
+        if (current is SessionUiState.Running) {
+            viewModelScope.launch {
+                timerRepository.giveUpSession(current.sessionId)
+                _uiState.update { it.copy(sessionResult = SessionResultUi.GaveUp(egg?.eggType?.name)) }
+            }
+        }
     }
 
     fun startSession() {
-        val eggTypeId = _uiState.value.selectedEggType?.id ?: return
+        val state = _uiState.value
         viewModelScope.launch {
-            timerRepository.startSession(_uiState.value.durationMin, eggTypeId, strictMode = true)
+            timerRepository.startSession(
+                durationMin = state.durationMin,
+                ownedEggId = state.selectedOwnedEgg?.id,
+                incubationRatio = state.selectedOwnedEgg?.let { state.incubationRatio },
+                rewardCurrency = state.rewardCurrency,
+                strictMode = true,
+            )
         }
     }
 
-    fun consumeHatchResult() = _uiState.update { it.copy(lastHatch = null) }
+    fun dismissSessionResult() = _uiState.update { it.copy(sessionResult = null) }
+
+    fun logout(onDone: () -> Unit) {
+        viewModelScope.launch {
+            authRepository.logout()
+            onDone()
+        }
+    }
 }

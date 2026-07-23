@@ -15,12 +15,19 @@ object SessionStatus {
  * (đọc [startElapsedRealtimeMs] để tính thời gian còn lại, không lệch khi khoá màn hình).
  * [remoteId] null cho tới khi đồng bộ được `POST /sessions` lên backend (best-effort, không
  * chặn timer — outbox retry đầy đủ khi mất mạng là T-043, chưa làm ở đây).
+ *
+ * [ownedEggId] trứng ĐANG SỞ HỮU được chọn ấp (null = tập trung không ấp trứng nào).
+ * [incubationRatio] % thời gian dành cho ấp trứng, phần còn lại vào Giờ tích luỹ — chỉ có ý
+ * nghĩa khi có [ownedEggId].
  */
 @Entity(tableName = "sessions")
 data class SessionEntity(
     @PrimaryKey val id: String,
     val remoteId: String? = null,
-    val eggTypeId: String,
+    val ownedEggId: String? = null,
+    val incubationRatio: Float? = null,
+    /** "COIN" hoặc "FOCUS_MINUTE" — phần thời gian không dành cho ấp trứng quy đổi thành CHỈ 1 loại tiền này. */
+    val rewardCurrency: String = "COIN",
     val plannedMin: Int,
     val strictMode: Boolean,
     val status: String,
@@ -31,5 +38,7 @@ data class SessionEntity(
     val resultSpeciesName: String? = null,
     val resultSpeciesRarity: String? = null,
     val coinsEarned: Int? = null,
+    val minutesAccumulated: Int? = null,
+    val hatched: Boolean = false,
     val clientEventId: String,
 )

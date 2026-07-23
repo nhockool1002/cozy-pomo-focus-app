@@ -25,17 +25,34 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
-data class HatchResult(
-    val speciesName: String?,
-    val speciesRarity: String?,
-    val coinsEarned: Int,
-)
+/** Kết quả 1 phiên hoàn thành — 3 trường hợp tuỳ có ấp trứng hay không, và có vừa nở hay không. */
+sealed interface SessionCompletionResult {
+    data class Hatched(
+        val speciesName: String?,
+        val speciesRarity: String?,
+        val speciesCategory: String?,
+        val speciesArchetype: String?,
+        val speciesPaletteIdx: Int?,
+        val coinsEarned: Int,
+        val minutesAccumulated: Int,
+    ) : SessionCompletionResult
+
+    data class Incubating(
+        val eggTypeName: String?,
+        val incubatedMin: Int,
+        val hatchDurationMin: Int,
+        val coinsEarned: Int,
+        val minutesAccumulated: Int,
+    ) : SessionCompletionResult
+
+    data class NoEgg(val coinsEarned: Int, val minutesAccumulated: Int) : SessionCompletionResult
+}
 
 sealed interface SessionUiState {
     data object Idle : SessionUiState
     data class Running(
         val sessionId: String,
-        val eggTypeId: String,
+        val ownedEggId: String?,
         val plannedMin: Int,
         val remainingMs: Long,
         val totalMs: Long,
@@ -46,6 +63,10 @@ sealed interface SessionUiState {
  * TimerRepository (FR01/FR03, mục 3.1 docs/technical-spec.md) — lõi của app.
  * Room là nguồn sự thật cho phiên đang chạy (đọc bởi cả UI lẫn Foreground Service);
  * backend chỉ đồng bộ best-effort (không có outbox retry đầy đủ — đó là T-043).
+ *
+ * Mỗi phiên hoàn thành chia phút giữa Giờ tích luỹ và trứng đang ấp (nếu có) theo
+ * [incubationRatio] — logic chia % + roll loài khi đủ ngưỡng nằm ở backend
+ * (SessionsService.complete), app chỉ hiển thị kết quả trả về.
  */
 @Singleton
 class TimerRepository @Inject constructor(
@@ -53,8 +74,8 @@ class TimerRepository @Inject constructor(
     private val sessionDao: SessionDao,
     private val apiService: ApiService,
 ) {
-    private val _hatchEvents = MutableSharedFlow<HatchResult>(extraBufferCapacity = 1)
-    val hatchEvents: SharedFlow<HatchResult> = _hatchEvents.asSharedFlow()
+    private val _completionEvents = MutableSharedFlow<SessionCompletionResult>(extraBufferCapacity = 1)
+    val completionEvents: SharedFlow<SessionCompletionResult> = _completionEvents.asSharedFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun observeActiveSession(): Flow<SessionUiState> =
@@ -77,7 +98,7 @@ class TimerRepository @Inject constructor(
         val totalMs = plannedMin * 60_000L
         val elapsed = SystemClock.elapsedRealtime() - startElapsedRealtimeMs
         val remaining = (totalMs - elapsed).coerceAtLeast(0)
-        return SessionUiState.Running(id, eggTypeId, plannedMin, remaining, totalMs)
+        return SessionUiState.Running(id, ownedEggId, plannedMin, remaining, totalMs)
     }
 
     /**
@@ -90,12 +111,30 @@ class TimerRepository @Inject constructor(
         startForegroundService(entity.id)
     }
 
-    suspend fun startSession(durationMin: Int, eggTypeId: String, strictMode: Boolean): String {
+    /** [Chỉ dùng cho bubble cheat tester] Kéo phiên đang chạy về gần cuối (còn ~5s) để test
+     * nhận thưởng nhanh, không cần đợi hết thời gian thật. Không đổi gì phía backend. */
+    suspend fun debugFastForwardActiveSession() {
+        val entity = sessionDao.getActiveOnce() ?: return
+        val totalMs = entity.plannedMin * 60_000L
+        val remainingTargetMs = 5_000L
+        val newStart = SystemClock.elapsedRealtime() - (totalMs - remainingTargetMs)
+        sessionDao.upsert(entity.copy(startElapsedRealtimeMs = newStart))
+    }
+
+    suspend fun startSession(
+        durationMin: Int,
+        ownedEggId: String?,
+        incubationRatio: Float?,
+        rewardCurrency: String,
+        strictMode: Boolean,
+    ): String {
         val id = UUID.randomUUID().toString()
         val clientEventId = UUID.randomUUID().toString()
         val entity = SessionEntity(
             id = id,
-            eggTypeId = eggTypeId,
+            ownedEggId = ownedEggId,
+            incubationRatio = ownedEggId?.let { incubationRatio ?: 1f },
+            rewardCurrency = rewardCurrency,
             plannedMin = durationMin,
             strictMode = strictMode,
             status = SessionStatus.RUNNING,
@@ -107,7 +146,9 @@ class TimerRepository @Inject constructor(
         startForegroundService(id)
 
         runCatching {
-            apiService.createSession(CreateSessionRequest(eggTypeId, durationMin, strictMode, clientEventId))
+            apiService.createSession(
+                CreateSessionRequest(ownedEggId, entity.incubationRatio, rewardCurrency, durationMin, strictMode, clientEventId),
+            )
         }.onSuccess { remote ->
             sessionDao.upsert(entity.copy(remoteId = remote.id))
         }
@@ -123,14 +164,21 @@ class TimerRepository @Inject constructor(
         }
     }
 
-    /** Gọi khi đếm về 0 (từ Foreground Service) — chấm dứt phiên, roll trứng, trả kết quả. */
-    suspend fun completeSession(sessionId: String): HatchResult {
+    /** Gọi khi đếm về 0 (từ Foreground Service) — chấm dứt phiên, ấp/nở trứng, trả kết quả. */
+    suspend fun completeSession(sessionId: String): SessionCompletionResult {
         var entity = sessionDao.getById(sessionId) ?: error("Không tìm thấy phiên $sessionId")
 
         if (entity.remoteId == null) {
             runCatching {
                 apiService.createSession(
-                    CreateSessionRequest(entity.eggTypeId, entity.plannedMin, entity.strictMode, entity.clientEventId),
+                    CreateSessionRequest(
+                        entity.ownedEggId,
+                        entity.incubationRatio,
+                        entity.rewardCurrency,
+                        entity.plannedMin,
+                        entity.strictMode,
+                        entity.clientEventId,
+                    ),
                 )
             }.onSuccess {
                 entity = entity.copy(remoteId = it.id)
@@ -142,7 +190,14 @@ class TimerRepository @Inject constructor(
             runCatching { apiService.completeSession(remoteId, CompleteSessionRequest(entity.clientEventId)) }.getOrNull()
         }
 
-        val coinsEarned = response?.coinsEarned ?: entity.plannedMin
+        // Offline/lỗi mạng: không biết chia % ra sao ở backend — coi như toàn bộ quy đổi thành
+        // đúng 1 loại tiền theo lựa chọn rewardCurrency của người dùng, không ấp trứng, giữ trải
+        // nghiệm không bị "treo" dù mất mạng đúng lúc hết giờ.
+        val coinsEarned = response?.coinsEarned
+            ?: if (entity.rewardCurrency == "FOCUS_MINUTE") 0 else entity.plannedMin * 10
+        val minutesAccumulated = response?.minutesAccumulated
+            ?: if (entity.rewardCurrency == "FOCUS_MINUTE") entity.plannedMin else 0
+
         val updated = entity.copy(
             status = SessionStatus.COMPLETED,
             endedAtEpochMs = System.currentTimeMillis(),
@@ -150,12 +205,32 @@ class TimerRepository @Inject constructor(
             resultSpeciesName = response?.resultSpecies?.name,
             resultSpeciesRarity = response?.resultSpecies?.rarity,
             coinsEarned = coinsEarned,
+            minutesAccumulated = minutesAccumulated,
+            hatched = response?.hatched ?: false,
         )
         sessionDao.upsert(updated)
         stopForegroundService()
 
-        val result = HatchResult(updated.resultSpeciesName, updated.resultSpeciesRarity, coinsEarned)
-        _hatchEvents.emit(result)
+        val result: SessionCompletionResult = when {
+            response?.hatched == true -> SessionCompletionResult.Hatched(
+                speciesName = response.resultSpecies?.name,
+                speciesRarity = response.resultSpecies?.rarity,
+                speciesCategory = response.resultSpecies?.category,
+                speciesArchetype = response.resultSpecies?.archetype,
+                speciesPaletteIdx = response.resultSpecies?.paletteIdx,
+                coinsEarned = coinsEarned,
+                minutesAccumulated = minutesAccumulated,
+            )
+            response?.ownedEgg != null -> SessionCompletionResult.Incubating(
+                eggTypeName = response.ownedEgg.eggType.name,
+                incubatedMin = response.ownedEgg.incubatedMin,
+                hatchDurationMin = response.ownedEgg.eggType.hatchDurationMin,
+                coinsEarned = coinsEarned,
+                minutesAccumulated = minutesAccumulated,
+            )
+            else -> SessionCompletionResult.NoEgg(coinsEarned, minutesAccumulated)
+        }
+        _completionEvents.emit(result)
         return result
     }
 
