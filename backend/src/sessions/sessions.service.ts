@@ -35,6 +35,7 @@ export class SessionsService {
         userId,
         ownedEggId: dto.ownedEggId,
         incubationRatio,
+        rewardCurrency: dto.rewardCurrency ?? CurrencyType.COIN,
         plannedMin: dto.plannedMin,
         strictMode: dto.strictMode,
         clientEventId: dto.clientEventId,
@@ -92,11 +93,16 @@ export class SessionsService {
     }
 
     const gameSettings = await this.gameSettingsService.get();
-    const coinsEarned = Math.round(session.plannedMin * gameSettings.coinsPerFocusMinute);
 
     const ratio = session.ownedEggId ? (session.incubationRatio ?? 1) : 0;
     const minutesIncubated = session.ownedEggId ? Math.round(session.plannedMin * ratio) : 0;
-    const minutesAccumulated = session.plannedMin - minutesIncubated;
+    const remainingMin = session.plannedMin - minutesIncubated;
+
+    // Phần thời gian không dành cho ấp trứng chỉ quy đổi thành 1 loại tiền — theo lựa chọn
+    // rewardCurrency của người dùng lúc bắt đầu phiên, không còn cộng cả 2 loại như trước.
+    const rewardCurrency = session.rewardCurrency;
+    const coinsEarned = rewardCurrency === CurrencyType.FOCUS_MINUTE ? 0 : Math.round(remainingMin * gameSettings.coinsPerFocusMinute);
+    const minutesAccumulated = rewardCurrency === CurrencyType.FOCUS_MINUTE ? remainingMin : 0;
 
     const result = await this.prisma.$transaction(async (tx) => {
       const updatedSession = await tx.session.update({
@@ -110,18 +116,21 @@ export class SessionsService {
         },
       });
 
-      await this.currencyService.earn(userId, coinsEarned, LedgerReason.SESSION_REWARD, {
-        currency: CurrencyType.COIN,
-        refSessionId: sessionId,
-        clientEventId: clientEventId ? `${clientEventId}:coin` : undefined,
-        tx,
-      });
-      await this.currencyService.earn(userId, minutesAccumulated, LedgerReason.SESSION_REWARD, {
-        currency: CurrencyType.FOCUS_MINUTE,
-        refSessionId: sessionId,
-        clientEventId: clientEventId ? `${clientEventId}:focus` : undefined,
-        tx,
-      });
+      if (rewardCurrency === CurrencyType.FOCUS_MINUTE) {
+        await this.currencyService.earn(userId, minutesAccumulated, LedgerReason.SESSION_REWARD, {
+          currency: CurrencyType.FOCUS_MINUTE,
+          refSessionId: sessionId,
+          clientEventId: clientEventId ? `${clientEventId}:focus` : undefined,
+          tx,
+        });
+      } else {
+        await this.currencyService.earn(userId, coinsEarned, LedgerReason.SESSION_REWARD, {
+          currency: CurrencyType.COIN,
+          refSessionId: sessionId,
+          clientEventId: clientEventId ? `${clientEventId}:coin` : undefined,
+          tx,
+        });
+      }
 
       let ownedEgg = null;
       let resultSpecies = null;

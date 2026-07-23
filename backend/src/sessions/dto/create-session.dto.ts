@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { CurrencyType } from '@prisma/client';
+import { IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 
 export class CreateSessionDto {
   @ApiProperty({
@@ -28,6 +29,16 @@ export class CreateSessionDto {
   @Min(10)
   @Max(120)
   plannedMin!: number;
+
+  @ApiProperty({
+    required: false,
+    enum: CurrencyType,
+    default: CurrencyType.COIN,
+    description: 'Phần thời gian không dành cho ấp trứng sẽ quy đổi thành CHỈ 1 loại tiền này — Xu Lá hoặc Giờ tích luỹ, không nhận cả 2.',
+  })
+  @IsOptional()
+  @IsEnum(CurrencyType)
+  rewardCurrency?: CurrencyType;
 
   @ApiProperty({ default: true })
   @IsBoolean()

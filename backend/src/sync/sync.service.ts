@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { CurrencyType } from '@prisma/client';
 import { SessionsService } from '../sessions/sessions.service';
 import { ShopService } from '../shop/shop.service';
 import { SyncBatchDto, SyncEventDto } from './dto/sync-batch.dto';
@@ -47,12 +48,14 @@ export class SyncService {
         const p = event.payload as {
           ownedEggId?: string;
           incubationRatio?: number;
+          rewardCurrency?: CurrencyType;
           plannedMin: number;
           strictMode?: boolean;
         };
         return this.sessionsService.create(userId, {
           ownedEggId: p.ownedEggId,
           incubationRatio: p.incubationRatio,
+          rewardCurrency: p.rewardCurrency,
           plannedMin: p.plannedMin,
           strictMode: p.strictMode ?? true,
           clientEventId: event.clientEventId,

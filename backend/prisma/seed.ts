@@ -121,7 +121,7 @@ async function main() {
   await prisma.gameSettings.deleteMany();
 
   console.log('Nạp cấu hình kinh tế (game_settings)...');
-  await prisma.gameSettings.create({ data: { id: 1, coinsPerFocusMinute: 1 } });
+  await prisma.gameSettings.create({ data: { id: 1, coinsPerFocusMinute: 10 } });
 
   console.log('Nạp rarity_weights...');
   await prisma.rarityWeight.createMany({
@@ -153,17 +153,20 @@ async function main() {
 
   console.log('Nạp 4 loại trứng + bảng tỉ lệ nở...');
   // hatchDurationMin/priceHours/priceCoin chỉ là giá trị khởi tạo — admin chỉnh trực tiếp qua AdminJS.
+  // Tỉ giá quy đổi cố định: 1 phút Giờ tích luỹ = 10 Xu Lá — priceCoin luôn bằng priceHours * 10
+  // để 2 cách trả tiền công bằng như nhau (không có cách nào rẻ hơn cách còn lại).
+  const COIN_PER_HOUR_MINUTE = 10;
   const eggForest = await prisma.eggType.create({
-    data: { name: 'Trứng Rừng', colorHex: PALETTE_HEX[2], priceCoin: 70, priceHours: 90, hatchDurationMin: 180 },
+    data: { name: 'Trứng Rừng', colorHex: PALETTE_HEX[2], priceCoin: 90 * COIN_PER_HOUR_MINUTE, priceHours: 90, hatchDurationMin: 180 },
   });
   const eggSea = await prisma.eggType.create({
-    data: { name: 'Trứng Biển', colorHex: PALETTE_HEX[9], priceCoin: 50, priceHours: 60, hatchDurationMin: 120 },
+    data: { name: 'Trứng Biển', colorHex: PALETTE_HEX[9], priceCoin: 60 * COIN_PER_HOUR_MINUTE, priceHours: 60, hatchDurationMin: 120 },
   });
   const eggPlant = await prisma.eggType.create({
-    data: { name: 'Trứng Hoa', colorHex: PALETTE_HEX[4], priceCoin: 30, priceHours: 30, hatchDurationMin: 60 },
+    data: { name: 'Trứng Hoa', colorHex: PALETTE_HEX[4], priceCoin: 30 * COIN_PER_HOUR_MINUTE, priceHours: 30, hatchDurationMin: 60 },
   });
   const eggMystery = await prisma.eggType.create({
-    data: { name: 'Trứng Bí Ẩn', colorHex: PALETTE_HEX[12], priceCoin: 150, priceHours: 150, hatchDurationMin: 300 },
+    data: { name: 'Trứng Bí Ẩn', colorHex: PALETTE_HEX[12], priceCoin: 150 * COIN_PER_HOUR_MINUTE, priceHours: 150, hatchDurationMin: 300 },
   });
 
   await prisma.eggDropEntry.createMany({
@@ -257,7 +260,12 @@ async function main() {
       if (isCompleted) {
         const incubationRatio = Math.round((0.4 + rnd() * 0.6) * 100) / 100; // 40-100% dành cho ấp trứng
         const minutesIncubated = Math.round(plannedMin * incubationRatio);
-        const minutesAccumulated = plannedMin - minutesIncubated;
+        const remainingMin = plannedMin - minutesIncubated;
+        // Phần thời gian không dành cho ấp trứng chỉ quy đổi thành 1 loại tiền — mô phỏng người
+        // dùng chọn ngẫu nhiên mỗi phiên, giống logic thật ở SessionsService.complete().
+        const rewardCurrency = rnd() < 0.5 ? CurrencyType.COIN : CurrencyType.FOCUS_MINUTE;
+        const coinsEarned = rewardCurrency === CurrencyType.COIN ? Math.round(remainingMin * 10) : 0;
+        const minutesAccumulated = rewardCurrency === CurrencyType.FOCUS_MINUTE ? remainingMin : 0;
 
         let ownedEggId = activeEggId[pool.egg.id];
         if (!ownedEggId) {
@@ -292,28 +300,30 @@ async function main() {
             userId: user.id,
             ownedEggId,
             incubationRatio,
+            rewardCurrency,
             plannedMin,
             strictMode: true,
             status: SessionStatus.COMPLETED,
             startedAt: cursor,
             endedAt: new Date(cursor.getTime() + plannedMin * 60 * 1000),
-            coinsEarned: plannedMin,
+            coinsEarned,
             minutesAccumulated,
             minutesIncubated,
           },
         });
-        balance += plannedMin;
-        await prisma.ledgerEntry.create({
-          data: {
-            userId: user.id,
-            amount: plannedMin,
-            currency: CurrencyType.COIN,
-            reason: LedgerReason.SESSION_REWARD,
-            refSessionId: session.id,
-            createdAt: cursor,
-          },
-        });
-        if (minutesAccumulated > 0) {
+        if (rewardCurrency === CurrencyType.COIN) {
+          balance += coinsEarned;
+          await prisma.ledgerEntry.create({
+            data: {
+              userId: user.id,
+              amount: coinsEarned,
+              currency: CurrencyType.COIN,
+              reason: LedgerReason.SESSION_REWARD,
+              refSessionId: session.id,
+              createdAt: cursor,
+            },
+          });
+        } else if (minutesAccumulated > 0) {
           await prisma.ledgerEntry.create({
             data: {
               userId: user.id,
@@ -368,15 +378,24 @@ async function main() {
       await prisma.inventoryItem.update({ where: { id: ownedJars[0].id }, data: { equipped: true } });
     }
 
-    // Đảm bảo mỗi tester có ít nhất 2 Thần Thú (SSR) trong bộ sưu tập để demo/kiểm thử UI hiếm —
-    // tỉ lệ rơi thật (0.5%) khiến việc này khó xảy ra tự nhiên với dữ liệu seed cỡ nhỏ.
-    const bonusMythics = [...mythicSpecies].sort(() => rnd() - 0.5).slice(0, 2);
-    for (const species of bonusMythics) {
-      await prisma.collectionEntry.upsert({
-        where: { userId_speciesId: { userId: user.id, speciesId: species.id } },
-        create: { userId: user.id, speciesId: species.id, hatchCount: 1, isFavorite: rnd() > 0.5 },
-        update: {},
-      });
+    // Đảm bảo mỗi tester có ít nhất vài loài mỗi nhóm (Thú rừng/Sinh vật biển/Thực vật/Thần Thú)
+    // trong bộ sưu tập để demo/kiểm thử UI đủ đa dạng — chỉ dựa vào random rollFromPool ở trên
+    // (đặc biệt Thần Thú tỉ lệ rơi thật chỉ 0.5%) không đủ để chắc chắn tester có đại diện mỗi nhóm.
+    const bonusPools: { species: typeof allSpecies; count: number }[] = [
+      { species: forestSpecies, count: 3 },
+      { species: seaSpecies, count: 2 },
+      { species: plantSpecies, count: 3 },
+      { species: mythicSpecies, count: 2 },
+    ];
+    for (const { species, count } of bonusPools) {
+      const bonusSpecies = [...species].sort(() => rnd() - 0.5).slice(0, count);
+      for (const s of bonusSpecies) {
+        await prisma.collectionEntry.upsert({
+          where: { userId_speciesId: { userId: user.id, speciesId: s.id } },
+          create: { userId: user.id, speciesId: s.id, hatchCount: 1 + Math.floor(rnd() * 3), isFavorite: rnd() > 0.7 },
+          update: {},
+        });
+      }
     }
 
     console.log(`  ✓ ${email} — ${sessionCount} phiên, số dư còn lại ${balance} Xu Lá`);

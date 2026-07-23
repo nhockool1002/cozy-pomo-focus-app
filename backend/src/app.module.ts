@@ -17,6 +17,7 @@ import { SyncModule } from './sync/sync.module';
 import { AdminModule } from './admin/admin.module';
 import { OwnedEggsModule } from './owned-eggs/owned-eggs.module';
 import { GameSettingsModule } from './game-settings/game-settings.module';
+import { DebugModule } from './debug/debug.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { GameSettingsModule } from './game-settings/game-settings.module';
     SettingsModule,
     SyncModule,
     AdminModule,
+    DebugModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

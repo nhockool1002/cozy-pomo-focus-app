@@ -146,8 +146,9 @@ model OwnedEgg {
 /// Cấu hình toàn cục do admin quản lý — 1 dòng duy nhất (id cố định = 1).
 model GameSettings {
   id                  Int   @id @default(1)
-  /// Số Xu Lá nhận được cho mỗi phút tập trung hoàn thành.
-  coinsPerFocusMinute Float @default(1)
+  /// Số Xu Lá nhận được cho mỗi phút tập trung hoàn thành (khi người dùng chọn nhận Xu Lá) —
+  /// khớp tỉ giá quy đổi 1 phút Giờ tích luỹ = 10 Xu Lá dùng trong Cửa hàng.
+  coinsPerFocusMinute Float @default(10)
 
   @@map("game_settings")
 }
@@ -207,8 +208,11 @@ model Session {
   /// Trứng đang ấp trong phiên này — không bắt buộc, có thể tập trung mà không ấp trứng nào.
   ownedEgg           OwnedEgg?     @relation(fields: [ownedEggId], references: [id])
   ownedEggId         String?
-  /// Tỉ lệ % thời gian dành cho ấp trứng (phần còn lại vào Giờ tích luỹ) — chỉ có ý nghĩa khi có ownedEggId.
+  /// Tỉ lệ % thời gian dành cho ấp trứng (phần còn lại quy đổi theo rewardCurrency) — chỉ có ý nghĩa khi có ownedEggId.
   incubationRatio    Float?
+  /// Phần thời gian KHÔNG dành cho ấp trứng chỉ quy đổi thành 1 loại tiền duy nhất — người dùng
+  /// chọn trước khi bắt đầu phiên. Không còn nhận cả 2 loại cùng lúc như thiết kế trước đó.
+  rewardCurrency     CurrencyType  @default(COIN)
   plannedMin         Int
   strictMode         Boolean       @default(true)
   status             SessionStatus @default(RUNNING)
