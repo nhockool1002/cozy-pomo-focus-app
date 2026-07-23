@@ -8,16 +8,16 @@
 
 | Mảng | Trạng thái | Ghi chú |
 |---|---|---|
-| Backend API (NestJS) | ✅ Hoàn chỉnh, đã test thật | Toàn bộ endpoint theo Function List đã có + economy v2 + economy v3 (T-077, chọn 1 tiền tệ/phiên) + module Debug/cheat tester-only (T-085) — **cả 2 chưa release lên production**, mới test qua Docker local |
+| Backend API (NestJS) | ✅ Hoàn chỉnh, đã test thật **và đã release production** | Toàn bộ endpoint theo Function List đã có + economy v2 + economy v3 (chọn 1 tiền tệ/phiên, tỉ giá 1:10) + module Debug/cheat tester-only — đã lên `backend-v1.20260723.004` |
 | Trang quản trị AdminJS | ✅ Hoàn chỉnh, đã Việt hoá + brand hoá | Species/EggType có UI card riêng, có trang liệt kê API; đã thêm resource `GameSettings`/`OwnedEgg` |
-| Dữ liệu seed | ✅ 175 loài + 4 loại trứng + 10 tài khoản tester | Production đang chạy seed economy v2 (2026-07-23). Seed cục bộ đã cập nhật thêm tỉ giá 1:10 + bonus loài đa dạng hơn (T-077/T-078) nhưng **chưa reseed lại production** với bản này |
-| CI/CD workflows | ✅ Đã viết **và xác nhận chạy thật thành công** | `backend-v1.20260723.003` — pipeline Release→build→push→SSH deploy chạy tự động end-to-end, không lỗi. Bản economy v3 (T-077/T-085) chưa release version mới |
+| Dữ liệu seed | ✅ 175 loài + 4 loại trứng + 10 tài khoản tester | Production đã reseed lại theo economy v3 (T-090, 2026-07-23) — tỉ giá 1:10 + bonus loài đa dạng đã có hiệu lực thật, không còn kẹt giá trị cũ từ economy v2 |
+| CI/CD workflows | ✅ Đã viết **và xác nhận chạy thật thành công cho cả backend lẫn Android** | `backend-v1.20260723.004` (build→push→SSH deploy) và `app-v1.20260723.002` (build→ký release→upload asset) đều chạy xanh end-to-end — T-054 (test workflow Android lần đầu) coi như xong |
 | Branding (icon/favicon/logo) | ✅ Hoàn chỉnh, đã deploy | `docs/branding/`, hiện trên `/admin` thật |
-| Backend production | ✅ **Đang chạy thật** tại `https://cozyapi.nhutnm.id.vn`, đã lên `backend-v1.20260723.003` (economy v2) | Domain + SSL + Reverse Proxy + Docker trên aaPanel, đã verify `/health` `/docs` `/admin`. Economy v3 (T-077) + Debug module (T-085) mới test local, **chưa deploy** |
-| Android app | 🟨 6/10 màn chạy thật: Splash/Onboarding/Đăng nhập/Trang chủ/Khu rừng/Cửa hàng | T-029→T-031, T-040, T-041, T-069, T-071→T-076, T-077→T-085, **T-086→T-089** xong (bubble cheat kiểu chat-head, Cài đặt/Khu rừng làm đẹp, fix hình loài khi nở + Khu rừng cập nhật ngay); còn S-06 Thống kê + S-07a Sao lưu (T-038/T-039 phần đồng bộ) là placeholder |
+| Backend production | ✅ **Đang chạy thật** tại `https://cozyapi.nhutnm.id.vn`, đã lên `backend-v1.20260723.004` (economy v3, đã reseed) | Domain + SSL + Reverse Proxy + Docker trên aaPanel, đã verify `/health` + `/game-settings` (`coinsPerFocusMinute: 10`) + đăng nhập tester sau reseed |
+| Android app | 🟨 6/10 màn chạy thật: Splash/Onboarding/Đăng nhập/Trang chủ/Khu rừng/Cửa hàng | T-029→T-031, T-040, T-041, T-069, T-071→T-089 xong, **đã release `app-v1.20260723.002`** (versionCode 2, versionName 0.2.0); còn S-06 Thống kê + S-07a Sao lưu (T-038/T-039 phần đồng bộ) là placeholder |
 | Test suite (backend + Android) | ⬜ Chưa có | 0 file test ở cả 2 phía |
-| Android release (keystore/secrets/Play Store) | ⬜ Chưa làm | Cần app chạy được trước (xem Nhóm A) |
-| Working tree | 🟨 Có thay đổi chưa commit | Android economy v2 (T-069) + đợt UI overhaul (T-071→T-076) + economy v3/bubble-cheat batch (T-077→T-085) + đợt polish bubble/Cài đặt/Khu rừng (T-086→T-089) — xem mục Đã hoàn thành. **Chưa commit/push** theo yêu cầu, chờ xác nhận. |
+| Android release (keystore/secrets/Play Store) | ✅ Secrets đã cấu hình, workflow đã chạy thật thành công | `app-v1.20260723.002` build/ký/upload asset OK (T-053/T-054 xong) — còn thiếu bước đăng thật lên Play Console (Nhóm E) |
+| Working tree | ✅ Sạch, đã push hết lên `main` | Toàn bộ economy v2/v3, UI overhaul, bubble-cheat, T-086→T-090 đã push + release — xem mục Đã hoàn thành |
 
 ### ✅ Production đã reseed theo economy v2 (2026-07-23)
 
@@ -223,6 +223,16 @@ Theo phản hồi tiếp theo của Dev1002 sau khi dùng thử T-085: bubble ch
   - **Đã verify trên emulator:** đứng nguyên ở tab Khu rừng/Kho Trứng, mở bubble cheat cấp "Trứng Bí Ẩn" và cấp ngẫu nhiên hạng SSR — cả hai xuất hiện ngay lập tức trong Kho Trứng/lưới loài mà không cần rời tab (số loài mở khoá tăng `16→17`, thẻ "Phượng Hoàng Bình Minh" hiện hào quang SSR ngay). Xác nhận thêm qua thực nghiệm: 1 phiên ấp Trứng Biển (75→120 phút) hoàn thành thật (không qua cheat fast-forward giả lập số liệu) khiến trứng biến mất khỏi Kho Trứng và số loài mở khoá tăng thêm — xác nhận logic nở trứng phía sau vẫn đúng, chỉ riêng phần hiển thị hình ảnh trong modal là cần fix.
   - **Hạn chế khi verify:** không chụp được ảnh màn hình modal "Hatched" với hình loài thật trong phiên test này do JWT hết hạn 15 phút + trục trặc thao tác UI-automation (chọn nhầm trứng, cuộn danh sách egg-picker) làm gián đoạn nhiều lần giữa lúc phiên hoàn thành và lúc chụp — nhưng đã xác nhận chắc chắn qua log + số liệu rằng nở trứng vẫn hoạt động đúng, và code fix chỉ đơn thuần truyền tiếp 3 trường dữ liệu BE đã trả sẵn vào đúng composable `SpeciesArtIcon` đã verify hoạt động tốt ở Khu rừng — rủi ro sai sót thấp.
 
+### ✅ Release backend-v1.20260723.004 + app-v1.20260723.002, reseed production (2026-07-23)
+
+- **T-090 — Push toàn bộ batch T-077→T-089 lên `main`, release cả backend lẫn Android, reseed production.**
+  - Commit theo 4 phần rõ ràng (backend economy v3 + debug module; toàn bộ batch UI Android; cập nhật `plan.md`; bump version Android) rồi `git push` fast-forward thẳng lên `origin/main` (không qua PR, đúng thói quen của repo — lịch sử toàn commit thẳng, không có merge commit).
+  - **Backend:** tạo GitHub Release `backend-v1.20260723.004` → `backend-deploy.yml` tự chạy build image + push `ghcr.io` + SSH deploy (`docker compose pull && up -d`) — xác nhận thành công qua `gh run watch` (cả 2 job `build-and-push` và `deploy` đều xanh) và `curl /health` trả `200` đúng ngay sau đó.
+  - **Bug phát hiện khi verify sau deploy:** `GET /game-settings` trên production vẫn trả `coinsPerFocusMinute: 1` dù code + migration đã lên `main` — nguyên nhân: migration chỉ có `ALTER COLUMN ... SET DEFAULT 10`, đổi **default cho dòng mới**, không đụng tới dòng `GameSettings` **đã tồn tại sẵn** từ lần seed trước. Tỉ giá 1:10 vì vậy không thực sự có hiệu lực trên production dù đã "release xong".
+  - Hỏi Dev1002 cách xử lý — chọn phương án **reseed lại toàn bộ production** (như lần economy v2 trước) thay vì chỉ UPDATE 1 dòng. Kích hoạt job `reseed-production` có sẵn (gated kép: `reseed=true` + gõ đúng `RESEED`) qua `gh workflow run backend-deploy.yml --ref main -f reseed=true -f confirm_reseed=RESEED` — chạy thành công, xác nhận lại `GET /game-settings` trả đúng `coinsPerFocusMinute: 10`, đăng nhập `tester01@cozypomo.dev` bằng mật khẩu chuẩn vẫn hoạt động (tài khoản tester được tạo lại từ seed mới).
+  - **Android:** bump `versionCode 1→2`, `versionName "0.1.0"→"0.2.0"` (release đầu tiên chưa từng bump version dù đã tồn tại `app-v1.20260723.001` — lần này nội dung tăng đáng kể nên bump cho đúng). Dev1002 xác nhận đã tự cấu hình xong 4 GitHub Secrets ký release (`ANDROID_KEYSTORE_BASE64/PASSWORD`, `ANDROID_KEY_ALIAS/PASSWORD`) — tạo GitHub Release `app-v1.20260723.002` → `android-release.yml` chạy **lần đầu tiên với secrets thật** (trước đó T-054 ghi nhận "chưa test lần nào"), build `bundleRelease`/`assembleRelease` ký bằng keystore thật, upload `app-release.aab` + `app-release.apk` vào release — xác nhận qua `gh run watch` (job `build` xanh) và `gh release view` thấy đủ 2 asset.
+  - **Kết quả:** cả backend lẫn Android đều đã có bản release thật đang chạy khớp nhau (tỉ giá 1:10, chọn 1 loại thưởng, Khu rừng/Cửa hàng/Cài đặt/bubble cheat...); T-053/T-054 (Nhóm D) coi như xong.
+
 ---
 
 ## ⬜ Chưa làm
@@ -256,10 +266,7 @@ Chỉ còn `StatsScreen.kt` là placeholder (12 dòng, gọi `PlaceholderScreen`
 
 ### Nhóm D — Hạ tầng thật còn lại (việc của bạn, Claude không có quyền truy cập)
 
-~~T-048 GitHub Secrets backend~~, ~~T-049 ghcr.io visibility~~, ~~T-050 aaPanel+Docker~~, ~~T-051 `.env` production~~, ~~T-052 Domain+SSL~~ — **đã xong**, xem T-059→T-066 ở mục Đã hoàn thành. Còn lại:
-
-- **T-053 — GitHub Secrets cho Android release.** `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` — cần có keystore `.jks` release trước (tự tạo bằng `keytool`, giữ bí mật, mất là không update được app cũ trên Play Store).
-- **T-054 — Test trigger workflow Android** (`android-release.yml`) trên tài khoản Play Console thật — workflow backend đã xác nhận chạy tốt (T-066), workflow Android vẫn chưa test lần nào.
+~~T-048 GitHub Secrets backend~~, ~~T-049 ghcr.io visibility~~, ~~T-050 aaPanel+Docker~~, ~~T-051 `.env` production~~, ~~T-052 Domain+SSL~~, ~~T-053 GitHub Secrets Android~~, ~~T-054 test workflow Android~~ — **đã xong**, xem T-059→T-066 và T-090 ở mục Đã hoàn thành.
 
 ### Nhóm E — Chuẩn bị phát hành Play Store
 
@@ -272,14 +279,11 @@ Chỉ còn `StatsScreen.kt` là placeholder (12 dòng, gọi `PlaceholderScreen`
 
 ## Đề xuất thứ tự ưu tiên tiếp theo
 
-Backend production đang chạy economy v2 (T-059→T-068, release `backend-v1.20260723.003`, đã reseed thật T-070); trên working tree hiện đã có thêm cả economy v3 (T-077/T-078: chọn 1 tiền tệ/phiên, tỉ giá cố định 1:10) và module Debug/cheat (T-085) nhưng **backend chưa release/deploy bản mới** này. Android đã chạy thật 6/10 màn và đã cập nhật hết theo cả 3 đợt (T-029→T-031, T-040, T-041, T-069, T-071→T-089) nhưng **chưa commit/push**. Trọng tâm tiếp theo:
+Backend production đang chạy economy v3 đã reseed (`backend-v1.20260723.004`, T-090); Android đã release `app-v1.20260723.002` (versionCode 2) với build/ký/upload asset qua CI xác nhận thành công. Cả 2 phía đều đã đồng bộ (tỉ giá 1:10, chọn 1 loại thưởng). Trọng tâm tiếp theo:
 
-1. **Xác nhận rồi commit/push toàn bộ** (backend economy v3 + Debug module, Android T-069/T-071→T-089) — khối lượng thay đổi rất lớn đang nằm ở working tree, đã verify kỹ qua `curl` + emulator (kể cả nhiều bug phát hiện qua test thật đã fix — decode favorite-toggle, vỡ dòng Shop header, 2 bug layout bubble số dư, Column overflow ở Cài đặt, FQN tooltip không biên dịch được, tap-vs-drag của bubble cheat, lưới Khu rừng lệch hàng/mất hào quang, hình loài không hiện khi nở, Khu rừng không tự cập nhật) nhưng chưa vào git history.
-2. **Release + deploy backend economy v3 lên production** (theo quy trình `backend-v1.20260723.003` đã dùng) rồi **reseed lại production** với seed mới (tỉ giá 1:10 + bonus loài đa dạng, T-077/T-078) — hiện production vẫn đang chạy giá/tỉ giá economy v2 cũ, lệch với Android sắp release.
-3. **Refresh-token flow cho `AuthRepository`** — ưu tiên cao vì access token hết hạn sau 15 phút gây `401` liên tục gặp phải khi tự kiểm thử thật (kể cả giữa lúc test T-086→T-089, phải đăng xuất/đăng nhập lại nhiều lần); T-081 mới chỉ là giải pháp tạm (cache email/id vào DataStore) chứ chưa giải quyết gốc. Càng nhiều màn cần JWT càng gặp lại lỗi này.
-4. **T-038 (màn Thống kê)** — màn cuối cùng còn placeholder trong 4 tab chính.
-5. **T-039 phần còn lại** — Strict Mode/âm thanh/thời gian mặc định (`SettingsRepository`), Sao lưu Google Drive (`SyncRepository`), UI Kho đồ (equip bình/nhạc).
-6. Song song lúc rảnh: **T-044** (Swagger summary), **T-042** (SoundManager/NotificationManager)
-7. **T-053 → T-054** — chỉ làm khi app đã chạy được, để build release Android có ý nghĩa
-8. Test suite (Nhóm B/C) và chuẩn bị Play Store (Nhóm E) làm cuối, khi app đã chạy được end-to-end
-9. **Cân nhắc gỡ menu cheat tester (T-085) trước khi phát hành Play Store thật** — dù đã chặn server-side theo email tester, đây vẫn là bề mặt tấn công/endpoint debug không nên tồn tại vĩnh viễn trên production một khi không còn cần QA nội bộ.
+1. **Refresh-token flow cho `AuthRepository`** — ưu tiên cao vì access token hết hạn sau 15 phút gây `401` liên tục gặp phải khi tự kiểm thử thật (kể cả giữa lúc test T-086→T-089, phải đăng xuất/đăng nhập lại nhiều lần); T-081 mới chỉ là giải pháp tạm (cache email/id vào DataStore) chứ chưa giải quyết gốc. Càng nhiều màn cần JWT càng gặp lại lỗi này.
+2. **T-038 (màn Thống kê)** — màn cuối cùng còn placeholder trong 4 tab chính.
+3. **T-039 phần còn lại** — Strict Mode/âm thanh/thời gian mặc định (`SettingsRepository`), Sao lưu Google Drive (`SyncRepository`), UI Kho đồ (equip bình/nhạc).
+4. Song song lúc rảnh: **T-044** (Swagger summary), **T-042** (SoundManager/NotificationManager)
+5. Test suite (Nhóm B/C) và chuẩn bị đăng thật lên Play Console (Nhóm E — feature graphic, Privacy Policy, Data safety form, content rating) — hạ tầng release đã sẵn sàng (T-053/T-054 xong), chỉ còn phần thủ tục/nội dung.
+6. **Cân nhắc gỡ menu cheat tester trước khi phát hành Play Store thật** — dù đã chặn server-side theo email tester, đây vẫn là bề mặt tấn công/endpoint debug không nên tồn tại vĩnh viễn trên production một khi không còn cần QA nội bộ.
