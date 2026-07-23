@@ -8,7 +8,9 @@ services:
     restart: unless-stopped
     env_file: .env
     ports:
-      - "127.0.0.1:3000:3000"
+      # Cổng host 3012 (không phải 3000) — tránh đụng service khác trên server. Bên trong
+      # container app vẫn lắng nghe ở PORT=3000 (xem .env), không đổi.
+      - "127.0.0.1:3012:3000"
     depends_on:
       db:
         condition: service_healthy
@@ -20,10 +22,10 @@ services:
       POSTGRES_USER: cozypomo
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      # 5433 ở host (không phải 5432) — tránh đụng Postgres/service khác đã chiếm 5432 sẵn trên
+      # 5437 ở host (không phải 5432) — tránh đụng Postgres/service khác đã chiếm 5432 sẵn trên
       # server. Container "api" vẫn nối "db" qua mạng nội bộ Docker ở cổng 5432 như thường
       # (xem DATABASE_URL trong .env), đổi cổng host không ảnh hưởng gì tới việc đó.
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:5437:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
