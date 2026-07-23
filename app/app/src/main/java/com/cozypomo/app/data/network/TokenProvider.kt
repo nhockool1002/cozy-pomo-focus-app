@@ -4,8 +4,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Giữ access/refresh token trong bộ nhớ cho scaffold ban đầu.
- * TODO: chuyển sang lưu bền bằng Jetpack DataStore trước khi triển khai đăng nhập thật.
+ * Cache token trong RAM để AuthInterceptor đọc đồng bộ trên mỗi request.
+ * Nguồn bền (DataStore) và vòng đời đăng nhập/đăng xuất do AuthRepository quản lý —
+ * xem AuthRepository.restoreSession/login/register/logout.
  */
 @Singleton
 class TokenProvider @Inject constructor() {

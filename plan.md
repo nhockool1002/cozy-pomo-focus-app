@@ -14,10 +14,10 @@
 | CI/CD workflows | ✅ Đã viết **và xác nhận chạy thật thành công** | `backend-v1.20260723.001` — pipeline Release→build→push→SSH deploy chạy tự động end-to-end, không lỗi |
 | Branding (icon/favicon/logo) | ✅ Hoàn chỉnh, đã deploy | `docs/branding/`, hiện trên `/admin` thật |
 | Backend production | ✅ **Đang chạy thật** tại `https://cozyapi.nhutnm.id.vn` | Domain + SSL + Reverse Proxy + Docker trên aaPanel, đã verify `/health` `/docs` `/admin` |
-| Android app | 🟥 Chỉ mới scaffold điều hướng | Toàn bộ 13 màn hình trong Screen List còn là placeholder |
+| Android app | 🟨 Splash/Onboarding/Đăng nhập/Trang chủ chạy thật | T-029→T-031, T-040, T-041 xong + tích hợp API thật end-to-end; 9 màn còn lại (S-02…S-07a) vẫn placeholder |
 | Test suite (backend + Android) | ⬜ Chưa có | 0 file test ở cả 2 phía |
 | Android release (keystore/secrets/Play Store) | ⬜ Chưa làm | Cần app chạy được trước (xem Nhóm A) |
-| Working tree | ✅ Sạch, mọi thứ đã commit + push lên `main` | — |
+| Working tree | 🟨 Có thay đổi chưa commit | Splash/Onboarding/Login/Trang chủ (T-029→T-031, T-040, T-041) — xem mục Đã hoàn thành |
 
 ---
 
@@ -72,27 +72,38 @@
 - **T-066 — Release đầu tiên `backend-v1.20260723.001`.** Xác nhận toàn bộ pipeline `GitHub Release → build-and-push (ghcr.io) → SSH deploy (pull + up -d)` chạy tự động thành công, không cần thao tác tay trên server (sau khi sửa xong T-060 → T-062). Đây là lần đầu tiên quy trình auto-deploy hoạt động end-to-end đúng như thiết kế.
 - **T-067 — Fix `Dockerfile` thiếu `COPY public/`.** Sau khi deploy, favicon/logo AdminJS bị vỡ ảnh trên production dù cấu hình đúng — do giai đoạn `runner` của `Dockerfile` chưa từng copy thư mục `public/` (chỉ copy `dist/`, `prisma/`, `src/admin/components/`) nên `useStaticAssets` không có gì để phục vụ trong container thật, dù chạy đúng khi test từ source local. Đã thêm `COPY public ./public`, build thử local xác nhận file có mặt trong image trước khi release `backend-v1.20260723.002` — đã verify `/branding/favicon.png` và `/branding/logo.png` trả `200` qua domain thật.
 
+### Android — Phase 1: Splash → Onboarding → Đăng nhập (2026-07-23)
+
+- **T-040 — Splash (S-00) + Onboarding (S-00b) thật.** `ui/splash/SplashScreen.kt` đọc `AuthRepository` (DataStore) để quyết định điều hướng kế tiếp (Onboarding lần đầu / Login / thẳng Main). `ui/onboarding/OnboardingScreen.kt` — 3 slide `HorizontalPager`, xin quyền `POST_NOTIFICATIONS` ở slide cuối (chỉ Android 13+), đánh dấu đã xem vào DataStore nên chỉ hiện đúng 1 lần. `ui/common/JarMark.kt` — icon bình ấp trứng vẽ bằng `Canvas` (chưa có illustration asset thật ngoài icon app T-021/T-022).
+- **T-041 — Đăng nhập/Đăng ký thật, tích hợp API.** `ui/login/LoginScreen.kt` + `LoginViewModel` — 1 màn toggle Đăng nhập/Đăng ký, gọi thật `POST /auth/login`/`register`, validate phía client, dịch lỗi HTTP sang tiếng Việt (`AuthErrorMapper.kt`). `data/auth/AuthRepository.kt` là nguồn sự thật: bọc `ApiService.auth/*` + `DataStore<Preferences>` (bền, qua `AuthDataStoreModule`) + `TokenProvider` (RAM, để `AuthInterceptor` đọc đồng bộ). `ui/navigation/RootNavHost.kt` nối graph cấp cao Splash→Onboarding→Login→Main (bọc ngoài `CozyPomoNavHost` 4-tab cũ). Đã test thật trên emulator (Pixel 5, API 30) với tài khoản seed `tester01@cozypomo.dev` — login trả `200`, JWT lưu bền, mở lại app vào thẳng Main.
+  - **Bug đã gặp & fix:** (1) KSP2 không resolve được `AuthRepository` khi inject qua `Context.authDataStore by preferencesDataStore(...)` (extension property + delegate) — fix bằng cách cấp `DataStore<Preferences>` qua `@Provides` trong `AuthDataStoreModule` thay vì extension property. (2) Debug build gọi `http://10.0.2.2:3000` bị chặn bởi Network Security Policy mặc định (chỉ cho HTTPS) — thêm `app/src/debug/res/xml/network_security_config_debug.xml` cho phép cleartext tới `10.0.2.2`/`localhost`, chỉ áp dụng build debug (release vẫn HTTPS nguyên vẹn).
+  - **Chưa làm trong T-041:** không có refresh-token flow tự động khi access token hết hạn (chỉ lưu/gửi token, chưa gọi `/auth/refresh` khi 401) — cần làm khi xây các Repository gọi API cần JWT khác ở Nhóm A. **Đã quan sát thật:** access token hết hạn sau 15 phút (`exp - iat`), lúc test T-031 số dư Xu Lá bị `401` do token cũ — phải đăng nhập lại mới gọi được API cần JWT. Cần ưu tiên làm refresh-token flow sớm trong Nhóm A, không để tới cuối.
+
+### Android — Phase 2: Room DB + TimerRepository + Trang chủ (2026-07-23)
+
+- **T-029 — Room DB local-first.** `data/local/session/SessionEntity.kt` + `SessionDao.kt` + `CozyPomoDatabase.kt` (`DatabaseModule.kt` cấp qua Hilt). Chỉ có bảng `sessions` ở bản đầu (đủ cho T-030) — các bảng khác (inventory, collection, settings) sẽ thêm khi xây Repository tương ứng, không tạo trước schema chưa dùng tới.
+- **T-030 — TimerRepository + Foreground Service.** `data/timer/TimerRepository.kt` — `startSession`/`giveUpSession`/`completeSession`/`observeActiveSession` đúng Function List §3.1; Room là nguồn sự thật cho phiên đang chạy, backend (`POST /sessions`, `PATCH .../complete`, `PATCH .../give-up`) đồng bộ best-effort (chưa có outbox retry đầy đủ — đó là T-043). `data/timer/TimerForegroundService.kt` đếm bằng `SystemClock.elapsedRealtime()`, tự gọi `completeSession` khi về 0 dù UI không mở, cập nhật notification mỗi giây; khai báo `foregroundServiceType="specialUse"` + `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` trong `AndroidManifest.xml` (bắt buộc từ Android 14). `ensureServiceRunningIfActive()` tự khởi động lại service nếu Home mở lại và Room còn phiên RUNNING dở dang (service từng bị hệ thống kill).
+- **T-031 — UI Trang chủ/Timer (S-01) thật.** `ui/home/HomeViewModel.kt` + `HomeScreen.kt` — bình ấp (`JarMark`) + nút "+" mở popup chọn trứng tối giản (chỉ tên + màu, chưa có trạng thái khoá theo sở hữu — đó là T-032 đầy đủ), đồng hồ đếm ngược lớn, slider 10–120 phút (khoá khi đang chạy), nút BẮT ĐẦU ⇄ BỎ CUỘC, dialog xác nhận bỏ cuộc, Snackbar hiện kết quả nở trứng (tên loài + Xu Lá) khi `TimerRepository.hatchEvents` bắn — thay cho hoạt ảnh nở trứng đầy đủ (T-034, chưa làm). Số dư Xu Lá đọc trực tiếp qua `GET /currency/balance` (không qua CurrencyRepository riêng — chưa cần thiết ở quy mô này).
+  - **Đã test thật trên emulator** (tài khoản `tester01@cozypomo.dev`): bắt đầu phiên → `POST /sessions` trả `201` → đếm ngược đúng theo giây (đối chiếu qua notification) → chỉnh thẳng `startElapsedRealtimeMs`/`plannedMin` trong SQLite (qua `adb run-as` + `sqlite3`) để mô phỏng hết giờ mà không phải chờ thật → xác nhận Foreground Service tự gọi `completeSession`, backend roll ra loài thật ("Sứa Đêm Sâu", cấp B), Xu Lá cộng đúng (`60 → 125`, +65 = plannedMin ban đầu), UI reset về Idle + Snackbar. Test riêng luồng Bỏ cuộc: dialog cảnh báo đúng, `PATCH .../give-up` trả `200`, Xu Lá không đổi, UI reset về Idle.
+
 ---
 
 ## ⬜ Chưa làm
 
 ### Nhóm A — Android app: xây từng màn hình thật (việc lớn nhất còn lại)
 
-Hiện tại 4 file màn hình (`HomeScreen.kt`, `ForestScreen.kt`, `ShopScreen.kt`, `StatsScreen.kt`) mỗi file chỉ 12 dòng, gọi chung 1 `PlaceholderScreen` hiển thị tiêu đề + mô tả — chưa có UI, chưa có ViewModel, chưa có data layer nào phía app (ngoài tầng network gọi API thô). Cần xây theo đúng Screen List trong `docs/technical-spec.md` mục 2, và các hàm Repository ở mục 3.
+3 file màn hình (`ForestScreen.kt`, `ShopScreen.kt`, `StatsScreen.kt`) vẫn chỉ 12 dòng, gọi chung 1 `PlaceholderScreen`. `HomeScreen.kt` (S-01) đã có UI/ViewModel/data layer thật (xem T-029→T-031 ở mục Đã hoàn thành). Cần xây các màn còn lại theo đúng Screen List trong `docs/technical-spec.md` mục 2, và các hàm Repository ở mục 3.
 
-- **T-029 — Room DB local-first.** Tạo schema Room phản chiếu dữ liệu cần cache offline (session đang chạy, inventory trứng, collection đã mở khoá, settings) — nền tảng bắt buộc trước khi làm bất kỳ ViewModel nào, vì kiến trúc đề ra là local-first + đồng bộ nền qua WorkManager (xem `SyncRepository` mục 3.8 và bộ nhớ dự án `cozypomo-db-recommendation`).
-- **T-030 — TimerRepository + Foreground Service (S-01).** Đếm ngược chính xác kể cả khi khoá màn hình (dùng `SystemClock.elapsedRealtime()`, không dùng `Handler.postDelayed` đơn thuần vì trôi giờ), các hàm `startSession`/`giveUpSession`/`completeSession`/`observeActiveSession`. Đây là lõi của toàn bộ app — nên làm đầu tiên trong nhóm A.
-- **T-031 — Màn Trang chủ/Timer (S-01) UI thật.** Bình ấp trên giá gỗ, đồng hồ đếm ngược lớn, slider 10–120 phút, nút Bắt đầu → đổi thành nút đỏ "Bỏ cuộc" khi đang chạy, nút "+" mở popup chọn trứng.
-- **T-032 — Popup chọn Trứng/Hạt giống (S-02).** Danh sách trứng đã sở hữu (từ `EggRepository.getOwnedEggs`), trạng thái khoá nếu chưa mua.
-- **T-033 — Dialog xác nhận Bỏ cuộc.** Cảnh báo mất tiến trình (Strict Mode), 2 nút Huỷ/Đồng ý.
-- **T-034 — Hoạt ảnh nở trứng (S-01a).** Animation nở khi timer về 0, reveal loài mới (gọi `TimerRepository.completeSession` → `EggRepository.rollHatchResult`), hiện số Xu Lá nhận được, điều hướng sang "Xem khu rừng" hoặc quay lại S-01.
+- ~~T-029 Room DB local-first~~, ~~T-030 TimerRepository + Foreground Service~~, ~~T-031 Màn Trang chủ/Timer UI thật~~ — **đã xong**, xem mục Đã hoàn thành.
+- **T-032 — Popup chọn Trứng/Hạt giống (S-02) đầy đủ.** T-031 đã có popup chọn trứng *tối giản* (tên + màu, gọi thẳng `GET /egg-types`) — T-032 cần nâng cấp: chỉ hiện trứng **đã sở hữu** (`EggRepository.getOwnedEggs`, cần Inventory từ T-037/Shop trước), trạng thái khoá nếu chưa mua, số lượng còn lại.
+- ~~T-033 Dialog xác nhận Bỏ cuộc~~ — **đã xong** (làm chung với T-031, xem `HomeScreen.kt`).
+- **T-034 — Hoạt ảnh nở trứng (S-01a) đầy đủ.** `TimerRepository.completeSession` (đã xong ở T-030) đã trigger đúng lúc và trả kết quả roll thật qua `hatchEvents`; T-031 mới chỉ hiện Snackbar tạm ("Trứng đã nở: <tên> (+N Xu Lá)") thay vì màn hoạt ảnh riêng. T-034 cần thay Snackbar bằng animation nở thật (reveal loài + hào quang theo cấp bậc) và điều hướng sang "Xem khu rừng" hoặc quay lại S-01.
 - **T-035 — Màn Khu rừng/Bộ sưu tập (S-04) UI thật.** Tabs lọc Tất cả/Thú rừng/Sinh vật biển/Thực vật, lưới thẻ loài + badge cấp bậc (gọi `CollectionRepository.getCollection`), thẻ chưa mở khoá hiện bóng đen + dấu "?".
 - **T-036 — Chi tiết loài/Lore (S-03).** Popup khi chạm thẻ đã mở khoá — ảnh loài, tên, cấp bậc, lore text, nút yêu thích (`toggleFavorite`).
 - **T-037 — Màn Cửa hàng (S-05) UI thật.** Tabs danh mục (Trứng mới/Bình thuỷ tinh/Nhạc nền), danh sách item với trạng thái nút theo số dư Xu Lá (`ShopRepository.getShopItems`), dialog xác nhận mua trước khi `purchaseItem`.
 - **T-038 — Màn Thống kê (S-06) UI thật.** Biểu đồ ngày/tuần/tháng (`StatsRepository.getDailyStats`/`getRangeStats`), streak, tổng phiên thành công/thất bại.
 - **T-039 — Màn Cài đặt (S-07) + Sao lưu & Đồng bộ (S-07a).** Cấu hình thời gian mặc định, Strict Mode, âm thanh (`SettingsRepository`); kết nối Google Drive, xem thời điểm sao lưu gần nhất, nút "Sao lưu ngay"/"Khôi phục" (`SyncRepository`).
-- **T-040 — Splash + Onboarding (S-00, S-00b).** Làm nóng Room DB/DataStore lúc khởi động; 2-3 slide giới thiệu cơ chế ấp trứng + xin quyền thông báo (chỉ hiện lần đầu).
-- **T-041 — Màn Đăng nhập/Đăng ký.** Chưa có trong Screen List gốc nhưng bắt buộc phải có trước khi gọi được API cần JWT — form gọi `/auth/register` `/auth/login`, lưu token qua `TokenProvider` đã có sẵn ở tầng network.
+- ~~T-040 Splash + Onboarding~~, ~~T-041 Đăng nhập/Đăng ký~~ — **đã xong**, xem mục Đã hoàn thành.
 - **T-042 — SoundManager/NotificationManager.** Nhạc nền lofi/mưa qua Media3, tiếng "ting" hoàn thành qua SoundPool, thông báo khi màn hình khoá lúc hết giờ (mục 3.9 technical-spec).
 - **T-043 — WorkManager đồng bộ offline→online.** Hàng đợi outbox cho phiên/giao dịch gửi thất bại lúc mất mạng, gọi `POST /sync/batch` khi có mạng lại.
 
@@ -124,11 +135,10 @@ Hiện tại 4 file màn hình (`HomeScreen.kt`, `ForestScreen.kt`, `ShopScreen.
 
 ## Đề xuất thứ tự ưu tiên tiếp theo
 
-Backend đã deploy production hoàn chỉnh (T-059→T-066) — trọng tâm tiếp theo chuyển hẳn sang Android:
+Backend đã deploy production hoàn chỉnh (T-059→T-066); Splash/Onboarding/Đăng nhập/Trang chủ Android đã chạy thật, tích hợp API thành công end-to-end kể cả Foreground Service (T-029→T-031, T-040, T-041) — trọng tâm tiếp theo:
 
-1. **T-029 → T-030 → T-031** — Room DB + TimerRepository + màn Trang chủ thật (lõi sản phẩm, mọi màn khác phụ thuộc vào đây)
-2. **T-041** — màn Đăng nhập (chặn mọi API cần JWT, backend đã sẵn sàng nhận request thật ở `https://cozyapi.nhutnm.id.vn`)
-3. Các màn còn lại theo thứ tự Screen List (T-032 → T-039)
-4. Song song lúc rảnh: **T-044** (Swagger summary)
-5. **T-053 → T-054** — chỉ làm khi app đã chạy được, để build release Android có ý nghĩa
-6. Test suite (Nhóm B/C) và chuẩn bị Play Store (Nhóm E) làm cuối, khi app đã chạy được end-to-end
+1. **Refresh-token flow cho `AuthRepository`** — ưu tiên cao vì đã quan sát thật access token hết hạn sau 15 phút gây `401` khi test T-031; càng nhiều màn cần JWT (T-032→T-039) càng gặp lại lỗi này.
+2. Các màn còn lại theo thứ tự Screen List: **T-032** (Egg picker đầy đủ, cần Inventory) → **T-034** (hoạt ảnh nở trứng, thay Snackbar tạm) → **T-035 → T-039**
+3. Song song lúc rảnh: **T-044** (Swagger summary)
+4. **T-053 → T-054** — chỉ làm khi app đã chạy được, để build release Android có ý nghĩa
+5. Test suite (Nhóm B/C) và chuẩn bị Play Store (Nhóm E) làm cuối, khi app đã chạy được end-to-end

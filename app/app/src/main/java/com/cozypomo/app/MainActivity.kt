@@ -7,7 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.cozypomo.app.ui.navigation.CozyPomoNavHost
+import com.cozypomo.app.ui.navigation.RootNavHost
 import com.cozypomo.app.ui.theme.CozyPomoTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             CozyPomoTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    CozyPomoNavHost()
+                    RootNavHost()
                 }
             }
         }
