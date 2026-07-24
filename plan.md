@@ -2,7 +2,7 @@
 
 > Tài liệu này theo dõi tiến độ toàn dự án ở mức task cụ thể. Cập nhật thủ công mỗi khi có thay đổi lớn — không tự động sinh. Tham chiếu: [`docs/technical-spec.md`](docs/technical-spec.md) (kiến trúc/Screen List/Function List), [`docs/setup-checklist.md`](docs/setup-checklist.md) (checklist hạ tầng), [`docs/deploy_backend.md`](docs/deploy_backend.md) (hướng dẫn deploy).
 >
-> Tác giả sản phẩm: Dev1002. Cập nhật lần cuối: 2026-07-23.
+> Tác giả sản phẩm: Dev1002. Cập nhật lần cuối: 2026-07-24.
 
 ## Tổng quan tình trạng
 
@@ -14,10 +14,10 @@
 | CI/CD workflows | ✅ Đã viết **và xác nhận chạy thật thành công cho cả backend lẫn Android** | `backend-v1.20260723.004` (build→push→SSH deploy) và `app-v1.20260723.002` (build→ký release→upload asset) đều chạy xanh end-to-end — T-054 (test workflow Android lần đầu) coi như xong |
 | Branding (icon/favicon/logo) | ✅ Hoàn chỉnh, đã deploy | `docs/branding/`, hiện trên `/admin` thật |
 | Backend production | ✅ **Đang chạy thật** tại `https://cozyapi.nhutnm.id.vn`, đã lên `backend-v1.20260723.004` (economy v3, đã reseed) | Domain + SSL + Reverse Proxy + Docker trên aaPanel, đã verify `/health` + `/game-settings` (`coinsPerFocusMinute: 10`) + đăng nhập tester sau reseed |
-| Android app | 🟨 6/10 màn chạy thật: Splash/Onboarding/Đăng nhập/Trang chủ/Khu rừng/Cửa hàng | T-029→T-031, T-040, T-041, T-069, T-071→T-089 xong, **đã release `app-v1.20260723.002`** (versionCode 2, versionName 0.2.0); còn S-06 Thống kê + S-07a Sao lưu (T-038/T-039 phần đồng bộ) là placeholder |
+| Android app | 🟨 8/9 màn chạy thật (S-07a chủ động bỏ theo yêu cầu Dev1002 — xem T-095): Splash/Onboarding/Đăng nhập/Trang chủ/Khu rừng/Cửa hàng/Thống kê/Cài đặt | T-029→T-031, T-040, T-041, T-069, T-071→T-089, T-091→T-095 xong (2026-07-24: T-038 Thống kê + T-039 Cài đặt phần còn lại thật, trừ Sao lưu Google Drive); **đã release `app-v1.20260723.002`**, batch T-091→T-095 **chưa release/reseed lên production, chưa commit/push** |
 | Test suite (backend + Android) | ⬜ Chưa có | 0 file test ở cả 2 phía |
 | Android release (keystore/secrets/Play Store) | ✅ Secrets đã cấu hình, workflow đã chạy thật thành công | `app-v1.20260723.002` build/ký/upload asset OK (T-053/T-054 xong) — còn thiếu bước đăng thật lên Play Console (Nhóm E) |
-| Working tree | ✅ Sạch, đã push hết lên `main` | Toàn bộ economy v2/v3, UI overhaul, bubble-cheat, T-086→T-090 đã push + release — xem mục Đã hoàn thành |
+| Working tree | 🟨 Có thay đổi chưa commit (T-091→T-095, 2026-07-24) | Bug fix tiến trình ấp trứng + redesign bubble cheat + refresh-token flow + màn Thống kê + Cài đặt phần còn lại — xem mục Đã hoàn thành |
 
 ### ✅ Production đã reseed theo economy v2 (2026-07-23)
 
@@ -233,13 +233,39 @@ Theo phản hồi tiếp theo của Dev1002 sau khi dùng thử T-085: bubble ch
   - **Android:** bump `versionCode 1→2`, `versionName "0.1.0"→"0.2.0"` (release đầu tiên chưa từng bump version dù đã tồn tại `app-v1.20260723.001` — lần này nội dung tăng đáng kể nên bump cho đúng). Dev1002 xác nhận đã tự cấu hình xong 4 GitHub Secrets ký release (`ANDROID_KEYSTORE_BASE64/PASSWORD`, `ANDROID_KEY_ALIAS/PASSWORD`) — tạo GitHub Release `app-v1.20260723.002` → `android-release.yml` chạy **lần đầu tiên với secrets thật** (trước đó T-054 ghi nhận "chưa test lần nào"), build `bundleRelease`/`assembleRelease` ký bằng keystore thật, upload `app-release.aab` + `app-release.apk` vào release — xác nhận qua `gh run watch` (job `build` xanh) và `gh release view` thấy đủ 2 asset.
   - **Kết quả:** cả backend lẫn Android đều đã có bản release thật đang chạy khớp nhau (tỉ giá 1:10, chọn 1 loại thưởng, Khu rừng/Cửa hàng/Cài đặt/bubble cheat...); T-053/T-054 (Nhóm D) coi như xong.
 
+### Android — Bug tiến trình ấp trứng, redesign bubble cheat, refresh-token, màn Thống kê + Cài đặt còn lại (2026-07-24)
+
+Theo yêu cầu tiếp theo của Dev1002: sửa bug hiển thị tiến trình ấp trứng, làm đẹp lại modal bubble cheat, xây refresh-token flow (điểm nghẽn ưu tiên cao nhất còn lại), và xây 2 màn còn thiếu trong 4 tab chính + Cài đặt (T-038/T-039), **chủ động bỏ hẳn Sao lưu Google Drive (S-07a/`SyncRepository`)** khỏi phạm vi theo yêu cầu — không phải hoãn lại, mà không làm. Đã build `compileDebugKotlin` thành công (toàn bộ module), **chưa chạy tay trên emulator, chưa commit/push**.
+
+- **T-091 — Fix bug: tiến trình ấp trứng không cập nhật ngay khi phiên hoàn thành.**
+  - Nguyên nhân: `HomeViewModel` chỉ gọi `loadOwnedEggs()` (bất đồng bộ, phải đợi mạng) khi nhận `completionEvents` — trong lúc đó, `sessionState` (đọc từ Room, đổi gần như ngay lập tức khi `TimerRepository.completeSession()` ghi `status=COMPLETED`) đã chuyển Running→Idle, khiến `HomeScreen.jarProgress` rơi vào nhánh `else` dùng `selectedEgg.incubatedMin` **CŨ** (giá trị trước khi phiên vừa hoàn thành) cho tới khi network kịp trả về — tạo cảm giác "chưa cập nhật ngay".
+  - Fix: `HomeViewModel` vá `selectedOwnedEgg` NGAY (đồng bộ, trong cùng lần cập nhật state với `sessionResult`) từ chính dữ liệu đã có sẵn trong `SessionCompletionResult` (`Incubating.incubatedMin`, hoặc `null` nếu `Hatched` vì trứng không còn ở trạng thái INCUBATING nữa) — không cần đợi `loadOwnedEggs()` mới thấy đúng số liệu.
+  - Bug thứ 2 cùng gốc: `TimerRepository.completeSession()` trước đây không báo cho `CollectionEventBus` — nếu đang đứng ở tab Khu rừng/Kho Trứng khi 1 phiên hoàn thành ở Trang chủ (hoặc Foreground Service tự hoàn thành lúc không mở app), tiến trình ấp ở đó vẫn hiện số liệu cũ tới khi rời rồi quay lại tab, y hệt lỗi cheat-bubble đã sửa ở T-089 nhưng cho trường hợp hoàn thành phiên thật. Fix: `TimerRepository` inject thêm `CollectionEventBus`, gọi `notifyChanged()` sau khi emit kết quả nếu có `ownedEgg`/`hatched` liên quan.
+- **T-092 — Redesign bubble cheat (Tester) thành lưới thẻ nhỏ.** `TesterCheatMenu.kt` viết lại hoàn toàn: bỏ `LazyColumn` nút full-width cũ, thay bằng 1 hàng 3 thẻ vuông (Xu Lá/Giờ tích luỹ/Kéo phiên) + lưới 3 cột (Trứng Bí Ẩn + 5 thẻ hạng B/A/S/SS/SSR, tái dùng màu `RARITY_BADGE` có sẵn từ `SpeciesArt.kt` cho đúng ngôn ngữ hình ảnh với Khu rừng) — gọn và "tinh tế" hơn theo đúng yêu cầu.
+- **T-093 — Refresh-token flow cho `AuthRepository`.** Điểm nghẽn ưu tiên cao nhất còn lại theo ghi nhận ở T-041/T-081 (access token hết hạn sau 15 phút, gây `401` liên tục khi tự kiểm thử).
+  - `TokenAuthenticator.kt` mới (implement `okhttp3.Authenticator`, không phải Interceptor — chỉ Authenticator mới được OkHttp gọi lại kèm request gốc để retry sau 401) — khi 1 request có JWT nhận `401`: khoá `synchronized` để tránh nhiều request song song cùng gọi refresh, gọi `POST /auth/refresh` qua `RefreshApiService` (Retrofit **riêng**, dùng `OkHttpClient` **không** gắn `TokenAuthenticator` — tránh đệ quy vô hạn khi chính `/auth/refresh` cũng trả 401), cập nhật `TokenProvider` + persist vào DataStore, rồi retry request gốc với token mới. Nếu refresh token cũng hết hạn (>30 ngày không mở app) → xoá sạch phiên (access/refresh token + email/id cache) → `AuthRepository.isLoggedIn` tự chuyển `false`.
+  - `NetworkModule.kt`: thêm qualifier `@RefreshHttpClient` cho `OkHttpClient` riêng của `RefreshApiService` (tránh xung đột binding với `OkHttpClient` chính), gắn `.authenticator(tokenAuthenticator)` vào client chính.
+  - `SessionViewModel.kt` mới (tạo 1 lần ở `CozyPomoNavHost`, cùng tầng với `currencyViewModel`/`cheatViewModel`) quan sát `authRepository.isLoggedIn` — khi `TokenAuthenticator` phải xoá phiên vì refresh token cũng hết hạn (không phải người dùng tự bấm Đăng xuất), Flow này tự chuyển `false` và `CozyPomoNavHost` tự điều hướng về Login qua `onLogout()`, không cần người dùng tự nhận ra rồi vào Cài đặt bấm Đăng xuất thủ công.
+  - **Chưa verify trên emulator/production thật** (chỉ xác nhận build thành công) — cần test thật: để access token hết hạn tự nhiên (hoặc chỉnh giờ máy) rồi gọi 1 API cần JWT, xác nhận tự refresh mà không văng về Login; và test refresh token hết hạn (JWT_REFRESH_SECRET đổi hoặc token thu hồi) để xác nhận tự điều hướng Login đúng.
+- **T-094 — Màn Thống kê (S-06) thật.** `StatsViewModel.kt` mới: gọi `GET /stats/range` (7 ngày gần nhất theo ngày local máy, không cố khớp tuyệt đối UTC với backend) + `GET /stats/summary`, tự điền 0 cho ngày không có phiên nào (backend chỉ trả ngày CÓ dữ liệu). `StatsScreen.kt` viết lại hoàn toàn (trước là `PlaceholderScreen`): thẻ streak (icon lửa), 2 ô thống kê phiên hoàn thành/bỏ cuộc trong 7 ngày, biểu đồ cột tự vẽ bằng `Box` lồng nhau (không dùng thư viện chart ngoài) cho phút tập trung mỗi ngày, cột hôm nay tô đậm hơn.
+- **T-095 — Cài đặt (S-07) phần còn lại — trừ Sao lưu Google Drive theo yêu cầu.**
+  - `SettingsViewModel.kt`: thêm `GET`/`PATCH /settings` (đã có sẵn ở backend từ T-010, Android chưa gọi tới) — cấu hình thời gian tập trung/nghỉ mặc định (`Slider`, chỉ PATCH khi thả tay qua `onValueChangeFinished`, kéo mượt không gọi mạng liên tục) + Strict Mode (`Switch`) + chủ đề âm thanh (`FilterChip` 4 lựa chọn cứng: Mặc định/Mưa/Rừng/Lo-fi — chỉ lưu lựa chọn, **chưa** phát âm thanh thật, đó là T-042 riêng chưa làm). Thêm Kho đồ: `GET /inventory` (đã có từ T-076 nhưng chỉ dùng để check sở hữu ở Cửa hàng, chưa có UI riêng) + `PATCH /inventory/:id/equip` (có từ T-008, chưa từng có UI gọi tới) — liệt kê bình/nhạc đã mua, nút "Dùng"/"Đang dùng".
+  - `SettingsScreen.kt`: thêm 3 `SettingsSection` mới ("Cấu hình phiên tập trung", "Âm thanh", "Kho đồ") giữa "Tài khoản" và "Số dư" đã có.
+  - **Chủ động KHÔNG làm** S-07a (Sao lưu & Đồng bộ Google Drive, `SyncRepository`) theo đúng yêu cầu — khác các mục "chưa làm" khác trong plan này, đây là quyết định phạm vi, không phải để dành làm sau.
+  - **Chưa verify trên emulator** (chỉ xác nhận build thành công) — cần test thật: kéo Slider thời gian tập trung/nghỉ xác nhận PATCH đúng giá trị sau khi thả tay, bật/tắt Strict Mode, chọn chủ đề âm thanh, mua 1 bình/nhạc ở Cửa hàng rồi xác nhận hiện đúng trong Kho đồ + bấm "Dùng" chuyển đúng trạng thái `equipped`.
+
+- **T-096 — Fix thông báo (Snackbar) bị thanh điều hướng che khuất, đổi sang modal.** Dev1002 chụp ảnh cho thấy Snackbar kết quả cheat ("Đã kéo phiên đang chạy về còn ~5s") bị đè bởi bottom nav + thanh điều hướng hệ thống 3 nút.
+  - Nguyên nhân: cả 2 Snackbar trong app (cheat message ở `CozyPomoNavHost.kt`, kết quả mua hàng ở `ShopScreen.kt`) đều render trong 1 `Box` nổi tự do `fillMaxSize().padding(16.dp)` neo `Alignment.BottomCenter` — không tính inset của bottom nav (Scaffold) lẫn thanh điều hướng hệ thống (edge-to-edge, xem T-080 gặp vấn đề tương tự với version text ở Splash), nên bị vẽ đè lên/dưới các thanh đó.
+  - Fix: thêm `MessageDialog.kt` dùng chung (`ui/common/`) — modal `Dialog` nhỏ gọn (card bo góc, tonalElevation, nút "Đóng"), thay cho cả 2 Snackbar cũ. Dialog render trong 1 window Android riêng nên luôn hiện giữa màn hình, không bao giờ bị các thanh điều hướng che, và "tinh tế" hơn kiểu banner đáy màn hình theo đúng yêu cầu.
+  - **Chưa verify trên emulator** (chỉ xác nhận build thành công) — cần test thật: kích hoạt 1 lệnh cheat và 1 lần mua hàng ở Cửa hàng, xác nhận modal hiện giữa màn hình, không bị che bởi bottom nav/thanh điều hướng hệ thống.
+
 ---
 
 ## ⬜ Chưa làm
 
 ### Nhóm A — Android app: xây từng màn hình thật (việc lớn nhất còn lại)
 
-Chỉ còn `StatsScreen.kt` là placeholder (12 dòng, gọi `PlaceholderScreen`) — `HomeScreen.kt`, `ForestScreen.kt`, `ShopScreen.kt` đã có UI/ViewModel/data layer thật (xem T-029→T-031, T-069, T-075, T-076 ở mục Đã hoàn thành). Cần xây S-06 theo đúng Screen List trong `docs/technical-spec.md` mục 2, và hàm `StatsRepository` ở mục 3.
+`HomeScreen.kt`, `ForestScreen.kt`, `ShopScreen.kt`, `StatsScreen.kt`, `SettingsScreen.kt` nay đều có UI/ViewModel/data layer thật — không còn màn nào dùng `PlaceholderScreen` trong 4 tab chính + Cài đặt (xem T-029→T-031, T-069, T-075, T-076, T-094, T-095 ở mục Đã hoàn thành).
 
 - ~~T-029 Room DB local-first~~, ~~T-030 TimerRepository + Foreground Service~~, ~~T-031 Màn Trang chủ/Timer UI thật~~ — **đã xong**, xem mục Đã hoàn thành.
 - ~~T-032 Popup chọn Trứng đầy đủ~~ — **đã xong, gộp vào T-069** (`EggPickerDialog.kt` hiện trứng sở hữu thật qua `GET /owned-eggs`, có thanh tiến trình ấp, không còn khái niệm "khoá theo mua" — mua qua Shop tạo `OwnedEgg` mới, không phải mở khoá 1 loại chung). Xem mục Đã hoàn thành.
@@ -248,10 +274,11 @@ Chỉ còn `StatsScreen.kt` là placeholder (12 dòng, gọi `PlaceholderScreen`
 - ~~T-035 Màn Khu rừng/Bộ sưu tập (S-04) UI thật~~ — **đã xong (T-075)**, xem mục Đã hoàn thành.
 - ~~T-036 Chi tiết loài/Lore (S-03)~~ — **đã xong (T-075)**, xem mục Đã hoàn thành.
 - ~~T-037 Màn Cửa hàng (S-05) UI thật~~ — **đã xong (T-076)**, mua trứng bằng Xu Lá hoặc Giờ tích luỹ đã hoạt động thật, xem mục Đã hoàn thành.
-- **T-038 — Màn Thống kê (S-06) UI thật.** Biểu đồ ngày/tuần/tháng (`StatsRepository.getDailyStats`/`getRangeStats`), streak, tổng phiên thành công/thất bại. Vẫn placeholder.
-- **T-039 — Cài đặt (S-07) phần còn lại + Sao lưu & Đồng bộ (S-07a).** Phần lõi (tài khoản, phiên bản, đăng xuất) đã xong ở T-073 (xem mục Đã hoàn thành) — còn thiếu: cấu hình thời gian mặc định/Strict Mode/âm thanh (`SettingsRepository`, backend `GET`/`PATCH /settings` đã có sẵn từ T-010, Android chưa gọi tới); kết nối Google Drive, xem thời điểm sao lưu gần nhất, nút "Sao lưu ngay"/"Khôi phục" (`SyncRepository`). Cũng chưa có UI Kho đồ (Inventory/equip bình-nhạc đã mua ở T-076) — backend đã sẵn `PATCH /inventory/:id/equip`.
+- ~~T-038 Màn Thống kê (S-06) UI thật~~ — **đã xong**, xem T-094 ở mục Đã hoàn thành.
+- ~~T-039 Cài đặt (S-07) phần còn lại~~ — **đã xong, trừ S-07a chủ động bỏ theo yêu cầu Dev1002** (không phải hoãn — xem T-095 ở mục Đã hoàn thành). Cấu hình thời gian mặc định/Strict Mode/âm thanh + Kho đồ (equip bình-nhạc) đã có UI thật; Sao lưu & Đồng bộ Google Drive (`SyncRepository`) **không nằm trong phạm vi sản phẩm nữa** trừ khi Dev1002 yêu cầu lại.
 - ~~T-040 Splash + Onboarding~~, ~~T-041 Đăng nhập/Đăng ký~~ — **đã xong**, xem mục Đã hoàn thành.
-- **T-042 — SoundManager/NotificationManager.** Nhạc nền lofi/mưa qua Media3, tiếng "ting" hoàn thành qua SoundPool, thông báo khi màn hình khoá lúc hết giờ (mục 3.9 technical-spec).
+- ~~Refresh-token flow cho AuthRepository~~ — **đã xong (T-093)**, xem mục Đã hoàn thành — còn cần verify thật trên emulator (chỉ mới xác nhận build).
+- **T-042 — SoundManager/NotificationManager.** Nhạc nền lofi/mưa qua Media3, tiếng "ting" hoàn thành qua SoundPool, thông báo khi màn hình khoá lúc hết giờ (mục 3.9 technical-spec). Lưu ý: T-095 đã thêm UI chọn "chủ đề âm thanh" ở Cài đặt (lưu lựa chọn qua `PATCH /settings`) nhưng **chưa** phát âm thanh thật — đó vẫn là việc của T-042 này.
 - **T-043 — WorkManager đồng bộ offline→online.** Hàng đợi outbox cho phiên/giao dịch gửi thất bại lúc mất mạng, gọi `POST /sync/batch` khi có mạng lại.
 
 ### Nhóm B — Backend polish (nhỏ, không chặn deploy)
@@ -271,19 +298,18 @@ Chỉ còn `StatsScreen.kt` là placeholder (12 dòng, gọi `PlaceholderScreen`
 ### Nhóm E — Chuẩn bị phát hành Play Store
 
 - **T-055 — Feature graphic + ảnh chụp màn hình thật.** Cần Android app chạy được (sau Nhóm A) mới chụp được.
-- **T-056 — Chính sách bảo mật (Privacy Policy).** Bắt buộc với Play Console, đặc biệt vì app có lưu dữ liệu người dùng + đồng bộ Google Drive.
-- **T-057 — Data safety form trên Play Console.** Khai báo rõ việc lưu tiến trình qua Google Drive, loại dữ liệu thu thập.
+- **T-056 — Chính sách bảo mật (Privacy Policy).** Bắt buộc với Play Console vì app có lưu dữ liệu người dùng (tài khoản, tiến trình). Không còn cần nhắc Google Drive — S-07a đã bị bỏ khỏi phạm vi (xem T-095).
+- **T-057 — Data safety form trên Play Console.** Khai báo loại dữ liệu thu thập (tài khoản, tiến trình phiên tập trung); không còn mục đồng bộ Google Drive để khai báo.
 - **T-058 — Content rating.** Chọn mức phù hợp (dự kiến mọi lứa tuổi).
 
 ---
 
 ## Đề xuất thứ tự ưu tiên tiếp theo
 
-Backend production đang chạy economy v3 đã reseed (`backend-v1.20260723.004`, T-090); Android đã release `app-v1.20260723.002` (versionCode 2) với build/ký/upload asset qua CI xác nhận thành công. Cả 2 phía đều đã đồng bộ (tỉ giá 1:10, chọn 1 loại thưởng). Trọng tâm tiếp theo:
+Backend production đang chạy economy v3 đã reseed (`backend-v1.20260723.004`, T-090); Android đã release `app-v1.20260723.002` (versionCode 2). Batch T-091→T-096 (2026-07-24: fix bug tiến trình ấp trứng, redesign bubble cheat, refresh-token flow, màn Thống kê, Cài đặt phần còn lại, fix thông báo bị che) đã build thành công nhưng **chưa verify trên emulator, chưa commit/push, chưa release**. Trọng tâm tiếp theo:
 
-1. **Refresh-token flow cho `AuthRepository`** — ưu tiên cao vì access token hết hạn sau 15 phút gây `401` liên tục gặp phải khi tự kiểm thử thật (kể cả giữa lúc test T-086→T-089, phải đăng xuất/đăng nhập lại nhiều lần); T-081 mới chỉ là giải pháp tạm (cache email/id vào DataStore) chứ chưa giải quyết gốc. Càng nhiều màn cần JWT càng gặp lại lỗi này.
-2. **T-038 (màn Thống kê)** — màn cuối cùng còn placeholder trong 4 tab chính.
-3. **T-039 phần còn lại** — Strict Mode/âm thanh/thời gian mặc định (`SettingsRepository`), Sao lưu Google Drive (`SyncRepository`), UI Kho đồ (equip bình/nhạc).
-4. Song song lúc rảnh: **T-044** (Swagger summary), **T-042** (SoundManager/NotificationManager)
-5. Test suite (Nhóm B/C) và chuẩn bị đăng thật lên Play Console (Nhóm E — feature graphic, Privacy Policy, Data safety form, content rating) — hạ tầng release đã sẵn sàng (T-053/T-054 xong), chỉ còn phần thủ tục/nội dung.
-6. **Cân nhắc gỡ menu cheat tester trước khi phát hành Play Store thật** — dù đã chặn server-side theo email tester, đây vẫn là bề mặt tấn công/endpoint debug không nên tồn tại vĩnh viễn trên production một khi không còn cần QA nội bộ.
+1. **Verify T-091→T-096 trên emulator thật** — chưa test tay lần nào (chỉ mới `compileDebugKotlin`), đặc biệt refresh-token flow (T-093, cần giả lập JWT hết hạn) và bug tiến trình ấp trứng (T-091, cần hoàn thành 1 phiên thật rồi quan sát bình + Kho Trứng).
+2. Sau khi verify xong: commit + push lên `main`, cân nhắc release Android bản mới (versionCode 3) vì đủ thay đổi UI đáng kể để người dùng thấy khác biệt.
+3. Song song lúc rảnh: **T-044** (Swagger summary), **T-042** (SoundManager/NotificationManager — phát âm thanh thật cho lựa chọn "chủ đề âm thanh" vừa thêm ở T-095), **T-043** (WorkManager outbox).
+4. Test suite (Nhóm B/C) và chuẩn bị đăng thật lên Play Console (Nhóm E — feature graphic, Privacy Policy, Data safety form, content rating) — hạ tầng release đã sẵn sàng (T-053/T-054 xong), chỉ còn phần thủ tục/nội dung. Data safety form nay đơn giản hơn vì không còn Google Drive (S-07a bị bỏ, xem T-095).
+5. **Cân nhắc gỡ menu cheat tester trước khi phát hành Play Store thật** — dù đã chặn server-side theo email tester, đây vẫn là bề mặt tấn công/endpoint debug không nên tồn tại vĩnh viễn trên production một khi không còn cần QA nội bộ.
