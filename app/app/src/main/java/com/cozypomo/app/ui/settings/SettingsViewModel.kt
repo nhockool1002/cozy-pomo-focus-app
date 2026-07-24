@@ -26,7 +26,7 @@ val SOUND_THEME_OPTIONS = listOf(
 data class SettingsUiState(
     val email: String? = null,
     val userId: String? = null,
-    val versionName: String = BuildConfig.VERSION_NAME,
+    val versionName: String = BuildConfig.RELEASE_TAG,
     val settingsLoaded: Boolean = false,
     val focusMinutes: Int = 25,
     val breakMinutes: Int = 5,

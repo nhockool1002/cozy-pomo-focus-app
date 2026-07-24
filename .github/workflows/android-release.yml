@@ -53,6 +53,9 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          # Bake tag Release thật (VD "app-v1.20260724.002") vào BuildConfig.RELEASE_TAG — Splash
+          # hiện đúng giá trị này (T-101), thay vì chỉ versionName không khớp tag trên GitHub.
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: ./gradlew :app:bundleRelease :app:assembleRelease --no-daemon
 
       - name: Build debug APK only (workflow_dispatch test run, no signing secrets touched)

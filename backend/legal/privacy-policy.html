@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chính sách bảo mật — CozyPomo</title>
+<link rel="icon" href="/branding/favicon.png" />
+<style>
+  :root{
+    --ivory:#F9F6F0; --ivory-deep:#F1EADC; --card:#FFFDF9;
+    --ink:#6D594E; --ink-soft:rgba(109,89,78,0.62);
+    --matcha:#A8D08D; --matcha-deep:#3F5C2E;
+    --line:rgba(109,89,78,0.16);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ivory:#201B16; --ivory-deep:#1A140F; --card:#2A241D;
+      --ink:#F3E6D5; --ink-soft:rgba(243,230,213,0.68);
+      --matcha:#B8DE9E; --matcha-deep:#C8E8B0;
+      --line:rgba(243,230,213,0.14);
+    }
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--ivory-deep); color:var(--ink);
+    font-family:-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    line-height:1.65;
+  }
+  .page{max-width:760px; margin:0 auto; padding:48px 20px 80px;}
+  .card{background:var(--card); border-radius:20px; padding:36px 32px; box-shadow:0 6px 24px rgba(88,68,54,0.08);}
+  header{display:flex; align-items:center; gap:14px; margin-bottom:8px;}
+  header img{width:44px; height:44px;}
+  header h1{font-size:22px; margin:0;}
+  .updated{color:var(--ink-soft); font-size:13.5px; margin:0 0 28px;}
+  h2{font-size:17px; margin:32px 0 10px; color:var(--matcha-deep);}
+  p, li{font-size:15px;}
+  ul{padding-left:20px;}
+  a{color:var(--matcha-deep);}
+  .badge{
+    display:inline-block; font-size:12px; background:var(--ivory-deep); border:1px solid var(--line);
+    border-radius:10px; padding:2px 9px; margin-left:6px; color:var(--ink-soft);
+  }
+  table{width:100%; border-collapse:collapse; margin:14px 0; font-size:14px;}
+  th, td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top;}
+  th{color:var(--ink-soft); font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:0.03em;}
+  footer{margin-top:36px; font-size:13px; color:var(--ink-soft);}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="card">
+    <header>
+      <img src="/branding/logo.png" alt="CozyPomo" onerror="this.style.display='none'" />
+      <h1>Chính sách bảo mật — CozyPomo</h1>
+    </header>
+    <p class="updated">Cập nhật lần cuối: 24/07/2026 · Áp dụng cho ứng dụng Android "CozyPomo" (gói <code>com.cozypomo.app</code>) và API phục vụ ứng dụng tại <code>cozyapi.nhutnm.id.vn</code>.</p>
+
+    <p>CozyPomo là ứng dụng Pomodoro (quản lý thời gian tập trung) miễn phí, biến mỗi phiên tập trung thành một bước ấp trứng và mở khoá sinh vật mới trong một khu rừng ảo. Chính sách này giải thích CozyPomo thu thập, sử dụng và bảo vệ dữ liệu của bạn như thế nào.</p>
+
+    <h2>1. Dữ liệu chúng tôi thu thập</h2>
+    <table>
+      <thead><tr><th>Loại dữ liệu</th><th>Mục đích</th></tr></thead>
+      <tbody>
+        <tr><td>Email + mật khẩu (đã băm bằng bcrypt, không lưu dạng chữ thường)</td><td>Tạo và xác thực tài khoản</td></tr>
+        <tr><td>Lịch sử phiên tập trung (thời lượng, thời điểm bắt đầu/kết thúc, hoàn thành hay bỏ cuộc)</td><td>Tính năng cốt lõi: đếm giờ, thống kê, streak</td></tr>
+        <tr><td>Số dư "Xu Lá"/"Giờ tích luỹ" và lịch sử giao dịch trong game</td><td>Vận hành kinh tế trong game — <strong>đây đều là tiền tệ ảo, không quy đổi ra tiền thật, không có giao dịch mua hàng bằng tiền thật (in-app purchase) nào trong ứng dụng</strong></td></tr>
+        <tr><td>Bộ sưu tập sinh vật, trứng đang sở hữu, vật phẩm (bình/nhạc) đã "mua" bằng tiền tệ ảo</td><td>Tính năng bộ sưu tập/Khu rừng/Kho đồ</td></tr>
+        <tr><td>Cấu hình cá nhân (thời gian tập trung/nghỉ mặc định, Strict Mode, chủ đề âm thanh)</td><td>Cá nhân hoá trải nghiệm</td></tr>
+      </tbody>
+    </table>
+    <p>Chúng tôi <strong>không</strong> thu thập vị trí, danh bạ, ảnh, microphone/camera, hay bất kỳ dữ liệu nào ngoài phạm vi ở trên.</p>
+
+    <h2>2. Dữ liệu lưu trên thiết bị của bạn</h2>
+    <p>Một phần dữ liệu (phiên tập trung đang chạy, token đăng nhập) được lưu cục bộ trên máy bằng Room/DataStore để ứng dụng hoạt động chính xác kể cả khi mất mạng hoặc khoá màn hình. Dữ liệu này bị xoá khi bạn gỡ ứng dụng hoặc đăng xuất.</p>
+
+    <h2>3. Quyền hệ thống</h2>
+    <p>Ứng dụng có thể xin quyền <strong>Thông báo</strong> (Android 13+) để hiển thị thông báo cục bộ ngay trên máy khi phiên tập trung kết thúc lúc màn hình khoá. Thông báo này <strong>không</strong> đi qua máy chủ đẩy (push) của bên thứ ba nào.</p>
+
+    <h2>4. Chúng tôi KHÔNG làm gì</h2>
+    <ul>
+      <li>Không có SDK quảng cáo, không hiển thị quảng cáo bên thứ ba.</li>
+      <li>Không có SDK phân tích/theo dõi bên thứ ba (Firebase Analytics, Facebook SDK, v.v.).</li>
+      <li>Không bán hay chia sẻ dữ liệu cá nhân cho bên thứ ba vì mục đích quảng cáo.</li>
+      <li>Không đồng bộ/sao lưu lên Google Drive hay dịch vụ đám mây bên thứ ba nào khác ngoài máy chủ CozyPomo của chúng tôi.</li>
+    </ul>
+
+    <h2>5. Nơi lưu trữ và bảo mật dữ liệu</h2>
+    <p>Dữ liệu tài khoản được lưu trên máy chủ backend riêng của CozyPomo (NestJS + PostgreSQL), truyền tải qua HTTPS/TLS. Mật khẩu được băm bằng bcrypt, không bao giờ lưu ở dạng đọc được. Xác thực dùng JWT (access token ngắn hạn + refresh token) để hạn chế rủi ro nếu token bị lộ.</p>
+
+    <h2>6. Quyền của bạn</h2>
+    <p>Bạn có thể yêu cầu xem, xuất, hoặc xoá vĩnh viễn toàn bộ dữ liệu tài khoản bất kỳ lúc nào bằng cách liên hệ email bên dưới. Chúng tôi sẽ xử lý yêu cầu xoá dữ liệu trong vòng 30 ngày.</p>
+
+    <h2>7. Trẻ em</h2>
+    <p>CozyPomo không hướng riêng tới trẻ em và không cố ý thu thập dữ liệu từ người dùng dưới độ tuổi quy định theo luật địa phương. Nếu bạn cho rằng con em mình đã cung cấp dữ liệu cá nhân cho chúng tôi, vui lòng liên hệ để được hỗ trợ xoá.</p>
+
+    <h2>8. Thay đổi chính sách</h2>
+    <p>Chúng tôi có thể cập nhật chính sách này khi ứng dụng thay đổi. Ngày cập nhật lần cuối luôn hiển thị ở đầu trang.</p>
+
+    <h2>9. Liên hệ</h2>
+    <p>Mọi câu hỏi về quyền riêng tư hoặc yêu cầu xoá dữ liệu, vui lòng liên hệ: <a href="mailto:nhut.nguyenminh.it@gmail.com">nhut.nguyenminh.it@gmail.com</a></p>
+
+    <footer>CozyPomo · Tác giả: Dev1002</footer>
+  </div>
+</div>
+</body>
+</html>

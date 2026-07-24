@@ -10,6 +10,9 @@ async function bootstrap() {
 
   // Favicon/logo cho trang quản trị AdminJS (xem docs/branding).
   app.useStaticAssets(path.join(process.cwd(), 'public'), { prefix: '/branding' });
+  // Chính sách bảo mật (Play Console yêu cầu 1 URL công khai, xem docs/play-store) — mount
+  // riêng ngoài setGlobalPrefix('api/v1') bên dưới, giống cách /branding đã làm.
+  app.useStaticAssets(path.join(process.cwd(), 'legal'), { prefix: '/legal' });
 
   app.setGlobalPrefix('api/v1', { exclude: ['health'] });
   app.useGlobalPipes(

@@ -34,6 +34,13 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "API_BASE_URL", "\"https://cozyapi.nhutnm.id.vn/api/v1/\"")
+
+        // Tag GitHub Release thật (VD "app-v1.20260724.002") — CI truyền qua biến môi trường
+        // RELEASE_TAG khi build từ 1 Release thật (xem android-release.yml). Build local/dev/
+        // workflow_dispatch không có biến này thì hiện tạm "v{versionName}" — Splash (T-101)
+        // hiện đúng giá trị này thay vì chỉ versionName, để khớp với tag hiện trên GitHub Releases.
+        val releaseTag = envOrProp("RELEASE_TAG", "release.tag") ?: "v$versionName"
+        buildConfigField("String", "RELEASE_TAG", "\"$releaseTag\"")
     }
 
     val hasReleaseSigning = envOrProp("KEYSTORE_PATH", "keystore.path") != null

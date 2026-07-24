@@ -39,6 +39,7 @@ import com.cozypomo.app.ui.common.MessageDialog
 import com.cozypomo.app.ui.common.SessionViewModel
 import com.cozypomo.app.ui.common.TesterCheatMenu
 import com.cozypomo.app.ui.common.TesterCheatViewModel
+import com.cozypomo.app.ui.about.AboutScreen
 import com.cozypomo.app.ui.forest.ForestScreen
 import com.cozypomo.app.ui.home.HomeScreen
 import com.cozypomo.app.ui.inventory.InventoryScreen
@@ -47,6 +48,7 @@ import com.cozypomo.app.ui.shop.ShopScreen
 import com.cozypomo.app.ui.stats.StatsScreen
 
 private const val SettingsRoute = "settings"
+private const val AboutRoute = "about"
 
 @Composable
 fun CozyPomoNavHost(onLogout: () -> Unit) {
@@ -139,9 +141,13 @@ fun CozyPomoNavHost(onLogout: () -> Unit) {
                     SettingsScreen(
                         onBack = { navController.popBackStack() },
                         onLoggedOut = onLogout,
+                        onOpenAbout = { navController.navigate(AboutRoute) },
                         currencyViewModel = currencyViewModel,
                         cheatViewModel = cheatViewModel,
                     )
+                }
+                composable(AboutRoute) {
+                    AboutScreen(onBack = { navController.popBackStack() })
                 }
             }
         }

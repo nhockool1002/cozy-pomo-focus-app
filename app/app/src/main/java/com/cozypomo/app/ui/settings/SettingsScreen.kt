@@ -63,6 +63,7 @@ import com.cozypomo.app.ui.common.TesterCheatViewModel
 fun SettingsScreen(
     onBack: () -> Unit,
     onLoggedOut: () -> Unit,
+    onOpenAbout: () -> Unit,
     currencyViewModel: CurrencyViewModel,
     cheatViewModel: TesterCheatViewModel,
     viewModel: SettingsViewModel = hiltViewModel(),
@@ -80,6 +81,11 @@ fun SettingsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onOpenAbout) {
+                        Icon(Icons.Filled.Info, contentDescription = "Giới thiệu")
                     }
                 },
             )

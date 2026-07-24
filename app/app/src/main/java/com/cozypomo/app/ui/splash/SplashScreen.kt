@@ -101,7 +101,7 @@ fun SplashScreen(
         }
 
         Text(
-            text = "v${BuildConfig.VERSION_NAME}",
+            text = BuildConfig.RELEASE_TAG,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
             modifier = Modifier

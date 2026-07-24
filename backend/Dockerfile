@@ -28,6 +28,8 @@ COPY --from=builder /app/dist ./dist
 COPY src/admin/components ./src/admin/components
 # Favicon/logo cho AdminJS — xem useStaticAssets trong main.ts.
 COPY public ./public
+# Chính sách bảo mật cho Play Console — xem useStaticAssets trong main.ts.
+COPY legal ./legal
 
 EXPOSE 3000
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
