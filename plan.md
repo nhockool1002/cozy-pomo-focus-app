@@ -14,10 +14,10 @@
 | CI/CD workflows | ✅ Đã viết **và xác nhận chạy thật thành công cho cả backend lẫn Android** | `backend-v1.20260723.004` (build→push→SSH deploy) và `app-v1.20260723.002` (build→ký release→upload asset) đều chạy xanh end-to-end — T-054 (test workflow Android lần đầu) coi như xong |
 | Branding (icon/favicon/logo) | ✅ Hoàn chỉnh, đã deploy | `docs/branding/`, hiện trên `/admin` thật |
 | Backend production | ✅ **Đang chạy thật** tại `https://cozyapi.nhutnm.id.vn`, đã lên `backend-v1.20260723.004` (economy v3, đã reseed) | Domain + SSL + Reverse Proxy + Docker trên aaPanel, đã verify `/health` + `/game-settings` (`coinsPerFocusMinute: 10`) + đăng nhập tester sau reseed |
-| Android app | 🟨 8/9 màn chạy thật (S-07a chủ động bỏ theo yêu cầu Dev1002 — xem T-095): Splash/Onboarding/Đăng nhập/Trang chủ/Khu rừng/Cửa hàng/Thống kê/Cài đặt | T-029→T-031, T-040, T-041, T-069, T-071→T-089, T-091→T-095 xong (2026-07-24: T-038 Thống kê + T-039 Cài đặt phần còn lại thật, trừ Sao lưu Google Drive); **đã release `app-v1.20260723.002`**, batch T-091→T-095 **chưa release/reseed lên production, chưa commit/push** |
+| Android app | 🟨 8/9 màn chạy thật (S-07a chủ động bỏ theo yêu cầu Dev1002 — xem T-095): Splash/Onboarding/Đăng nhập/Trang chủ/Khu rừng/Cửa hàng/Thống kê/Cài đặt | T-029→T-031, T-040, T-041, T-069, T-071→T-089, T-091→T-096 xong (2026-07-24: T-038 Thống kê + T-039 Cài đặt phần còn lại thật, trừ Sao lưu Google Drive, + fix bug/UI); **đã release `app-v1.20260724.001`** (versionCode 3, versionName 0.3.0) — build/ký/upload asset qua CI xác nhận thành công, **chưa verify thủ công trên emulator/thiết bị thật** |
 | Test suite (backend + Android) | ⬜ Chưa có | 0 file test ở cả 2 phía |
-| Android release (keystore/secrets/Play Store) | ✅ Secrets đã cấu hình, workflow đã chạy thật thành công | `app-v1.20260723.002` build/ký/upload asset OK (T-053/T-054 xong) — còn thiếu bước đăng thật lên Play Console (Nhóm E) |
-| Working tree | 🟨 Có thay đổi chưa commit (T-091→T-095, 2026-07-24) | Bug fix tiến trình ấp trứng + redesign bubble cheat + refresh-token flow + màn Thống kê + Cài đặt phần còn lại — xem mục Đã hoàn thành |
+| Android release (keystore/secrets/Play Store) | ✅ Secrets đã cấu hình, workflow đã chạy thật thành công | `app-v1.20260724.001` build/ký/upload asset OK (T-053/T-054 xong) — còn thiếu bước đăng thật lên Play Console (Nhóm E) |
+| Working tree | ✅ Sạch, đã push hết lên `main` | T-091→T-096 đã commit (3 commit: code, plan.md, bump version) + push + release `app-v1.20260724.001` — xem mục Đã hoàn thành |
 
 ### ✅ Production đã reseed theo economy v2 (2026-07-23)
 
@@ -259,6 +259,11 @@ Theo yêu cầu tiếp theo của Dev1002: sửa bug hiển thị tiến trình 
   - Fix: thêm `MessageDialog.kt` dùng chung (`ui/common/`) — modal `Dialog` nhỏ gọn (card bo góc, tonalElevation, nút "Đóng"), thay cho cả 2 Snackbar cũ. Dialog render trong 1 window Android riêng nên luôn hiện giữa màn hình, không bao giờ bị các thanh điều hướng che, và "tinh tế" hơn kiểu banner đáy màn hình theo đúng yêu cầu.
   - **Chưa verify trên emulator** (chỉ xác nhận build thành công) — cần test thật: kích hoạt 1 lệnh cheat và 1 lần mua hàng ở Cửa hàng, xác nhận modal hiện giữa màn hình, không bị che bởi bottom nav/thanh điều hướng hệ thống.
 
+- **T-097 — Push + release `app-v1.20260724.001` (versionCode 3, versionName 0.3.0).** Dev1002 xác nhận sẽ tự kiểm thử thủ công (không cần Claude verify trên emulator trước) và yêu cầu push + release luôn.
+  - 3 commit tách riêng theo đúng thói quen repo (code / `plan.md` / bump version): `a2d43f0` (toàn bộ T-091→T-096), `8d9867a` (`plan.md`), `c2cea5e` (`versionCode 2→3`, `versionName 0.2.0→0.3.0`) — push thẳng lên `main` (fast-forward, không qua PR, đúng thói quen của repo).
+  - Tạo GitHub Release `app-v1.20260724.001` qua `gh release create` → `android-release.yml` tự chạy — xác nhận thành công qua `gh run watch` (job `build` xanh, các bước "Build AAB + APK (release)" và "Upload AAB + APK to release" đều pass) và `gh release view` thấy đủ 2 asset `app-release.aab`/`app-release.apk`.
+  - **Lưu ý:** đây chỉ là build/ký/upload asset qua CI — **chưa** đăng lên Play Console (Nhóm E), và **chưa** ai (kể cả Claude) verify hành vi thật trên emulator/thiết bị — Dev1002 tự làm phần này sau khi tải APK/AAB từ GitHub Release.
+
 ---
 
 ## ⬜ Chưa làm
@@ -306,10 +311,9 @@ Theo yêu cầu tiếp theo của Dev1002: sửa bug hiển thị tiến trình 
 
 ## Đề xuất thứ tự ưu tiên tiếp theo
 
-Backend production đang chạy economy v3 đã reseed (`backend-v1.20260723.004`, T-090); Android đã release `app-v1.20260723.002` (versionCode 2). Batch T-091→T-096 (2026-07-24: fix bug tiến trình ấp trứng, redesign bubble cheat, refresh-token flow, màn Thống kê, Cài đặt phần còn lại, fix thông báo bị che) đã build thành công nhưng **chưa verify trên emulator, chưa commit/push, chưa release**. Trọng tâm tiếp theo:
+Backend production đang chạy economy v3 đã reseed (`backend-v1.20260723.004`, T-090); Android đã release `app-v1.20260724.001` (versionCode 3, T-097) — batch T-091→T-096 đã push lên `main` + build/ký/upload asset qua CI thành công. Dev1002 tự kiểm thử thủ công (APK/AAB đã có trên GitHub Release), Claude chưa verify hành vi thật trên emulator. Trọng tâm tiếp theo:
 
-1. **Verify T-091→T-096 trên emulator thật** — chưa test tay lần nào (chỉ mới `compileDebugKotlin`), đặc biệt refresh-token flow (T-093, cần giả lập JWT hết hạn) và bug tiến trình ấp trứng (T-091, cần hoàn thành 1 phiên thật rồi quan sát bình + Kho Trứng).
-2. Sau khi verify xong: commit + push lên `main`, cân nhắc release Android bản mới (versionCode 3) vì đủ thay đổi UI đáng kể để người dùng thấy khác biệt.
-3. Song song lúc rảnh: **T-044** (Swagger summary), **T-042** (SoundManager/NotificationManager — phát âm thanh thật cho lựa chọn "chủ đề âm thanh" vừa thêm ở T-095), **T-043** (WorkManager outbox).
-4. Test suite (Nhóm B/C) và chuẩn bị đăng thật lên Play Console (Nhóm E — feature graphic, Privacy Policy, Data safety form, content rating) — hạ tầng release đã sẵn sàng (T-053/T-054 xong), chỉ còn phần thủ tục/nội dung. Data safety form nay đơn giản hơn vì không còn Google Drive (S-07a bị bỏ, xem T-095).
-5. **Cân nhắc gỡ menu cheat tester trước khi phát hành Play Store thật** — dù đã chặn server-side theo email tester, đây vẫn là bề mặt tấn công/endpoint debug không nên tồn tại vĩnh viễn trên production một khi không còn cần QA nội bộ.
+1. **Chờ kết quả kiểm thử thủ công của Dev1002** cho `app-v1.20260724.001` — đặc biệt refresh-token flow (T-093) và bug tiến trình ấp trứng (T-091); sẵn sàng fix nhanh nếu phát hiện vấn đề.
+2. Song song lúc rảnh: **T-044** (Swagger summary), **T-042** (SoundManager/NotificationManager — phát âm thanh thật cho lựa chọn "chủ đề âm thanh" vừa thêm ở T-095), **T-043** (WorkManager outbox).
+3. Test suite (Nhóm B/C) và chuẩn bị đăng thật lên Play Console (Nhóm E — feature graphic, Privacy Policy, Data safety form, content rating) — hạ tầng release đã sẵn sàng (T-053/T-054 xong), chỉ còn phần thủ tục/nội dung. Data safety form nay đơn giản hơn vì không còn Google Drive (S-07a bị bỏ, xem T-095).
+4. **Cân nhắc gỡ menu cheat tester trước khi phát hành Play Store thật** — dù đã chặn server-side theo email tester, đây vẫn là bề mặt tấn công/endpoint debug không nên tồn tại vĩnh viễn trên production một khi không còn cần QA nội bộ.
