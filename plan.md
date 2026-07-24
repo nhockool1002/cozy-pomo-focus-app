@@ -14,11 +14,11 @@
 | CI/CD workflows | ✅ Đã viết **và xác nhận chạy thật thành công cho cả backend lẫn Android** | `backend-v1.20260723.004` (build→push→SSH deploy) và `app-v1.20260723.002` (build→ký release→upload asset) đều chạy xanh end-to-end — T-054 (test workflow Android lần đầu) coi như xong |
 | Branding (icon/favicon/logo) | ✅ Hoàn chỉnh, đã deploy | `docs/branding/`, hiện trên `/admin` thật |
 | Backend production | ✅ **Đang chạy thật** tại `https://cozyapi.nhutnm.id.vn`, đã lên `backend-v1.20260723.004` (economy v3, đã reseed) | Domain + SSL + Reverse Proxy + Docker trên aaPanel, đã verify `/health` + `/game-settings` (`coinsPerFocusMinute: 10`) + đăng nhập tester sau reseed |
-| Android app | ✅ 10/10 màn (S-07a chủ động bỏ theo yêu cầu Dev1002 — xem T-095), bottom nav 5 tab: Splash/Onboarding/Đăng nhập/Trang chủ/Khu rừng/Cửa hàng/Kho đồ/Thống kê/Cài đặt | T-029→T-031, T-040, T-041, T-069, T-071→T-089, T-091→T-099 xong; **đã release `app-v1.20260724.002`** (versionCode 4, T-097→T-099) lên GitHub qua CI |
+| Android app | ✅ 10/10 màn + màn mới Giới thiệu (T-102), bottom nav 5 tab: Splash/Onboarding/Đăng nhập/Trang chủ/Khu rừng/Cửa hàng/Kho đồ/Thống kê/Cài đặt/Giới thiệu | T-029→T-031, T-040, T-041, T-069, T-071→T-089, T-091→T-102 xong; **đã release `app-v1.20260724.002`** (versionCode 4, T-097→T-099) lên GitHub qua CI |
 | Tài liệu (technical-spec.md + wireframe) | ✅ Đã đồng bộ lại theo bản build thật (T-100, 2026-07-24) | Screen List/Function List/wireframe khớp kinh tế 2 tiền tệ, Kho đồ (S-07b), bottom nav 5 tab, S-07a đã đánh dấu bỏ khỏi phạm vi |
 | Test suite (backend + Android) | ⬜ Chưa có | 0 file test ở cả 2 phía |
 | Android release (keystore/secrets/Play Store) | ✅ Secrets đã cấu hình, workflow đã chạy thật thành công | `app-v1.20260724.002` build/ký/upload asset OK (T-053/T-054 xong) — còn thiếu bước đăng thật lên Play Console (Nhóm E) |
-| Working tree | ✅ Sạch, đã push hết lên `main` | T-097→T-100 đã commit + push + release `app-v1.20260724.002` — xem mục Đã hoàn thành |
+| Working tree | 🟨 Có thay đổi chưa commit (T-101, T-102, 2026-07-24) | Fix version tag Splash + màn Giới thiệu mới — đã verify kỹ trên emulator, chờ Dev1002 xác nhận trước khi push/release |
 
 ### ✅ Production đã reseed theo economy v2 (2026-07-23)
 
@@ -284,6 +284,37 @@ Theo yêu cầu tiếp theo của Dev1002: sửa bug hiển thị tiến trình 
   - **Đồng bộ lại `docs/technical-spec.md` + `docs/wireframes/use-case-flow.html`** cho khớp bản build thật — 2 tài liệu này vẫn giữ nguyên trạng thái từ lúc thiết kế ban đầu (2026-07-22, mọi thứ "⬜ Chưa làm"), trong khi thực tế toàn bộ Nhóm A đã xong từ lâu và kinh tế game đã đổi hẳn (2 tiền tệ, trứng ấp dần, 5 tab). Cập nhật: Screen List thêm S-07b Kho đồ, đánh dấu S-07a "đã bỏ khỏi phạm vi" (khác "chưa làm"); Function List sửa lại chữ ký hàm theo economy v2/v3 thật; wireframe HTML thêm mockup Kho đồ + 5-tab nav ở mọi màn, sửa mockup Trang chủ (2 số dư + chip chọn thưởng), mockup Chọn Trứng (theo tiến trình thay vì số lượng), bỏ hẳn mockup Sao lưu, bảng đối chiếu cuối trang cập nhật hết trạng thái "Đã xong".
   - Commit riêng (không gộp vào T-097→T-099) rồi push thẳng `main` — docs-only, không cần release Android mới.
 
+- **T-101 — Fix Splash hiện sai version: đổi sang đúng tag GitHub Release thật.**
+  - Nguyên nhân: Splash hiện `"v${BuildConfig.VERSION_NAME}"` (VD "v0.4.0") — chỉ là `versionName` khai báo tay trong `build.gradle.kts`, không liên quan gì tới tag Release thật trên GitHub (VD `app-v1.20260724.002`, đặt tên theo ngày+lần release trong ngày). 2 hệ đánh số này độc lập nhau nên không khớp — Dev1002 xem trên GitHub Releases thấy 1 tag nhưng app lại hiện số khác hẳn.
+  - Fix: thêm `BuildConfig.RELEASE_TAG` mới trong `app/build.gradle.kts`, đọc từ biến môi trường `RELEASE_TAG` (cùng cơ chế `envOrProp` đã dùng cho keystore secrets) — CI (`android-release.yml`) truyền `RELEASE_TAG: ${{ github.event.release.tag_name }}` vào bước build release, nên APK/AAB build ra bake sẵn đúng tag Release thật đã tạo ra nó. Build local/dev không có biến này thì fallback về `"v$versionName"` như cũ (không có tag thật để hiện). `SplashScreen.kt` đổi sang hiện `BuildConfig.RELEASE_TAG` thay vì `"v${VERSION_NAME}"`.
+  - **Đã verify trên emulator** — build debug với `RELEASE_TAG=app-v1.20260724.002 ./gradlew :app:assembleDebug` mô phỏng đúng 1 lần build release thật, xác nhận Splash hiện đúng `app-v1.20260724.002` ở góc dưới màn hình.
+
+- **T-102 — Màn Giới thiệu mới (icon (i) ở Cài đặt) — mô tả app, tác giả Dev1002, phiên bản, nút Buy Me a Coffee.**
+  - `ui/about/AboutScreen.kt` mới: icon bình ấp (`JarMark`, đồng bộ hình ảnh với Splash), tên "CozyPomo", phiên bản (`BuildConfig.RELEASE_TAG`, khớp T-101), "Tác giả: Dev1002", đoạn mô tả ngắn tự biên soạn về ý tưởng ấp trứng/nuôi khu rừng, và nút "Buy Me a Coffee" (màu `secondary`, icon cốc cà phê) mở `https://buymeacoffee.com/nhutnm` qua `Intent.ACTION_VIEW`.
+  - Bố trí: icon (i) mới ở `actions` của `TopAppBar` màn Cài đặt (`SettingsScreen.kt`, cạnh nút quay lại) — không thêm vào header dùng chung toàn app (`CozyPomoNavHost`) để tránh làm header vừa gọn lại ở T-099 bị đông icon trở lại; đặt trong Cài đặt vẫn dễ tìm và đúng quy ước phổ biến (Settings → About) trên hầu hết app Android.
+  - Route `about` mới trong `CozyPomoNavHost.kt`, cùng tầng với `settings`.
+  - **Đã verify trên emulator:** chạm icon (i) ở Cài đặt → mở đúng màn Giới thiệu với đủ nội dung; chạm "Buy Me a Coffee" → xác nhận mở đúng Chrome với Intent thật (không crash) — không đi tiếp qua bước chấp nhận ToS/điều hướng thật tới trang, chỉ xác minh Intent bắn đúng.
+  - **Chưa commit/push/release** — đang chờ Dev1002 xác nhận.
+
+- **T-103 — Chuẩn bị phát hành Play Store (Nhóm E) + README chuyên nghiệp.** Hạ tầng release (keystore, CI/CD ký app) đã xong từ trước — Dev1002 xác nhận phần còn lại chỉ là nội dung/thủ tục.
+  - **Feature graphic** (`docs/play-store/feature-graphic-1024x500.png`): dựng bằng ImageMagick từ logo chính thức + tagline font Baloo 2 trên nền ivory, xuất đúng 1024×500 PNG 24-bit không kênh alpha (`identify -verbose` xác nhận `Type: TrueColor`, đúng yêu cầu Google).
+  - **5 ảnh chụp màn hình thật** (`docs/play-store/screenshots/`) từ emulator (Trang chủ, Khu rừng, Cửa hàng, Kho đồ, Thống kê). Ảnh gốc 1080×2340 (tỉ lệ 2.167:1) vi phạm giới hạn tỉ lệ dài:ngắn ≤ 2:1 của Google — cắt bớt thanh điều hướng hệ thống ở đáy (không phải nội dung app) còn 1080×2130 (tỉ lệ 1.972:1) bằng `magick -crop`.
+  - **Chính sách bảo mật** (`backend/legal/privacy-policy.html`): trang HTML tiếng Việt đầy đủ (dữ liệu thu thập, không chia sẻ bên thứ 3, không quảng cáo/theo dõi, quyền xoá dữ liệu trong 30 ngày, liên hệ). Mount qua `useStaticAssets` mới trong `backend/src/main.ts` (`prefix: '/legal'`), `Dockerfile` thêm `COPY legal ./legal` (đúng bài học đã rút ra ở T-067 về quên copy thư mục static).
+  - **`docs/play-store/data-safety-form-guide.md`** — bảng câu trả lời tham khảo cho Data Safety form (chỉ điền qua UI Play Console): chỉ Email + App interactions là "có thu thập", không chia sẻ bên thứ 3 nào; đơn giản hơn dự kiến ban đầu vì Google Drive Sync (S-07a) đã bị bỏ khỏi phạm vi từ T-095.
+  - **`docs/play-store/content-rating-guide.md`** — bảng câu hỏi IARC; **lưu ý quan trọng**: cơ chế roll ngẫu nhiên có trọng số khi ấp trứng về bản chất là "simulated gambling" nhẹ, nên câu hỏi tương ứng phải trả lời **Yes** (kèm giải thích không có tiền thật/phần thưởng thật) — trả lời sai/bỏ sót có thể khiến Google gỡ app sau khi review thủ công. Dự đoán rating vẫn ở mức thấp nhất (ESRB Everyone/PEGI 3/USK 0).
+  - **`docs/play-store/README.md`** — tổng hợp toàn bộ, gồm checklist các bước thủ công còn lại trong Play Console (dán URL Privacy Policy, điền 2 form, upload assets, tạo app + track).
+  - **README.md gốc viết lại chuyên nghiệp**: giới thiệu sản phẩm, ảnh chụp màn hình thật, danh sách tính năng khớp bản build hiện tại, bảng tech stack, cấu trúc repo, hướng dẫn chạy dev cho cả `app/` và `backend/`, tổng quan release/CI-CD, bảng liên kết tài liệu, mục Giấy phép (chưa chọn license mã nguồn mở — không tự ý chọn thay Dev1002) và tác giả kèm link Buy Me a Coffee.
+  - **Đã deploy backend** (xem T-104) — `https://cozyapi.nhutnm.id.vn/legal/privacy-policy.html` xác nhận trả về `200` sau release.
+
+- **T-104 — Fix "Thông tin ứng dụng" ở Cài đặt hiện sai phiên bản + push/release cả app lẫn backend.** Dev1002 phát hiện màn Cài đặt cũng hiện sai phiên bản giống lỗi Splash đã sửa ở T-101 — bug T-101 mới chỉ sửa `SplashScreen.kt`, bỏ sót `SettingsViewModel.kt`.
+  - Nguyên nhân: `SettingsUiState.versionName` (dùng để hiện "Phiên bản ${uiState.versionName}" trong section "Thông tin ứng dụng") vẫn đọc `BuildConfig.VERSION_NAME` (VD "0.4.0", số tự khai trong `build.gradle.kts`) thay vì `BuildConfig.RELEASE_TAG` (tag Release thật trên GitHub) — cùng gốc rễ đã sửa ở Splash nhưng do 2 nơi hiện version độc lập nhau nên T-101 không tự động fix chỗ này.
+  - Fix: đổi `versionName: String = BuildConfig.VERSION_NAME` → `= BuildConfig.RELEASE_TAG` trong `SettingsViewModel.kt` — 1 dòng, không đổi UI/logic khác (5-tap vào dòng này vẫn mở cheat bubble như cũ, không phụ thuộc nội dung text).
+  - **Push + release cả 2 phía theo yêu cầu:**
+    - Android: 3 commit (`40370ee` code T-101/T-102/T-103/T-104 gộp, `63c5ee1` docs Nhóm E + README, `67deead` bump `versionCode 4→5`/`versionName 0.4.0→0.5.0`) push thẳng `main` → GitHub Release `app-v1.20260724.003` → `android-release.yml` xanh (`gh run watch`), asset `app-release.aab`/`app-release.apk` xác nhận có đủ.
+    - Backend: cùng đợt code T-101/T-103 (`main.ts` mount `/legal`, `Dockerfile` copy `legal/`) đã nằm trong commit `40370ee` ở trên → GitHub Release `backend-v1.20260724.001` → `backend-deploy.yml` xanh (`build-and-push` + `deploy` qua SSH, `reseed-production` bị skip vì không đổi schema — đúng như thiết kế). Xác nhận `curl -o /dev/null -w "%{http_code}" https://cozyapi.nhutnm.id.vn/legal/privacy-policy.html` trả về `200`.
+  - **Push kèm toàn bộ artifact Nhóm E (wireframe cập nhật từ T-100, feature graphic, 5 screenshot, 2 guide Data Safety/Content Rating, README.md mới)** lên GitHub để lưu trữ, theo đúng yêu cầu — không còn nằm riêng ở working tree nữa.
+  - **Chưa verify trên thiết bị thật/emulator lần build này** (chỉ xác nhận build CI xanh + compile sạch trước khi commit) — Dev1002 tự kiểm thử `app-v1.20260724.003` khi tiện.
+
 ---
 
 ## ⬜ Chưa làm
@@ -322,20 +353,17 @@ Theo yêu cầu tiếp theo của Dev1002: sửa bug hiển thị tiến trình 
 
 ### Nhóm E — Chuẩn bị phát hành Play Store
 
-- **T-055 — Feature graphic + ảnh chụp màn hình thật.** Cần Android app chạy được (sau Nhóm A) mới chụp được.
-- **T-056 — Chính sách bảo mật (Privacy Policy).** Bắt buộc với Play Console vì app có lưu dữ liệu người dùng (tài khoản, tiến trình). Không còn cần nhắc Google Drive — S-07a đã bị bỏ khỏi phạm vi (xem T-095).
-- **T-057 — Data safety form trên Play Console.** Khai báo loại dữ liệu thu thập (tài khoản, tiến trình phiên tập trung); không còn mục đồng bộ Google Drive để khai báo.
-- **T-058 — Content rating.** Chọn mức phù hợp (dự kiến mọi lứa tuổi).
+- ~~T-055 Feature graphic + ảnh chụp màn hình thật~~, ~~T-056 Chính sách bảo mật~~, ~~T-057 Data safety form (hướng dẫn)~~, ~~T-058 Content rating (hướng dẫn)~~ — **nội dung đã xong (T-103)**, xem mục Đã hoàn thành. Còn lại thuần thủ tục trong Play Console (không tự động hoá được — xem checklist trong `docs/play-store/README.md`): dán URL Privacy Policy (chờ release backend), điền 2 form theo hướng dẫn, upload assets, tạo app + chọn track.
 
 ---
 
 ## Đề xuất thứ tự ưu tiên tiếp theo
 
-Backend production đang chạy economy v3 đã reseed (`backend-v1.20260723.004`, T-090); Android đã release `app-v1.20260724.002` (versionCode 4, T-100) — toàn bộ T-091→T-099 đã lên `main` + build/ký/upload asset qua CI thành công, tài liệu (`technical-spec.md`/wireframe) đã đồng bộ lại theo bản build thật. Android app giờ đã đủ 10/10 màn theo Screen List (trừ S-07a chủ động bỏ). Trọng tâm tiếp theo:
+Backend production đang chạy bản có `/legal/privacy-policy.html` (`backend-v1.20260724.001`, T-104); Android đã release `app-v1.20260724.003` (versionCode 5, T-104) — toàn bộ T-091→T-104 đã lên `main` + build/ký/upload asset qua CI thành công, tài liệu (`technical-spec.md`/wireframe/README) đã đồng bộ lại theo bản build thật. Android app giờ đã đủ 10/10 màn theo Screen List (trừ S-07a chủ động bỏ). Nội dung Play Store prep (Nhóm E) đã có đủ, chỉ còn phần thủ tục trong Play Console. Trọng tâm tiếp theo:
 
-1. **Chờ Dev1002 kiểm thử `app-v1.20260724.002` trên thiết bị thật** (đã tự test kỹ trên emulator, nhưng chưa qua tay Dev1002) — đặc biệt luồng Kho đồ (trang bị bình/nhạc) và refresh-token flow (T-093, cần JWT hết hạn thật ~15 phút mới lộ ra nếu có vấn đề); sẵn sàng fix nhanh nếu phát hiện thêm.
-2. **T-042 — SoundManager/NotificationManager** — ưu tiên cao hơn các mục Nhóm B/C vì Cài đặt (T-095) đã có UI chọn "chủ đề âm thanh" nhưng chưa phát được gì; đây là khoảng trống UI/chức năng rõ nhất còn lại, không phải nợ kỹ thuật ẩn.
-3. **T-043 — WorkManager outbox** (đồng bộ offline→online) — vẫn còn thiếu, ảnh hưởng độ tin cậy khi mất mạng đúng lúc hoàn thành phiên.
-4. Song song lúc rảnh: **T-044** (Swagger summary).
-5. Test suite (Nhóm B/C) và chuẩn bị đăng thật lên Play Console (Nhóm E — feature graphic, Privacy Policy, Data safety form, content rating) — hạ tầng release đã sẵn sàng (T-053/T-054 xong), chỉ còn phần thủ tục/nội dung. Data safety form nay đơn giản hơn vì không còn Google Drive (S-07a bị bỏ, xem T-095).
+1. **Hoàn tất các bước thủ công còn lại trong Play Console** theo checklist `docs/play-store/README.md`: dán URL Privacy Policy (`https://cozyapi.nhutnm.id.vn/legal/privacy-policy.html`, đã xác nhận `200`), điền Data Safety form + Content Rating theo 2 guide có sẵn, upload feature graphic + 5 screenshot + mô tả, tạo app + chọn track.
+2. **Chờ Dev1002 kiểm thử `app-v1.20260724.003` trên thiết bị thật** (đã tự test kỹ trên emulator ở các phiên bản trước, nhưng chưa qua tay Dev1002 cho batch T-101→T-104) — đặc biệt luồng Kho đồ (trang bị bình/nhạc), refresh-token flow (T-093, cần JWT hết hạn thật ~15 phút mới lộ ra nếu có vấn đề), và cả 2 chỗ hiện phiên bản (Splash + Cài đặt) đã khớp tag `app-v1.20260724.003` chưa; sẵn sàng fix nhanh nếu phát hiện thêm.
+3. **T-042 — SoundManager/NotificationManager** — ưu tiên cao hơn các mục Nhóm B/C vì Cài đặt (T-095) đã có UI chọn "chủ đề âm thanh" nhưng chưa phát được gì; đây là khoảng trống UI/chức năng rõ nhất còn lại, không phải nợ kỹ thuật ẩn.
+4. **T-043 — WorkManager outbox** (đồng bộ offline→online) — vẫn còn thiếu, ảnh hưởng độ tin cậy khi mất mạng đúng lúc hoàn thành phiên.
+5. Song song lúc rảnh: **T-044** (Swagger summary), test suite (Nhóm B/C).
 6. **Cân nhắc gỡ menu cheat tester trước khi phát hành Play Store thật** — dù đã chặn server-side theo email tester, đây vẫn là bề mặt tấn công/endpoint debug không nên tồn tại vĩnh viễn trên production một khi không còn cần QA nội bộ.
