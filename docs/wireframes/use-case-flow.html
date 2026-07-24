@@ -83,7 +83,7 @@ body{margin:0;}
 }
 .row-note, .entry-note{font-size:12px; color:var(--ink-soft); margin:6px 2px 0;}
 .row{display:flex; align-items:center; gap:6px; overflow-x:auto; padding:6px 2px 14px;}
-.row.cols-4{align-items:flex-start;}
+.row.cols-4, .row.cols-5{align-items:flex-start;}
 
 /* ---------- phone chrome ---------- */
 .phone{
@@ -195,6 +195,7 @@ tbody tr:last-child td{border-bottom:none;}
 .status-pill{font-size:11px; padding:2px 9px; border-radius:10px; border:1px solid var(--line); white-space:nowrap;}
 .status-pill.todo{color:var(--terracotta); border-color:var(--terracotta);}
 .status-pill.done{color:var(--matcha-deep); border-color:var(--matcha-deep);}
+.status-pill.removed{color:var(--ink-soft); border-color:var(--ink-soft); text-decoration:line-through;}
 </style>
 
 <div class="page">
@@ -202,7 +203,7 @@ tbody tr:last-child td{border-bottom:none;}
   <header class="cover">
     <p class="eyebrow">CozyPomo · Android · Screen Flow</p>
     <h1>Sơ đồ Use Case toàn ứng dụng</h1>
-    <p class="cover-sub">14 màn hình wireframe dựng đúng theo Screen List trong <em>docs/technical-spec.md</em>, nối theo luồng thao tác thật của người dùng — dùng để đánh giá UX trước khi bắt tay vào Nhóm A (T-029 → T-043).</p>
+    <p class="cover-sub">Cập nhật 2026-07-24 — khớp đúng bản đã build thật (Nhóm A đã xong, T-029 → T-099), không còn là wireframe tiền-thiết-kế nữa. 14 màn hình theo Screen List trong <em>docs/technical-spec.md</em>, nối theo luồng thao tác thật của người dùng. Thay đổi lớn so với bản thiết kế gốc: kinh tế 2 tiền tệ (Xu Lá + Giờ tích luỹ, chọn 1 loại thưởng/phiên), trứng ấp dần theo instance sở hữu riêng, bottom nav 5 tab (thêm Kho đồ), và Sao lưu Google Drive (S-07a) đã bị bỏ hẳn khỏi phạm vi.</p>
     <div class="legend">
       <span class="legend-item"><span class="swatch"></span> Màn hình đầy đủ</span>
       <span class="legend-item"><span class="swatch dashed"></span> Popup / Dialog</span>
@@ -276,18 +277,17 @@ tbody tr:last-child td{border-bottom:none;}
       <div class="stack">
         <div class="phone popup" style="width:150px;">
           <div class="screen">
-            <div class="wf-row"><span class="title-md">Chọn Trứng</span><span class="wf-pill">✕</span></div>
-            <div class="wf-row" style="border:1px solid var(--ink-faint);border-radius:8px;padding:4px 6px;">
-              <div class="wf-img" style="width:16px;height:16px;border-radius:5px;"></div>
-              <span style="font-size:7.5px;">Trứng Rừng</span><span class="badge">x3</span>
+            <div class="wf-row"><span class="title-md">Chọn trứng đang ấp</span><span class="wf-pill">✕</span></div>
+            <div class="wf-row" style="border:1px solid var(--ink-faint);border-radius:8px;padding:4px 6px;background:rgba(168,208,141,0.25);">
+              <span style="font-size:7px;">✓ Không ấp trứng nào</span>
             </div>
             <div class="wf-row" style="border:1px solid var(--ink-faint);border-radius:8px;padding:4px 6px;">
               <div class="wf-img" style="width:16px;height:16px;border-radius:5px;"></div>
-              <span style="font-size:7.5px;">Trứng Biển</span><span class="badge">x1</span>
+              <span style="font-size:7px;">Trứng Rừng<br><span style="color:var(--ink-soft);">71/180 phút</span></span>
             </div>
-            <div class="wf-row" style="border:1px solid var(--ink-faint);border-radius:8px;padding:4px 6px;opacity:0.5;">
+            <div class="wf-row" style="border:1px solid var(--ink-faint);border-radius:8px;padding:4px 6px;">
               <div class="wf-img" style="width:16px;height:16px;border-radius:5px;"></div>
-              <span style="font-size:7.5px;">Trứng Bí Ẩn</span><span class="badge">🔒</span>
+              <span style="font-size:7px;">Trứng Bí Ẩn<br><span style="color:var(--ink-soft);">0/300 phút</span></span>
             </div>
           </div>
         </div>
@@ -298,19 +298,24 @@ tbody tr:last-child td{border-bottom:none;}
         <div class="phone">
           <div class="status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
           <div class="screen">
-            <div class="wf-row"><span class="wf-pill">⚙</span><span class="wf-pill"><span class="coin"></span> 128</span></div>
+            <div class="wf-row"><span class="wf-pill">⚙</span><span style="display:flex;gap:3px;"><span class="wf-pill"><span class="coin"></span> 128</span><span class="wf-pill">⏳ 46p</span></span></div>
             <div class="wf-img" style="height:52px;position:relative;">
               <span style="position:absolute;top:3px;right:3px;width:12px;height:12px;border-radius:50%;background:var(--matcha);border:1px solid var(--ink);font-size:8px;display:flex;align-items:center;justify-content:center;">+</span>
             </div>
             <div style="text-align:center;font-family:var(--font-display);font-size:19px;font-variant-numeric:tabular-nums;">25:00</div>
             <div style="height:4px;border-radius:3px;background:var(--ink-faint);position:relative;"><div style="position:absolute;left:38%;top:-3px;width:10px;height:10px;border-radius:50%;background:var(--matcha);border:1.4px solid var(--ink);"></div></div>
             <div class="wf-line" style="width:40%;align-self:center;"></div>
+            <div style="border:1px solid var(--ink-faint);border-radius:8px;padding:4px;">
+              <div style="font-size:6.5px;color:var(--ink-soft);">Nhận thưởng bằng</div>
+              <div class="tabs" style="margin-top:2px;"><span class="tab active">Xu Lá</span><span class="tab">Giờ tích luỹ</span></div>
+            </div>
             <div class="wf-btn primary">BẮT ĐẦU</div>
           </div>
           <div class="bottom-nav">
             <div class="item active"><span class="icon"></span>Trang chủ</div>
             <div class="item"><span class="icon"></span>Khu rừng</div>
             <div class="item"><span class="icon"></span>Cửa hàng</div>
+            <div class="item"><span class="icon"></span>Kho đồ</div>
             <div class="item"><span class="icon"></span>Thống kê</div>
           </div>
         </div>
@@ -336,8 +341,7 @@ tbody tr:last-child td{border-bottom:none;}
       <div class="conn-h auto" style="width:90px;"><div class="line"></div><div class="label">Hết giờ<br>(tự động)</div></div>
 
       <div class="stack">
-        <div class="phone">
-          <div class="status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+        <div class="phone popup" style="width:158px;">
           <div class="screen" style="align-items:center;text-align:center;">
             <div class="wf-line" style="width:60%;margin-top:6px;"></div>
             <div class="wf-img" style="width:64px;height:64px;border-radius:12px;margin-top:2px;position:relative;">
@@ -345,25 +349,26 @@ tbody tr:last-child td{border-bottom:none;}
             </div>
             <div class="title-md">Cáo Pomodoro</div>
             <div class="wf-pill"><span class="coin"></span> +15 Xu Lá</div>
-            <div class="wf-btn primary" style="width:100%;margin-top:4px;">Xem khu rừng</div>
-            <div class="wf-btn ghost" style="width:100%;">Quay lại</div>
+            <div class="wf-btn primary" style="width:100%;margin-top:4px;">Đóng</div>
           </div>
         </div>
-        <div class="phone-label"><div class="pid">S-01a</div><div class="pname">Hoạt ảnh nở trứng</div><div class="ptask">PATCH /sessions/:id/complete</div></div>
+        <div class="phone-label"><div class="pid">Dialog</div><div class="pname">Kết quả phiên — nhánh "Nở trứng"</div><div class="ptask">PATCH /sessions/:id/complete → hatched:true</div></div>
+        <div class="state-note">1 trong 4 nhánh nội dung tuỳ kết quả: Nở trứng (ảnh trên) / Đang ấp (thanh tiến trình) / Không ấp trứng (chỉ số tiền) / Bỏ cuộc (an ủi) — xem <span class="scr">SessionResultDialog.kt</span>.</div>
       </div>
     </div>
   </section>
 
   <!-- PHASE 3 -->
   <section class="phase">
-    <h2><span class="phase-no">Phase 3</span> Điều hướng chính — Bottom Nav (4 tab)</h2>
+    <h2><span class="phase-no">Phase 3</span> Điều hướng chính — Bottom Nav (5 tab)</h2>
     <div class="navbar-illustration">
       <div class="nb-item"><div class="sh"></div>Trang chủ</div>
       <div class="nb-item"><div class="sh"></div>Khu rừng</div>
       <div class="nb-item"><div class="sh"></div>Cửa hàng</div>
+      <div class="nb-item"><div class="sh"></div>Kho đồ</div>
       <div class="nb-item"><div class="sh"></div>Thống kê</div>
     </div>
-    <div class="row cols-4">
+    <div class="row cols-5">
 
       <div class="col">
         <div class="ref-card">Trang chủ đã vẽ ở<br><strong style="color:var(--ink);">Phase 2</strong></div>
@@ -386,6 +391,7 @@ tbody tr:last-child td{border-bottom:none;}
             <div class="item"><span class="icon"></span>Trang chủ</div>
             <div class="item active"><span class="icon"></span>Khu rừng</div>
             <div class="item"><span class="icon"></span>Cửa hàng</div>
+            <div class="item"><span class="icon"></span>Kho đồ</div>
             <div class="item"><span class="icon"></span>Thống kê</div>
           </div>
         </div>
@@ -422,6 +428,7 @@ tbody tr:last-child td{border-bottom:none;}
             <div class="item"><span class="icon"></span>Trang chủ</div>
             <div class="item"><span class="icon"></span>Khu rừng</div>
             <div class="item active"><span class="icon"></span>Cửa hàng</div>
+            <div class="item"><span class="icon"></span>Kho đồ</div>
             <div class="item"><span class="icon"></span>Thống kê</div>
           </div>
         </div>
@@ -447,63 +454,69 @@ tbody tr:last-child td{border-bottom:none;}
         <div class="phone">
           <div class="status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
           <div class="screen">
-            <div class="title-md">Thống kê</div>
-            <div class="tabs"><span class="tab active">Tuần</span><span class="tab">Ngày</span><span class="tab">Tháng</span></div>
+            <div class="wf-row"><span class="wf-pill">🔥 Streak: 6 ngày</span></div>
+            <div class="wf-row"><span style="font-size:7px;">Hoàn thành (7 ngày): 12</span><span style="font-size:7px;">Bỏ cuộc: 2</span></div>
+            <div class="title-md" style="font-size:8px;">Phút tập trung theo ngày</div>
             <div class="bars">
               <div class="bar" style="height:40%;"></div><div class="bar" style="height:70%;"></div><div class="bar" style="height:30%;"></div>
               <div class="bar" style="height:85%;"></div><div class="bar" style="height:55%;"></div><div class="bar" style="height:95%;"></div><div class="bar" style="height:20%;"></div>
             </div>
-            <div class="wf-row"><span class="wf-pill">🔥 Streak: 6 ngày</span></div>
-            <div class="wf-row"><span style="font-size:7px;">Thành công: 42</span><span style="font-size:7px;">Bỏ cuộc: 5</span></div>
           </div>
           <div class="bottom-nav">
             <div class="item"><span class="icon"></span>Trang chủ</div>
             <div class="item"><span class="icon"></span>Khu rừng</div>
             <div class="item"><span class="icon"></span>Cửa hàng</div>
+            <div class="item"><span class="icon"></span>Kho đồ</div>
             <div class="item active"><span class="icon"></span>Thống kê</div>
           </div>
         </div>
-        <div class="phone-label"><div class="pid">S-06</div><div class="pname">Thống kê</div><div class="ptask">StatsRepository.getRangeStats</div></div>
+        <div class="phone-label"><div class="pid">S-06</div><div class="pname">Thống kê</div><div class="ptask">GET /stats/range + /stats/summary</div></div>
+      </div>
+
+      <div class="col">
+        <div class="phone">
+          <div class="status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="screen">
+            <div class="title-md">Kho đồ</div>
+            <div class="tabs"><span class="tab active">Bình</span><span class="tab">Trứng</span><span class="tab">Âm thanh</span></div>
+            <div class="grid3" style="grid-template-columns:repeat(2,1fr);">
+              <div class="card-sp unlocked" style="border:1.4px solid var(--matcha-deep);">🏺<span style="position:absolute;top:2px;right:2px;font-size:6px;">✓</span></div>
+              <div class="card-sp" style="background:var(--card);">🏺</div>
+            </div>
+          </div>
+          <div class="bottom-nav">
+            <div class="item"><span class="icon"></span>Trang chủ</div>
+            <div class="item"><span class="icon"></span>Khu rừng</div>
+            <div class="item"><span class="icon"></span>Cửa hàng</div>
+            <div class="item active"><span class="icon"></span>Kho đồ</div>
+            <div class="item"><span class="icon"></span>Thống kê</div>
+          </div>
+        </div>
+        <div class="phone-label"><div class="pid">S-07b</div><div class="pname">Kho đồ</div><div class="ptask">GET /inventory + /owned-eggs, PATCH .../equip</div></div>
       </div>
     </div>
   </section>
 
   <!-- PHASE 4 -->
   <section class="phase">
-    <h2><span class="phase-no">Phase 4</span> Cài đặt & Sao lưu</h2>
-    <p class="entry-note">Vào từ icon ⚙ ở Trang chủ (Phase 2) — không nằm trong Bottom Nav.</p>
+    <h2><span class="phase-no">Phase 4</span> Cài đặt</h2>
+    <p class="entry-note">Vào từ icon ⚙ — nay dùng chung 1 hàng với bubble số dư ở mọi tab (không riêng Trang chủ nữa, xem T-099). <strong>Không còn Sao lưu & Đồng bộ (S-07a)</strong> — Dev1002 quyết định bỏ hẳn khỏi phạm vi, không phải hoãn lại.</p>
     <div class="row">
       <div class="node">
         <div class="phone">
           <div class="status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
           <div class="screen">
             <div class="title-md">Cài đặt</div>
-            <div class="wf-row" style="border-bottom:1px solid var(--ink-faint);padding-bottom:4px;"><span style="font-size:7.5px;">Thời gian Focus</span><span style="font-size:7.5px;">25 phút ›</span></div>
-            <div class="wf-row" style="border-bottom:1px solid var(--ink-faint);padding-bottom:4px;"><span style="font-size:7.5px;">Thời gian nghỉ</span><span style="font-size:7.5px;">5 phút ›</span></div>
+            <div class="wf-row" style="border-bottom:1px solid var(--ink-faint);padding-bottom:4px;"><span style="font-size:7.5px;">tester01@cozypomo.dev</span></div>
+            <div class="wf-row" style="border-bottom:1px solid var(--ink-faint);padding-bottom:4px;"><span style="font-size:7.5px;">Thời gian tập trung</span><span style="font-size:7.5px;">25 phút</span></div>
+            <div class="wf-row" style="border-bottom:1px solid var(--ink-faint);padding-bottom:4px;"><span style="font-size:7.5px;">Thời gian nghỉ</span><span style="font-size:7.5px;">5 phút</span></div>
             <div class="wf-row" style="border-bottom:1px solid var(--ink-faint);padding-bottom:4px;"><span style="font-size:7.5px;">Strict Mode</span><span class="wf-pill">ON</span></div>
-            <div class="wf-row" style="border-bottom:1px solid var(--ink-faint);padding-bottom:4px;"><span style="font-size:7.5px;">Âm thanh nền</span><span style="font-size:7.5px;">Mưa ›</span></div>
-            <div class="wf-row" style="padding-top:2px;"><span style="font-size:7.5px;font-weight:700;">Sao lưu & Đồng bộ</span><span style="font-size:7.5px;">›</span></div>
+            <div class="wf-row" style="border-bottom:1px solid var(--ink-faint);padding-bottom:4px;"><span style="font-size:7.5px;">Chủ đề âm thanh</span><span class="tab active" style="font-size:6px;">Mặc định</span></div>
+            <div class="wf-row" style="padding-top:2px;"><span style="font-size:7.5px;">Phiên bản</span><span style="font-size:7.5px;">0.4.0</span></div>
+            <div class="wf-btn warning" style="margin-top:2px;">Đăng xuất</div>
           </div>
         </div>
-        <div class="phone-label"><div class="pid">S-07</div><div class="pname">Cài đặt</div><div class="ptask">SettingsRepository</div></div>
-      </div>
-
-      <div class="conn-h"><div class="line"></div><div class="label">Sao lưu & Đồng bộ</div></div>
-
-      <div class="node">
-        <div class="phone">
-          <div class="status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
-          <div class="screen">
-            <div class="title-md">Sao lưu & Đồng bộ</div>
-            <div class="wf-row" style="border:1px solid var(--ink-faint);border-radius:8px;padding:6px;">
-              <span style="font-size:7.5px;">🟢 Đã kết nối Drive</span>
-            </div>
-            <div class="wf-line" style="width:70%;"></div>
-            <div class="wf-btn primary" style="margin-top:4px;">Sao lưu ngay</div>
-            <div class="wf-btn ghost">Khôi phục</div>
-          </div>
-        </div>
-        <div class="phone-label"><div class="pid">S-07a</div><div class="pname">Sao lưu & Đồng bộ</div><div class="ptask">SyncRepository</div></div>
+        <div class="phone-label"><div class="pid">S-07</div><div class="pname">Cài đặt</div><div class="ptask">GET/PATCH /settings</div></div>
       </div>
     </div>
   </section>
@@ -511,26 +524,30 @@ tbody tr:last-child td{border-bottom:none;}
   <!-- MAPPING -->
   <footer class="mapping">
     <h2>Đối chiếu với plan.md</h2>
-    <p class="sub">Backend cho toàn bộ 14 màn hình đã có endpoint thật — phần còn thiếu duy nhất là lớp UI/ViewModel Android (Nhóm A).</p>
+    <p class="sub">Toàn bộ Nhóm A (UI/ViewModel Android) đã xong — không còn màn nào dùng <span class="scr">PlaceholderScreen</span>. Bảng dưới đối chiếu Screen List với task đã build thật, tính tới 2026-07-24 (T-091→T-099).</p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Màn hình</th><th>Task Android</th><th>Trạng thái</th><th>Backend</th></tr></thead>
         <tbody>
-          <tr><td><span class="scr">S-00 / S-00b</span><br>Splash + Onboarding</td><td>T-040</td><td><span class="status-pill todo">⬜ Chưa làm</span></td><td>—</td></tr>
-          <tr><td><span class="scr">—</span><br>Đăng nhập / Đăng ký</td><td>T-041</td><td><span class="status-pill todo">⬜ Chưa làm</span></td><td><span class="status-pill done">✅ /auth/login</span></td></tr>
-          <tr><td><span class="scr">S-01</span><br>Trang chủ / Timer</td><td>T-029, T-030, T-031</td><td><span class="status-pill todo">⬜ Chưa làm — ưu tiên #1</span></td><td><span class="status-pill done">✅ /sessions</span></td></tr>
-          <tr><td><span class="scr">S-02</span><br>Chọn Trứng</td><td>T-032</td><td><span class="status-pill todo">⬜ Chưa làm</span></td><td><span class="status-pill done">✅ /egg-types</span></td></tr>
-          <tr><td><span class="scr">Dialog</span><br>Xác nhận Bỏ cuộc</td><td>T-033</td><td><span class="status-pill todo">⬜ Chưa làm</span></td><td><span class="status-pill done">✅ .../give-up</span></td></tr>
-          <tr><td><span class="scr">S-01a</span><br>Hoạt ảnh nở trứng</td><td>T-034</td><td><span class="status-pill todo">⬜ Chưa làm</span></td><td><span class="status-pill done">✅ .../complete</span></td></tr>
-          <tr><td><span class="scr">S-04</span><br>Khu rừng</td><td>T-035</td><td><span class="status-pill todo">⬜ Chưa làm</span></td><td><span class="status-pill done">✅ /collection</span></td></tr>
-          <tr><td><span class="scr">S-03</span><br>Chi tiết loài / Lore</td><td>T-036</td><td><span class="status-pill todo">⬜ Chưa làm</span></td><td><span class="status-pill done">✅ /species/:id</span></td></tr>
-          <tr><td><span class="scr">S-05</span><br>Cửa hàng</td><td>T-037</td><td><span class="status-pill todo">⬜ Chưa làm</span></td><td><span class="status-pill done">✅ /shop-items</span></td></tr>
-          <tr><td><span class="scr">Dialog</span><br>Xác nhận mua</td><td>T-037</td><td><span class="status-pill todo">⬜ Chưa làm</span></td><td><span class="status-pill done">✅ .../purchase</span></td></tr>
-          <tr><td><span class="scr">S-06</span><br>Thống kê</td><td>T-038</td><td><span class="status-pill todo">⬜ Chưa làm</span></td><td><span class="status-pill done">✅ /stats/*</span></td></tr>
-          <tr><td><span class="scr">S-07 / S-07a</span><br>Cài đặt & Sao lưu</td><td>T-039</td><td><span class="status-pill todo">⬜ Chưa làm</span></td><td><span class="status-pill done">✅ /settings</span></td></tr>
+          <tr><td><span class="scr">S-00 / S-00b</span><br>Splash + Onboarding</td><td>T-040, T-074, T-080</td><td><span class="status-pill done">✅ Đã xong</span></td><td>—</td></tr>
+          <tr><td><span class="scr">—</span><br>Đăng nhập / Đăng ký</td><td>T-041, T-093 (refresh token)</td><td><span class="status-pill done">✅ Đã xong</span></td><td><span class="status-pill done">✅ /auth/login + /auth/refresh</span></td></tr>
+          <tr><td><span class="scr">S-01</span><br>Trang chủ / Timer</td><td>T-029→T-031, T-069, T-072, T-077, T-091, T-098, T-099</td><td><span class="status-pill done">✅ Đã xong</span></td><td><span class="status-pill done">✅ /sessions</span></td></tr>
+          <tr><td><span class="scr">S-02</span><br>Chọn Trứng đang ấp</td><td>T-032 (gộp vào T-069)</td><td><span class="status-pill done">✅ Đã xong</span></td><td><span class="status-pill done">✅ /owned-eggs</span></td></tr>
+          <tr><td><span class="scr">Dialog</span><br>Xác nhận Bỏ cuộc</td><td>T-033, T-072 (sửa copy)</td><td><span class="status-pill done">✅ Đã xong</span></td><td><span class="status-pill done">✅ .../give-up</span></td></tr>
+          <tr><td><span class="scr">Dialog</span><br>Kết quả phiên (4 nhánh)</td><td>T-034 (gộp vào T-069)</td><td><span class="status-pill done">✅ Đã xong</span></td><td><span class="status-pill done">✅ .../complete</span></td></tr>
+          <tr><td><span class="scr">S-04</span><br>Khu rừng</td><td>T-035 (T-075), T-088</td><td><span class="status-pill done">✅ Đã xong</span></td><td><span class="status-pill done">✅ /collection</span></td></tr>
+          <tr><td><span class="scr">S-03</span><br>Chi tiết loài / Lore</td><td>T-036 (T-075)</td><td><span class="status-pill done">✅ Đã xong</span></td><td><span class="status-pill done">✅ /species/:id</span></td></tr>
+          <tr><td><span class="scr">S-05</span><br>Cửa hàng</td><td>T-037 (T-076)</td><td><span class="status-pill done">✅ Đã xong</span></td><td><span class="status-pill done">✅ /shop-items</span></td></tr>
+          <tr><td><span class="scr">Dialog</span><br>Chọn tiền tệ mua trứng</td><td>T-037 (T-076)</td><td><span class="status-pill done">✅ Đã xong</span></td><td><span class="status-pill done">✅ .../purchase</span></td></tr>
+          <tr><td><span class="scr">S-06</span><br>Thống kê</td><td>T-038 (T-094)</td><td><span class="status-pill done">✅ Đã xong</span></td><td><span class="status-pill done">✅ /stats/*</span></td></tr>
+          <tr><td><span class="scr">S-07</span><br>Cài đặt</td><td>T-039, T-073, T-081, T-083, T-087, T-095</td><td><span class="status-pill done">✅ Đã xong</span></td><td><span class="status-pill done">✅ /settings</span></td></tr>
+          <tr><td><span class="scr">S-07b</span><br>Kho đồ</td><td>T-099 (mới)</td><td><span class="status-pill done">✅ Đã xong</span></td><td><span class="status-pill done">✅ /inventory + /owned-eggs</span></td></tr>
+          <tr><td><span class="scr">S-07a</span><br>Sao lưu & Đồng bộ</td><td>—</td><td><span class="status-pill removed">⛔ Đã bỏ khỏi phạm vi</span></td><td>—</td></tr>
+          <tr><td><span class="scr">—</span><br>Thông báo (cheat/mua hàng)</td><td>T-085, T-086, T-092, T-096</td><td><span class="status-pill done">✅ Đã xong</span></td><td><span class="status-pill done">✅ /debug/*</span></td></tr>
         </tbody>
       </table>
     </div>
+    <p class="sub" style="margin-top:16px;">Còn lại (xem <span class="scr">plan.md</span> mục "Chưa làm"): T-042 SoundManager (phát âm thanh thật cho chủ đề đã chọn), T-043 outbox offline→online, test suite (Nhóm B/C), thủ tục Play Console (Nhóm E).</p>
   </footer>
 
 </div>
