@@ -20,8 +20,7 @@ interface ApiService {
     @POST("auth/login")
     suspend fun login(@Body body: LoginRequest): AuthResponse
 
-    @POST("auth/refresh")
-    suspend fun refresh(@Body body: RefreshRequest): TokenPairResponse
+    // /auth/refresh sống ở RefreshApiService riêng (dùng bởi TokenAuthenticator) — xem file đó.
 
     @Headers("Requires-Auth: true")
     @GET("auth/me")
@@ -67,6 +66,22 @@ interface ApiService {
     @Headers("Requires-Auth: true")
     @PATCH("collection/{speciesId}/favorite")
     suspend fun toggleFavorite(@Path("speciesId") speciesId: String): FavoriteToggleResponseDto
+
+    @Headers("Requires-Auth: true")
+    @GET("stats/range")
+    suspend fun getStatsRange(@Query("start") start: String, @Query("end") end: String): List<DailyStatsDto>
+
+    @Headers("Requires-Auth: true")
+    @GET("stats/summary")
+    suspend fun getStatsSummary(): StatsSummaryDto
+
+    @Headers("Requires-Auth: true")
+    @GET("settings")
+    suspend fun getSettings(): SettingsDto
+
+    @Headers("Requires-Auth: true")
+    @PATCH("settings")
+    suspend fun updateSettings(@Body body: UpdateSettingsRequest): SettingsDto
 
     @GET("shop-items")
     suspend fun getShopItems(@Query("category") category: String? = null): List<ShopItemDto>

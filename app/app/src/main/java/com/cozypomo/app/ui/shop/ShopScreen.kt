@@ -26,7 +26,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,6 +42,7 @@ import com.cozypomo.app.data.network.ShopItemDto
 import com.cozypomo.app.ui.common.CurrencyViewModel
 import com.cozypomo.app.ui.common.EggIcon
 import com.cozypomo.app.ui.common.FloatingIcon
+import com.cozypomo.app.ui.common.MessageDialog
 import com.cozypomo.app.ui.common.parseEggColor
 
 /** T-037 — S-05 Cửa hàng: Trứng mới / Bình thuỷ tinh / Nhạc nền, item có hiệu ứng bồng bềnh nhẹ.
@@ -111,13 +111,10 @@ fun ShopScreen(currencyViewModel: CurrencyViewModel, viewModel: ShopViewModel = 
                 }
             }
         }
+    }
 
-        uiState.lastMessage?.let { message ->
-            Snackbar(
-                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
-                action = { TextButton(onClick = viewModel::dismissMessage) { Text("Đóng") } },
-            ) { Text(message) }
-        }
+    uiState.lastMessage?.let { message ->
+        MessageDialog(message = message, onDismiss = viewModel::dismissMessage)
     }
 
     uiState.payWithChoiceFor?.let { item ->

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
+import com.cozypomo.app.data.events.CollectionEventBus
 import com.cozypomo.app.data.local.session.SessionDao
 import com.cozypomo.app.data.local.session.SessionEntity
 import com.cozypomo.app.data.local.session.SessionStatus
@@ -73,6 +74,7 @@ class TimerRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val sessionDao: SessionDao,
     private val apiService: ApiService,
+    private val collectionEventBus: CollectionEventBus,
 ) {
     private val _completionEvents = MutableSharedFlow<SessionCompletionResult>(extraBufferCapacity = 1)
     val completionEvents: SharedFlow<SessionCompletionResult> = _completionEvents.asSharedFlow()
@@ -231,6 +233,13 @@ class TimerRepository @Inject constructor(
             else -> SessionCompletionResult.NoEgg(coinsEarned, minutesAccumulated)
         }
         _completionEvents.emit(result)
+        // Báo cho Khu rừng/Kho Trứng (nếu đang mở ở tab khác) tự tải lại — nếu không, tiến
+        // trình ấp/số loài mở khoá vẫn hiện giá trị CŨ cho tới khi người dùng rời rồi quay
+        // lại tab đó, y hệt lỗi cheat-bubble đã sửa ở T-089 nhưng cho trường hợp hoàn thành
+        // phiên thật.
+        if (response?.ownedEgg != null || response?.hatched == true) {
+            collectionEventBus.notifyChanged()
+        }
         return result
     }
 

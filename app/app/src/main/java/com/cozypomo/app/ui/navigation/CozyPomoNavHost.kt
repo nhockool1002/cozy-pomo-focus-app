@@ -12,10 +12,9 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -33,6 +32,8 @@ import com.cozypomo.app.ui.common.CheatBubble
 import com.cozypomo.app.ui.common.CheatBubbleSize
 import com.cozypomo.app.ui.common.CurrencyBubble
 import com.cozypomo.app.ui.common.CurrencyViewModel
+import com.cozypomo.app.ui.common.MessageDialog
+import com.cozypomo.app.ui.common.SessionViewModel
 import com.cozypomo.app.ui.common.TesterCheatMenu
 import com.cozypomo.app.ui.common.TesterCheatViewModel
 import com.cozypomo.app.ui.forest.ForestScreen
@@ -55,6 +56,15 @@ fun CozyPomoNavHost(onLogout: () -> Unit) {
     val cheatViewModel: TesterCheatViewModel = hiltViewModel()
     val cheatState by cheatViewModel.uiState.collectAsState()
     val density = LocalDensity.current
+
+    // Refresh token cũng hết hạn (VD lâu ngày không mở app) → TokenAuthenticator tự xoá phiên
+    // khỏi DataStore → isLoggedIn chuyển false → tự điều hướng về Login, không cần người dùng
+    // tự nhận ra rồi vào Cài đặt bấm Đăng xuất thủ công.
+    val sessionViewModel: SessionViewModel = hiltViewModel()
+    val isLoggedIn by sessionViewModel.isLoggedIn.collectAsState()
+    LaunchedEffect(isLoggedIn) {
+        if (!isLoggedIn) onLogout()
+    }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val bubbleSizePx = with(density) { CheatBubbleSize.toPx() }
@@ -146,11 +156,6 @@ fun CozyPomoNavHost(onLogout: () -> Unit) {
     }
 
     cheatState.cheatMessage?.let { message ->
-        Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            Snackbar(
-                modifier = Modifier.align(Alignment.BottomCenter),
-                action = { TextButton(onClick = cheatViewModel::dismissMessage) { Text("Đóng") } },
-            ) { Text(message) }
-        }
+        MessageDialog(message = message, onDismiss = cheatViewModel::dismissMessage)
     }
 }

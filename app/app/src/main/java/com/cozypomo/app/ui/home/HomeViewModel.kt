@@ -58,11 +58,27 @@ class HomeViewModel @Inject constructor(
         loadOwnedEggs()
         viewModelScope.launch {
             timerRepository.completionEvents.collect { result ->
-                _uiState.update { it.copy(sessionResult = SessionResultUi.Completed(result)) }
+                // Vá ngay tiến trình ấp từ chính response vừa nhận được (đồng bộ, không cần
+                // đợi mạng) — trước đây chỉ gọi loadOwnedEggs() (bất đồng bộ) nên có khoảng
+                // trễ hiển thị lại incubatedMin CŨ (từ trước khi phiên hoàn thành) ngay khi
+                // sessionState chuyển Running→Idle, trước khi network kịp trả về dữ liệu mới.
+                _uiState.update {
+                    it.copy(
+                        sessionResult = SessionResultUi.Completed(result),
+                        selectedOwnedEgg = patchSelectedEgg(it.selectedOwnedEgg, result),
+                    )
+                }
                 loadOwnedEggs()
             }
         }
     }
+
+    private fun patchSelectedEgg(current: OwnedEggDto?, result: SessionCompletionResult): OwnedEggDto? =
+        when (result) {
+            is SessionCompletionResult.Incubating -> current?.copy(incubatedMin = result.incubatedMin)
+            is SessionCompletionResult.Hatched -> null // trứng vừa nở, không còn INCUBATING nữa
+            is SessionCompletionResult.NoEgg -> current
+        }
 
     private fun loadOwnedEggs() {
         viewModelScope.launch {
