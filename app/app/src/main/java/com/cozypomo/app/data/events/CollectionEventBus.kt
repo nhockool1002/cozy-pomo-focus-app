@@ -7,10 +7,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Bus tối giản báo "bộ sưu tập loài / trứng sở hữu vừa đổi" — dùng để [ForestViewModel] tự tải
- * lại khi có thay đổi đến từ nơi khác (VD bubble cheat cấp loài/trứng ở [TesterCheatViewModel]).
- * 2 ViewModel này không cùng phạm vi (cheat sống ở NavHost, Forest sống theo từng lần vào tab) nên
- * không thể tham chiếu thẳng nhau — dùng 1 singleton dùng chung qua Hilt thay vì ràng buộc trực tiếp.
+ * Bus tối giản báo "dữ liệu sở hữu (loài/trứng/kho đồ) vừa đổi" — dùng để các ViewModel không
+ * cùng phạm vi tự tải lại khi có thay đổi đến từ nơi khác mà không cần tham chiếu thẳng nhau:
+ * [ForestViewModel] (cấp loài/trứng qua cheat bubble ở [TesterCheatViewModel], hoặc hoàn thành
+ * phiên thật ở [com.cozypomo.app.data.timer.TimerRepository]), `InventoryViewModel` (trang bị
+ * bình/nhạc từ chính nó cũng tự thông báo lại cho mình qua bus này để nhất quán 1 cơ chế duy nhất).
  */
 @Singleton
 class CollectionEventBus @Inject constructor() {

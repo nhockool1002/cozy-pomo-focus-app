@@ -3,6 +3,7 @@ package com.cozypomo.app.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cozypomo.app.data.auth.AuthRepository
+import com.cozypomo.app.data.events.CollectionEventBus
 import com.cozypomo.app.data.network.ApiService
 import com.cozypomo.app.data.network.OwnedEggDto
 import com.cozypomo.app.data.timer.SessionCompletionResult
@@ -13,6 +14,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -36,6 +39,9 @@ data class HomeUiState(
     val showEggPicker: Boolean = false,
     val showGiveUpConfirm: Boolean = false,
     val sessionResult: SessionResultUi? = null,
+    /** Tên vật phẩm JAR_SKIN đang trang bị (Kho đồ, T-099) — null = bình mặc định. Chỉ cần tên để
+     * suy màu qua [com.cozypomo.app.ui.common.jarTintFor], không cần thêm DTO riêng. */
+    val equippedJarSkinName: String? = null,
 )
 
 /** S-01 — bọc TimerRepository cho UI (T-031). Trứng sở hữu đọc qua GET /owned-eggs (T-032/Shop
@@ -45,6 +51,7 @@ class HomeViewModel @Inject constructor(
     private val timerRepository: TimerRepository,
     private val authRepository: AuthRepository,
     private val apiService: ApiService,
+    private val collectionEventBus: CollectionEventBus,
 ) : ViewModel() {
 
     val sessionState: StateFlow<SessionUiState> = timerRepository.observeActiveSession()
@@ -56,6 +63,10 @@ class HomeViewModel @Inject constructor(
     init {
         viewModelScope.launch { timerRepository.ensureServiceRunningIfActive() }
         loadOwnedEggs()
+        loadEquippedJarSkin()
+        // Trang bị bình mới ở Kho đồ (T-099) trong lúc Trang chủ đã mở sẵn — tự tải lại để hình
+        // bình đổi màu ngay, không cần rời tab rồi quay lại mới thấy.
+        collectionEventBus.changes.onEach { loadEquippedJarSkin() }.launchIn(viewModelScope)
         viewModelScope.launch {
             timerRepository.completionEvents.collect { result ->
                 // Vá ngay tiến trình ấp từ chính response vừa nhận được (đồng bộ, không cần
@@ -90,6 +101,22 @@ class HomeViewModel @Inject constructor(
                         selectedOwnedEgg = if (stillValid) current.selectedOwnedEgg else null,
                     )
                 }
+            }
+        }
+    }
+
+    /** Public — gọi lại từ `LaunchedEffect` mỗi khi Trang chủ được vào lại (xem HomeScreen.kt).
+     * Đây là đường tải LẠI ĐÁNG TIN CẬY: đợt tự kiểm thử phát hiện `collectionEventBus` đôi khi
+     * không tới kịp khi trang bị bình đổi trong lúc đang ở tab khác rồi quay lại Trang chủ (còn
+     * đang điều tra nguyên nhân sâu, nghi liên quan tới ViewModelStore save/restore của
+     * Navigation Compose) — gọi lại ở đây đảm bảo luôn đúng dù listener có tới hay không. */
+    fun refreshEquippedJarSkin() = loadEquippedJarSkin()
+
+    private fun loadEquippedJarSkin() {
+        viewModelScope.launch {
+            runCatching { apiService.getInventory() }.onSuccess { items ->
+                val equippedName = items.firstOrNull { it.shopItem.category == "JAR_SKIN" && it.equipped }?.shopItem?.name
+                _uiState.update { it.copy(equippedJarSkinName = equippedName) }
             }
         }
     }

@@ -6,7 +6,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -38,6 +41,7 @@ import com.cozypomo.app.ui.common.TesterCheatMenu
 import com.cozypomo.app.ui.common.TesterCheatViewModel
 import com.cozypomo.app.ui.forest.ForestScreen
 import com.cozypomo.app.ui.home.HomeScreen
+import com.cozypomo.app.ui.inventory.InventoryScreen
 import com.cozypomo.app.ui.settings.SettingsScreen
 import com.cozypomo.app.ui.shop.ShopScreen
 import com.cozypomo.app.ui.stats.StatsScreen
@@ -73,10 +77,19 @@ fun CozyPomoNavHost(onLogout: () -> Unit) {
 
         Scaffold(
             topBar = {
-                // Bubble số dư dùng chung — chiếm không gian layout THẬT (không phải overlay nổi tự
-                // do) để không bao giờ đè lên nội dung riêng của từng tab (VD nút "+" chọn trứng ở
-                // Trang chủ) dù màn hình đó bố trí thế nào.
-                Box(modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp, end = 20.dp, bottom = 4.dp)) {
+                // 1 hàng DUY NHẤT cho toàn bộ NavHost (icon Cài đặt + bubble số dư) — trước đây
+                // Trang chủ tự vẽ thêm 1 hàng icon Cài đặt riêng ngay dưới hàng này, tạo khoảng
+                // trống thừa giữa 2 hàng liền kề (Dev1002 phản hồi header "trống trải dư thừa").
+                // Gộp lại còn 1 hàng vừa gọn hơn, vừa cho phép mở Cài đặt từ MỌI tab chứ không chỉ
+                // Trang chủ. Bubble số dư vẫn chiếm không gian layout THẬT (không overlay nổi tự do)
+                // để không bao giờ đè lên nội dung riêng của từng tab dù màn hình đó bố trí thế nào.
+                Box(modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp)) {
+                    IconButton(
+                        onClick = { navController.navigate(SettingsRoute) },
+                        modifier = Modifier.align(Alignment.CenterStart),
+                    ) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Cài đặt")
+                    }
                     CurrencyBubble(state = currencyState, modifier = Modifier.align(Alignment.CenterEnd))
                 }
             },
@@ -116,13 +129,11 @@ fun CozyPomoNavHost(onLogout: () -> Unit) {
                 modifier = Modifier.padding(innerPadding),
             ) {
                 composable(CozyPomoDestination.Home.route) {
-                    HomeScreen(
-                        onOpenSettings = { navController.navigate(SettingsRoute) },
-                        currencyViewModel = currencyViewModel,
-                    )
+                    HomeScreen(currencyViewModel = currencyViewModel)
                 }
                 composable(CozyPomoDestination.Forest.route) { ForestScreen() }
                 composable(CozyPomoDestination.Shop.route) { ShopScreen(currencyViewModel = currencyViewModel) }
+                composable(CozyPomoDestination.Inventory.route) { InventoryScreen() }
                 composable(CozyPomoDestination.Stats.route) { StatsScreen() }
                 composable(SettingsRoute) {
                     SettingsScreen(

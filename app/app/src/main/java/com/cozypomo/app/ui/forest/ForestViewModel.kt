@@ -6,7 +6,6 @@ import com.cozypomo.app.data.events.CollectionEventBus
 import com.cozypomo.app.data.network.ApiService
 import com.cozypomo.app.data.network.CollectionEntryDto
 import com.cozypomo.app.data.network.CollectionProgressDto
-import com.cozypomo.app.data.network.OwnedEggDto
 import com.cozypomo.app.data.network.SpeciesDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,14 +22,12 @@ enum class SpeciesCategoryFilter(val label: String, val backendValue: String?) {
     FOREST("Thú rừng", "FOREST"),
     SEA("Sinh vật biển", "SEA"),
     PLANT("Thực vật", "PLANT"),
-    EGG_STORAGE("Kho Trứng", "__EGG_STORAGE__"),
 }
 
 data class ForestUiState(
     val category: SpeciesCategoryFilter = SpeciesCategoryFilter.ALL,
     val allSpecies: List<SpeciesDto> = emptyList(),
     val collectionBySpeciesId: Map<String, CollectionEntryDto> = emptyMap(),
-    val ownedEggs: List<OwnedEggDto> = emptyList(),
     val progress: CollectionProgressDto? = null,
     val loading: Boolean = true,
     val selectedSpeciesId: String? = null,
@@ -39,7 +36,9 @@ data class ForestUiState(
         get() = if (category.backendValue == null) allSpecies else allSpecies.filter { it.category == category.backendValue }
 }
 
-/** T-035 — Khu rừng/Bộ sưu tập (S-04). Tải toàn bộ loài + collection 1 lần, lọc theo tab ở client. */
+/** T-035 — Khu rừng/Bộ sưu tập (S-04). Tải toàn bộ loài + collection 1 lần, lọc theo tab ở client.
+ * Trứng sở hữu ("Kho Trứng") đã chuyển sang màn Kho đồ riêng (T-099, `ui/inventory/`) — không
+ * còn là 1 tab lọc ở đây nữa. */
 @HiltViewModel
 class ForestViewModel @Inject constructor(
     private val apiService: ApiService,
@@ -62,13 +61,11 @@ class ForestViewModel @Inject constructor(
             val speciesResult = runCatching { apiService.getSpecies() }
             val collectionResult = runCatching { apiService.getCollection() }
             val progressResult = runCatching { apiService.getCollectionProgress() }
-            val ownedEggsResult = runCatching { apiService.getOwnedEggs(status = "INCUBATING") }
             _uiState.update {
                 it.copy(
                     allSpecies = speciesResult.getOrDefault(it.allSpecies),
                     collectionBySpeciesId = collectionResult.getOrNull()?.associateBy { entry -> entry.speciesId } ?: it.collectionBySpeciesId,
                     progress = progressResult.getOrNull() ?: it.progress,
-                    ownedEggs = ownedEggsResult.getOrDefault(it.ownedEggs),
                     loading = false,
                 )
             }

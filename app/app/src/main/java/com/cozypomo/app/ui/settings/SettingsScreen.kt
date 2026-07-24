@@ -24,8 +24,6 @@ import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.HourglassBottom
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LocalDrink
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,7 +52,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.cozypomo.app.data.network.InventoryItemDto
 import com.cozypomo.app.ui.common.CurrencyViewModel
 import com.cozypomo.app.ui.common.TesterCheatViewModel
 
@@ -154,19 +151,6 @@ fun SettingsScreen(
                                 label = { Text(label) },
                             )
                         }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            SettingsSection(title = "Kho đồ") {
-                if (uiState.inventory.isEmpty()) {
-                    SettingsRow(icon = Icons.Filled.LocalDrink, label = "Chưa sở hữu bình/nhạc nào — mua ở Cửa hàng")
-                } else {
-                    uiState.inventory.forEachIndexed { index, item ->
-                        if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        InventoryRow(item = item, onToggleEquip = { viewModel.toggleEquip(item.id) })
                     }
                 }
             }
@@ -287,33 +271,6 @@ private fun SettingsSliderRow(
             onValueChangeFinished = { onChangeFinished(value) },
             valueRange = valueRange,
         )
-    }
-}
-
-/** 1 dòng vật phẩm trong Kho đồ (bình/nhạc đã mua ở Cửa hàng) + nút trang bị/bỏ trang bị. */
-@Composable
-private fun InventoryRow(item: InventoryItemDto, onToggleEquip: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        val icon = if (item.shopItem.category == "MUSIC") Icons.Filled.MusicNote else Icons.Filled.LocalDrink
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(item.shopItem.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        if (item.equipped) {
-            Text(
-                "Đang dùng",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold,
-            )
-        } else {
-            Button(
-                onClick = onToggleEquip,
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-            ) { Text("Dùng") }
-        }
     }
 }
 

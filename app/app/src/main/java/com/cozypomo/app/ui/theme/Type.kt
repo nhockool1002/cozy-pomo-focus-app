@@ -10,26 +10,26 @@ import androidx.compose.ui.unit.sp
 import com.cozypomo.app.R
 
 /**
- * Nunito (biến trục wght, hỗ trợ tiếng Việt đầy đủ — res/font/nunito.ttf) — font bo tròn phù hợp
- * game cute cho toàn bộ ứng dụng, thay cho font hệ thống mặc định của scaffold ban đầu.
+ * Baloo 2 (biến trục wght 400-800, hỗ trợ tiếng Việt đầy đủ — res/font/baloo2.ttf) — font bo
+ * tròn, "mập mạp" hơn Nunito trước đó, hợp không khí game cute hơn cho toàn bộ ứng dụng.
  */
 @OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
-private fun nunito(weight: Int) = Font(
-    resId = R.font.nunito,
+private fun baloo2(weight: Int) = Font(
+    resId = R.font.baloo2,
     weight = FontWeight(weight),
     variationSettings = FontVariation.Settings(FontVariation.weight(weight)),
 )
 
-val NunitoFamily = FontFamily(
-    nunito(400),
-    nunito(500),
-    nunito(600),
-    nunito(700),
-    nunito(800),
+val Baloo2Family = FontFamily(
+    baloo2(400),
+    baloo2(500),
+    baloo2(600),
+    baloo2(700),
+    baloo2(800),
 )
 
 private fun style(weight: FontWeight, size: androidx.compose.ui.unit.TextUnit, lineHeight: androidx.compose.ui.unit.TextUnit? = null) =
-    TextStyle(fontFamily = NunitoFamily, fontWeight = weight, fontSize = size, lineHeight = lineHeight ?: TextStyle.Default.lineHeight)
+    TextStyle(fontFamily = Baloo2Family, fontWeight = weight, fontSize = size, lineHeight = lineHeight ?: TextStyle.Default.lineHeight)
 
 val CozyPomoTypography = Typography(
     displayLarge = style(FontWeight.ExtraBold, 48.sp, 56.sp),

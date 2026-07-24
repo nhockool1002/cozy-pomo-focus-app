@@ -18,21 +18,15 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -40,13 +34,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.cozypomo.app.data.network.OwnedEggDto
 import com.cozypomo.app.data.network.SpeciesDto
-import com.cozypomo.app.ui.common.EggIcon
 import com.cozypomo.app.ui.common.RarityBadge
 import com.cozypomo.app.ui.common.SpeciesArtIcon
-import com.cozypomo.app.ui.common.parseEggColor
-import kotlinx.coroutines.launch
 
 /** T-035 — S-04 Khu rừng/Bộ sưu tập: lưới loài đã/chưa mở khoá, lọc theo nhóm. */
 @Composable
@@ -88,26 +78,6 @@ fun ForestScreen(viewModel: ForestViewModel = hiltViewModel()) {
         if (uiState.loading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
-            }
-        } else if (uiState.category == SpeciesCategoryFilter.EGG_STORAGE) {
-            if (uiState.ownedEggs.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        "Chưa có trứng nào đang ấp — ghé Cửa hàng để mua nhé",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 32.dp),
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
-                    contentPadding = PaddingValues(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    items(uiState.ownedEggs, key = { it.id }) { egg -> EggStorageCard(egg) }
-                }
             }
         } else {
             LazyVerticalGrid(
@@ -195,45 +165,6 @@ private fun UnlockedSpeciesCard(species: SpeciesDto, hatchCount: Int, onClick: (
                     .padding(start = 8.dp, top = 8.dp)
                     .shadow(2.dp, RoundedCornerShape(50)),
             )
-        }
-    }
-}
-
-/** Kho Trứng — trứng đang sở hữu, chạm vào hiện bubble thời gian đã ấp. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun EggStorageCard(egg: OwnedEggDto) {
-    val hatchDuration = egg.eggType.hatchDurationMin.coerceAtLeast(1)
-    val tooltipState = rememberTooltipState(isPersistent = true)
-    val scope = rememberCoroutineScope()
-    TooltipBox(
-        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-        tooltip = {
-            PlainTooltip {
-                Text("${egg.incubatedMin}/$hatchDuration phút đã ấp")
-            }
-        },
-        state = tooltipState,
-    ) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            onClick = { scope.launch { tooltipState.show() } },
-            modifier = Modifier.fillMaxWidth().height(SpeciesCardHeight),
-        ) {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(vertical = 10.dp, horizontal = 4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                EggIcon(color = parseEggColor(egg.eggType.colorHex), size = 36.dp)
-                Text(egg.eggType.name, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 1)
-                Text(
-                    "${egg.incubatedMin}/$hatchDuration",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
 }

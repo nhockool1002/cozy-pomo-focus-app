@@ -33,6 +33,12 @@ fun jarEggStageFor(progress: Float): JarEggStage = when {
     else -> JarEggStage.NORMAL
 }
 
+/** Suy màu thân bình ổn định theo tên vật phẩm JAR_SKIN (không cần backend thêm cột màu riêng —
+ * ShopItem hiện không có trường màu nào) — cùng 1 tên luôn ra cùng 1 màu, lấy từ [SPECIES_PALETTE]
+ * sẵn có để khớp bảng màu chung của game thay vì bịa 1 bảng màu mới. */
+fun jarTintFor(shopItemName: String): Color =
+    SPECIES_PALETTE[(shopItemName.hashCode() and 0x7FFFFFFF) % SPECIES_PALETTE.size].base
+
 /**
  * Biểu tượng "bình ấp trứng" dùng chung cho Splash/Onboarding/Đăng nhập/Trang chủ.
  * [eggColor] null = bình rỗng (không chọn trứng). [progress] 0..1 = incubatedMin/hatchDurationMin,
@@ -47,9 +53,11 @@ fun JarMark(
     progress: Float = 0f,
     desaturated: Boolean = false,
     animate: Boolean = false,
+    /** Màu thân bình theo skin đang trang bị (Kho đồ, T-099) — null = màu mặc định [primary]. */
+    jarTint: Color? = null,
 ) {
     val ink = MaterialTheme.colorScheme.onBackground
-    val primary = MaterialTheme.colorScheme.primary
+    val primary = jarTint ?: MaterialTheme.colorScheme.primary
     val stage = if (eggColor == null) JarEggStage.NONE else if (desaturated) JarEggStage.NORMAL else jarEggStageFor(progress)
     val resolvedEggColor = if (desaturated) ink.copy(alpha = 0.35f) else eggColor
 

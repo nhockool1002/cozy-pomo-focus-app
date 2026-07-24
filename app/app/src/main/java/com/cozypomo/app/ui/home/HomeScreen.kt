@@ -6,6 +6,8 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -19,24 +21,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.HourglassBottom
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -48,13 +51,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.cozypomo.app.data.timer.SessionUiState
 import com.cozypomo.app.ui.common.CurrencyViewModel
 import com.cozypomo.app.ui.common.JarMark
+import com.cozypomo.app.ui.common.jarTintFor
 import com.cozypomo.app.ui.common.parseEggColor
 
 /** S-01 — Trang chủ/Timer, lõi sản phẩm. Xem docs/technical-spec.md §2. Số dư Xu Lá/Giờ tích luỹ
  * hiện qua bubble nổi dùng chung [CurrencyViewModel] (xem CozyPomoNavHost) — không tự tải riêng ở đây nữa. */
 @Composable
 fun HomeScreen(
-    onOpenSettings: () -> Unit,
     currencyViewModel: CurrencyViewModel,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -64,8 +67,14 @@ fun HomeScreen(
     val selectedEgg = uiState.selectedOwnedEgg
     val isIncubating = isRunning && selectedEgg != null
 
+    // Vào lại Trang chủ (đổi tab rồi quay lại) luôn tải lại bình đang trang bị — không chỉ dựa
+    // vào collectionEventBus (đôi lúc tới trễ/không tới khi ViewModel không active ở tab khác,
+    // xem HomeViewModel.refreshEquippedJarSkin), đảm bảo hình bình luôn đúng dù trang bị đổi từ
+    // Kho đồ lúc không đứng ở Trang chủ.
+    LaunchedEffect(Unit) { viewModel.refreshEquippedJarSkin() }
+
     // Số dư đổi sau khi hoàn thành/bỏ cuộc phiên — báo cho bubble dùng chung tải lại.
-    androidx.compose.runtime.LaunchedEffect(uiState.sessionResult) {
+    LaunchedEffect(uiState.sessionResult) {
         if (uiState.sessionResult != null) currencyViewModel.refresh()
     }
 
@@ -87,18 +96,10 @@ fun HomeScreen(
             .fillMaxSize()
             .padding(horizontal = 20.dp, vertical = 12.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onOpenSettings) {
-                Icon(Icons.Filled.Settings, contentDescription = "Cài đặt")
-            }
-        }
-
         Column(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -108,6 +109,7 @@ fun HomeScreen(
                     eggColor = selectedEgg?.let { parseEggColor(it.eggType.colorHex) },
                     progress = jarProgress,
                     animate = isRunning,
+                    jarTint = uiState.equippedJarSkinName?.let { jarTintFor(it) },
                 )
                 Surface(
                     onClick = { if (!isRunning) viewModel.openEggPicker() },
@@ -135,13 +137,13 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             Text(
                 text = formatCountdown(sessionState, uiState.durationMin),
                 style = MaterialTheme.typography.headlineMedium.copy(fontSize = 56.sp),
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Slider(
                 value = uiState.durationMin.toFloat(),
                 onValueChange = { viewModel.onDurationChange(it.toInt()) },
@@ -155,49 +157,64 @@ fun HomeScreen(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Nhận thưởng bằng:",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = uiState.rewardCurrency == "COIN",
-                    onClick = { viewModel.onRewardCurrencyChange("COIN") },
-                    enabled = !isRunning,
-                    leadingIcon = { Icon(Icons.Filled.Eco, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    label = { Text("Xu Lá") },
-                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.secondary),
-                )
-                FilterChip(
-                    selected = uiState.rewardCurrency == "FOCUS_MINUTE",
-                    onClick = { viewModel.onRewardCurrencyChange("FOCUS_MINUTE") },
-                    enabled = !isRunning,
-                    leadingIcon = { Icon(Icons.Filled.HourglassBottom, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    label = { Text("Giờ tích luỹ") },
-                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary),
-                )
-            }
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Nhận thưởng bằng",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = uiState.rewardCurrency == "COIN",
+                            onClick = { viewModel.onRewardCurrencyChange("COIN") },
+                            enabled = !isRunning,
+                            leadingIcon = { Icon(Icons.Filled.Eco, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                            label = { Text("Xu Lá") },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.secondary),
+                        )
+                        FilterChip(
+                            selected = uiState.rewardCurrency == "FOCUS_MINUTE",
+                            onClick = { viewModel.onRewardCurrencyChange("FOCUS_MINUTE") },
+                            enabled = !isRunning,
+                            leadingIcon = { Icon(Icons.Filled.HourglassBottom, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                            label = { Text("Giờ tích luỹ") },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary),
+                        )
+                    }
 
-            if (selectedEgg != null) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Dành cho ấp trứng: ${(uiState.incubationRatio * 100).toInt()}% · còn lại quy đổi theo lựa chọn ở trên",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Slider(
-                    value = uiState.incubationRatio,
-                    onValueChange = viewModel::onIncubationRatioChange,
-                    valueRange = 0f..1f,
-                    enabled = !isRunning,
-                    colors = androidx.compose.material3.SliderDefaults.colors(
-                        activeTrackColor = MaterialTheme.colorScheme.tertiary,
-                        thumbColor = MaterialTheme.colorScheme.tertiary,
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                    if (selectedEgg != null) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Dành cho ấp trứng: ${(uiState.incubationRatio * 100).toInt()}%",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = "Phần còn lại quy đổi theo lựa chọn ở trên",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        )
+                        Slider(
+                            value = uiState.incubationRatio,
+                            onValueChange = viewModel::onIncubationRatioChange,
+                            valueRange = 0f..1f,
+                            enabled = !isRunning,
+                            colors = androidx.compose.material3.SliderDefaults.colors(
+                                activeTrackColor = MaterialTheme.colorScheme.tertiary,
+                                thumbColor = MaterialTheme.colorScheme.tertiary,
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
             }
         }
 

@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.cozypomo.app.BuildConfig
 import com.cozypomo.app.data.auth.AuthRepository
 import com.cozypomo.app.data.network.ApiService
-import com.cozypomo.app.data.network.InventoryItemDto
 import com.cozypomo.app.data.network.UpdateSettingsRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,14 +32,13 @@ data class SettingsUiState(
     val breakMinutes: Int = 5,
     val strictModeEnabled: Boolean = true,
     val soundTheme: String = "default",
-    val inventory: List<InventoryItemDto> = emptyList(),
 )
 
 /** S-07 — gom các chức năng cài đặt (kể cả đăng xuất) vào 1 màn riêng, tách khỏi Trang chủ.
  * T-039: thêm cấu hình phiên (thời gian mặc định/Strict Mode/âm thanh, `GET`/`PATCH /settings`
- * đã có sẵn từ T-010) + Kho đồ (xem/trang bị bình-nhạc đã mua ở Cửa hàng, `PATCH /inventory/:id/equip`
- * đã có sẵn từ T-008 nhưng chưa có UI nào gọi tới). Không có mục Sao lưu & Đồng bộ (S-07a/`SyncRepository`)
- * theo yêu cầu — không nằm trong phạm vi đợt này.
+ * đã có sẵn từ T-010). Không có mục Sao lưu & Đồng bộ (S-07a/`SyncRepository`) theo yêu cầu —
+ * không nằm trong phạm vi đợt này. Kho đồ (bình/nhạc/trứng sở hữu) đã tách thành màn riêng ở
+ * `ui/inventory/` (T-099) — không còn sống ở đây nữa.
  * Menu cheat tester (5-tap vào "Phiên bản") sống ở [com.cozypomo.app.ui.common.TesterCheatViewModel]
  * dùng chung toàn app — xem CozyPomoNavHost — vì bubble phải hiện được ở mọi tab, không chỉ ở đây. */
 @HiltViewModel
@@ -60,7 +58,6 @@ class SettingsViewModel @Inject constructor(
 
     init {
         loadSettings()
-        loadInventory()
     }
 
     private fun loadSettings() {
@@ -75,14 +72,6 @@ class SettingsViewModel @Inject constructor(
                         soundTheme = dto.soundTheme,
                     )
                 }
-            }
-        }
-    }
-
-    private fun loadInventory() {
-        viewModelScope.launch {
-            runCatching { apiService.getInventory() }.onSuccess { items ->
-                _localState.update { it.copy(inventory = items) }
             }
         }
     }
@@ -109,12 +98,6 @@ class SettingsViewModel @Inject constructor(
                     )
                 }
             }
-        }
-    }
-
-    fun toggleEquip(inventoryItemId: String) {
-        viewModelScope.launch {
-            runCatching { apiService.toggleEquip(inventoryItemId) }.onSuccess { loadInventory() }
         }
     }
 
