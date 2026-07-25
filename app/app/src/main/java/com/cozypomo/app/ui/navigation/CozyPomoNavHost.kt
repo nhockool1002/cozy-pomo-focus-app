@@ -87,7 +87,7 @@ fun CozyPomoNavHost(onLogout: () -> Unit) {
                 // để không bao giờ đè lên nội dung riêng của từng tab dù màn hình đó bố trí thế nào.
                 Box(modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp)) {
                     IconButton(
-                        onClick = { navController.navigate(SettingsRoute) },
+                        onClick = { navController.navigate(SettingsRoute) { launchSingleTop = true } },
                         modifier = Modifier.align(Alignment.CenterStart),
                     ) {
                         Icon(Icons.Filled.Settings, contentDescription = "Cài đặt")
@@ -105,10 +105,18 @@ fun CozyPomoNavHost(onLogout: () -> Unit) {
                         NavigationBarItem(
                             selected = selected,
                             onClick = {
+                                // KHÔNG dùng saveState/restoreState ở đây: kết hợp popUpTo(startDestination)
+                                // + saveState + restoreState là 1 bug thật của Navigation-Compose khi có
+                                // route ngoài 5 tab (VD "settings"/"about") từng bị pop-with-saveState — lần
+                                // sau đó navigate() về đúng startDestination ("home") sẽ bị restore NHẦM sang
+                                // back-stack-entry đã lưu trước đó (settings) thay vì hiện "home" (tái hiện
+                                // được 100%: Cài đặt → Khu rừng → Trang chủ lại quay về Cài đặt). Bỏ
+                                // saveState/restoreState tránh hẳn registry lỗi này; cái giá phải trả là mỗi
+                                // lần đổi tab, ViewModel của tab đó bị tạo lại (gọi lại API) thay vì giữ
+                                // nguyên — chấp nhận được vì các màn đã tự refetch khi vào lại (VD T-099).
                                 navController.navigate(destination.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    popUpTo(navController.graph.findStartDestination().id)
                                     launchSingleTop = true
-                                    restoreState = true
                                 }
                             },
                             icon = { Icon(destination.icon, contentDescription = destination.label) },
@@ -141,7 +149,7 @@ fun CozyPomoNavHost(onLogout: () -> Unit) {
                     SettingsScreen(
                         onBack = { navController.popBackStack() },
                         onLoggedOut = onLogout,
-                        onOpenAbout = { navController.navigate(AboutRoute) },
+                        onOpenAbout = { navController.navigate(AboutRoute) { launchSingleTop = true } },
                         currencyViewModel = currencyViewModel,
                         cheatViewModel = cheatViewModel,
                     )
