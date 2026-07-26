@@ -13,19 +13,25 @@ export class EggsService {
     return this.prisma.eggType.findUnique({ where: { id } });
   }
 
+  /** T-116 — trọng số cấp bậc giờ RIÊNG theo từng loại trứng (`EggRarityWeight`), không còn 1 bảng
+   * toàn cục dùng chung. Cấp bậc KHÔNG có dòng trong bảng này ở trứng đó (rarityWeightMap không
+   * chứa key) → coi như trọng số 0, không bao giờ rơi (VD trứng Rừng/Biển/Hoa không có dòng SS/SSR
+   * → chỉ rơi B/A/S; khác hẳn hành vi cũ `?? 1` mặc định trọng số 1 khi thiếu dòng). */
   private async loadWeightedDrops(eggTypeId: string) {
     const [drops, rarityWeights] = await Promise.all([
       this.prisma.eggDropEntry.findMany({
         where: { eggTypeId },
         include: { species: true },
       }),
-      this.prisma.rarityWeight.findMany(),
+      this.prisma.eggRarityWeight.findMany({ where: { eggTypeId } }),
     ]);
     const rarityWeightMap = new Map(rarityWeights.map((r) => [r.rarity, r.weight]));
-    return drops.map((d) => ({
-      species: d.species,
-      effectiveWeight: d.weight * (rarityWeightMap.get(d.species.rarity) ?? 1),
-    }));
+    return drops
+      .map((d) => ({
+        species: d.species,
+        effectiveWeight: d.weight * (rarityWeightMap.get(d.species.rarity) ?? 0),
+      }))
+      .filter((d) => d.effectiveWeight > 0);
   }
 
   /** Xác suất nở theo từng cấp bậc — hiển thị minh bạch cho người chơi trước khi ấp. */

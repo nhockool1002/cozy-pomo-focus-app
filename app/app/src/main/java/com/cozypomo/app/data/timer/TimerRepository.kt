@@ -8,9 +8,15 @@ import com.cozypomo.app.data.events.CollectionEventBus
 import com.cozypomo.app.data.local.session.SessionDao
 import com.cozypomo.app.data.local.session.SessionEntity
 import com.cozypomo.app.data.local.session.SessionStatus
+import com.cozypomo.app.data.local.sync.SyncEventType
+import com.cozypomo.app.data.local.sync.SyncOutboxDao
+import com.cozypomo.app.data.local.sync.SyncOutboxEntity
 import com.cozypomo.app.data.network.ApiService
 import com.cozypomo.app.data.network.CompleteSessionRequest
 import com.cozypomo.app.data.network.CreateSessionRequest
+import com.cozypomo.app.data.notification.SessionNotifier
+import com.cozypomo.app.data.sound.SoundManager
+import com.cozypomo.app.data.sync.SyncOutboxScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -62,8 +68,10 @@ sealed interface SessionUiState {
 
 /**
  * TimerRepository (FR01/FR03, mục 3.1 docs/technical-spec.md) — lõi của app.
- * Room là nguồn sự thật cho phiên đang chạy (đọc bởi cả UI lẫn Foreground Service);
- * backend chỉ đồng bộ best-effort (không có outbox retry đầy đủ — đó là T-043).
+ * Room là nguồn sự thật cho phiên đang chạy (đọc bởi cả UI lẫn Foreground Service); backend đồng
+ * bộ best-effort trước — gọi thẳng ngay lúc thao tác, chỉ rơi vào hàng đợi outbox (T-043,
+ * [SyncOutboxDao]/[com.cozypomo.app.data.sync.SyncOutboxWorker]) khi thất bại (mất mạng), tự gửi
+ * lại qua `POST /sync/batch` lúc có mạng trở lại — không còn im lặng bỏ qua như trước T-043.
  *
  * Mỗi phiên hoàn thành chia phút giữa Giờ tích luỹ và trứng đang ấp (nếu có) theo
  * [incubationRatio] — logic chia % + roll loài khi đủ ngưỡng nằm ở backend
@@ -75,6 +83,10 @@ class TimerRepository @Inject constructor(
     private val sessionDao: SessionDao,
     private val apiService: ApiService,
     private val collectionEventBus: CollectionEventBus,
+    private val soundManager: SoundManager,
+    private val sessionNotifier: SessionNotifier,
+    private val syncOutboxDao: SyncOutboxDao,
+    private val syncOutboxScheduler: SyncOutboxScheduler,
 ) {
     private val _completionEvents = MutableSharedFlow<SessionCompletionResult>(extraBufferCapacity = 1)
     val completionEvents: SharedFlow<SessionCompletionResult> = _completionEvents.asSharedFlow()
@@ -146,6 +158,8 @@ class TimerRepository @Inject constructor(
         )
         sessionDao.upsert(entity)
         startForegroundService(id)
+        sessionNotifier.scheduleSessionEndNotification(id, System.currentTimeMillis() + durationMin * 60_000L)
+        playAmbientForCurrentSoundTheme()
 
         runCatching {
             apiService.createSession(
@@ -153,22 +167,48 @@ class TimerRepository @Inject constructor(
             )
         }.onSuccess { remote ->
             sessionDao.upsert(entity.copy(remoteId = remote.id))
+        }.onFailure {
+            enqueueOutbox(id, SyncEventType.SESSION_CREATE)
         }
         return id
+    }
+
+    /** T-043 — đẩy 1 thao tác phiên thất bại (mất mạng) vào hàng đợi outbox, đồng thời báo
+     * [SyncOutboxScheduler] thử xả ngay nếu mạng đã có lại. */
+    private suspend fun enqueueOutbox(localSessionId: String, type: String) {
+        syncOutboxDao.insert(
+            SyncOutboxEntity(localSessionId = localSessionId, type = type, createdAtEpochMs = System.currentTimeMillis()),
+        )
+        syncOutboxScheduler.enqueueFlush()
+    }
+
+    /** Đọc `soundTheme` hiện tại từ Cài đặt (T-095 chỉ lưu lựa chọn, chưa từng phát) rồi phát nhạc
+     * nền tương ứng — lỗi mạng thì coi như "default" (không phát gì), không chặn việc bắt đầu phiên. */
+    private suspend fun playAmbientForCurrentSoundTheme() {
+        val theme = runCatching { apiService.getSettings().soundTheme }.getOrDefault("default")
+        soundManager.playAmbientTrack(theme)
     }
 
     suspend fun giveUpSession(sessionId: String) {
         val entity = sessionDao.getById(sessionId) ?: return
         sessionDao.upsert(entity.copy(status = SessionStatus.GIVEN_UP, endedAtEpochMs = System.currentTimeMillis()))
         stopForegroundService()
-        entity.remoteId?.let { remoteId ->
-            runCatching { apiService.giveUpSession(remoteId) }
-        }
+        soundManager.stopAmbientTrack()
+        sessionNotifier.cancelSessionNotification(sessionId)
+        val synced = entity.remoteId?.let { remoteId ->
+            runCatching { apiService.giveUpSession(remoteId) }.isSuccess
+        } ?: false
+        if (!synced) enqueueOutbox(sessionId, SyncEventType.SESSION_GIVE_UP)
     }
 
     /** Gọi khi đếm về 0 (từ Foreground Service) — chấm dứt phiên, ấp/nở trứng, trả kết quả. */
     suspend fun completeSession(sessionId: String): SessionCompletionResult {
         var entity = sessionDao.getById(sessionId) ?: error("Không tìm thấy phiên $sessionId")
+
+        // Huỷ ngay báo động dự phòng (SessionNotifier) + nhạc nền — đường chính (ở đây) đang xử
+        // lý hoàn thành phiên nên không cần lớp bảo hiểm đó nữa.
+        sessionNotifier.cancelSessionNotification(sessionId)
+        soundManager.stopAmbientTrack()
 
         if (entity.remoteId == null) {
             runCatching {
@@ -191,6 +231,12 @@ class TimerRepository @Inject constructor(
         val response = entity.remoteId?.let { remoteId ->
             runCatching { apiService.completeSession(remoteId, CompleteSessionRequest(entity.clientEventId)) }.getOrNull()
         }
+        if (response == null) {
+            // remoteId null (session_create cũng đang mất mạng, đã tự nằm trong outbox từ
+            // startSession) hoặc completeSession thất bại — đẩy vào outbox, worker tự chờ
+            // session_create xong (nếu có) rồi gửi complete lại qua POST /sync/batch.
+            enqueueOutbox(sessionId, SyncEventType.SESSION_COMPLETE)
+        }
 
         // Offline/lỗi mạng: không biết chia % ra sao ở backend — coi như toàn bộ quy đổi thành
         // đúng 1 loại tiền theo lựa chọn rewardCurrency của người dùng, không ấp trứng, giữ trải
@@ -212,6 +258,7 @@ class TimerRepository @Inject constructor(
         )
         sessionDao.upsert(updated)
         stopForegroundService()
+        soundManager.playCompletionChime()
 
         val result: SessionCompletionResult = when {
             response?.hatched == true -> SessionCompletionResult.Hatched(

@@ -115,24 +115,13 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.shopItem.deleteMany();
   await prisma.eggDropEntry.deleteMany();
+  await prisma.eggRarityWeight.deleteMany();
   await prisma.eggType.deleteMany();
   await prisma.species.deleteMany();
-  await prisma.rarityWeight.deleteMany();
   await prisma.gameSettings.deleteMany();
 
   console.log('Nạp cấu hình kinh tế (game_settings)...');
   await prisma.gameSettings.create({ data: { id: 1, coinsPerFocusMinute: 10 } });
-
-  console.log('Nạp rarity_weights...');
-  await prisma.rarityWeight.createMany({
-    data: [
-      { rarity: Rarity.B, weight: 450 },
-      { rarity: Rarity.A, weight: 300 },
-      { rarity: Rarity.S, weight: 150 },
-      { rarity: Rarity.SS, weight: 95 },
-      { rarity: Rarity.SSR, weight: 5 },
-    ],
-  });
 
   console.log('Nạp 175 loài...');
   const insertSpecies = async (list: SpeciesSeed[], category: SpeciesCategory, rarity?: Rarity) => {
@@ -151,7 +140,23 @@ async function main() {
   const mythicSpecies = await insertSpecies(mythicNames, SpeciesCategory.MYTHIC, Rarity.SSR);
   const allSpecies = [...forestSpecies, ...seaSpecies, ...plantSpecies, ...mythicSpecies];
 
-  console.log('Nạp 4 loại trứng + bảng tỉ lệ nở...');
+  // T-116 — 25 loài Thần Thú (MYTHIC) chia theo 3 chủ đề cho 3 trứng Truyền Thuyết, dựa theo
+  // "họ" loài đã có sẵn trong mythicNames (mỗi họ 5 con, xem block phía trên): Kỳ Lân + Hồ Ly →
+  // Rừng (đất liền); Long + Hạc → Biển (nước/mây — rồng/hạc gắn với sông biển trong văn hoá dân
+  // gian); Phượng Hoàng → Hoa (lửa/ánh sáng rực rỡ, gần với khu vườn hơn Rừng/Biển). Đây là đề
+  // xuất của Claude, CHƯA được Dev1002 duyệt cụ thể — xem plan.md để đổi lại nếu cần.
+  const mythicByFamily = {
+    phoenix: mythicSpecies.slice(0, 5),
+    qilin: mythicSpecies.slice(5, 10),
+    dragon: mythicSpecies.slice(10, 15),
+    ninetail: mythicSpecies.slice(15, 20),
+    crane: mythicSpecies.slice(20, 25),
+  };
+  const mythicForest = [...mythicByFamily.qilin, ...mythicByFamily.ninetail];
+  const mythicSea = [...mythicByFamily.dragon, ...mythicByFamily.crane];
+  const mythicPlant = [...mythicByFamily.phoenix];
+
+  console.log('Nạp 7 loại trứng + bảng tỉ lệ nở riêng từng loại...');
   // hatchDurationMin/priceHours/priceCoin chỉ là giá trị khởi tạo — admin chỉnh trực tiếp qua AdminJS.
   // Tỉ giá quy đổi cố định: 1 phút Giờ tích luỹ = 10 Xu Lá — priceCoin luôn bằng priceHours * 10
   // để 2 cách trả tiền công bằng như nhau (không có cách nào rẻ hơn cách còn lại).
@@ -168,6 +173,17 @@ async function main() {
   const eggMystery = await prisma.eggType.create({
     data: { name: 'Trứng Bí Ẩn', colorHex: PALETTE_HEX[12], priceCoin: 150 * COIN_PER_HOUR_MINUTE, priceHours: 150, hatchDurationMin: 300 },
   });
+  // 3 trứng Truyền Thuyết: priceCoin/priceHours = 0 — không bán ở Cửa hàng (ShopItem.purchasable
+  // = false bên dưới), Admin phát trực tiếp bằng cách tạo `OwnedEgg` qua AdminJS (resource có sẵn).
+  const eggLegendForest = await prisma.eggType.create({
+    data: { name: 'Trứng Truyền Thuyết Rừng', colorHex: PALETTE_HEX[2], priceCoin: 0, priceHours: 0, hatchDurationMin: 360 },
+  });
+  const eggLegendSea = await prisma.eggType.create({
+    data: { name: 'Trứng Truyền Thuyết Biển', colorHex: PALETTE_HEX[9], priceCoin: 0, priceHours: 0, hatchDurationMin: 360 },
+  });
+  const eggLegendPlant = await prisma.eggType.create({
+    data: { name: 'Trứng Truyền Thuyết Hoa', colorHex: PALETTE_HEX[4], priceCoin: 0, priceHours: 0, hatchDurationMin: 360 },
+  });
 
   await prisma.eggDropEntry.createMany({
     data: [
@@ -176,8 +192,41 @@ async function main() {
       ...plantSpecies.map((s) => ({ eggTypeId: eggPlant.id, speciesId: s.id, weight: 1 })),
       // Trứng Bí Ẩn: rơi ra từ TẤT CẢ các loài (kể cả Thần Thú) — đây là trứng "gacha" cao cấp.
       ...allSpecies.map((s) => ({ eggTypeId: eggMystery.id, speciesId: s.id, weight: 1 })),
+      // Trứng Truyền Thuyết: trọn bộ 1 khu (kể cả cấp B/A) + Thần Thú cùng chủ đề — bảng trọng số
+      // cấp bậc (EggRarityWeight bên dưới) mới là thứ loại B/A ra khỏi kết quả thật, không phải
+      // bảng rơi trứng này — giữ nguyên toàn bộ khu để tự động khớp nếu sau này đổi cấp 1 loài.
+      ...forestSpecies.map((s) => ({ eggTypeId: eggLegendForest.id, speciesId: s.id, weight: 1 })),
+      ...mythicForest.map((s) => ({ eggTypeId: eggLegendForest.id, speciesId: s.id, weight: 1 })),
+      ...seaSpecies.map((s) => ({ eggTypeId: eggLegendSea.id, speciesId: s.id, weight: 1 })),
+      ...mythicSea.map((s) => ({ eggTypeId: eggLegendSea.id, speciesId: s.id, weight: 1 })),
+      ...plantSpecies.map((s) => ({ eggTypeId: eggLegendPlant.id, speciesId: s.id, weight: 1 })),
+      ...mythicPlant.map((s) => ({ eggTypeId: eggLegendPlant.id, speciesId: s.id, weight: 1 })),
     ],
   });
+
+  console.log('Nạp trọng số cấp bậc riêng từng loại trứng (egg_rarity_weights)...');
+  // T-116 — mỗi loại trứng 1 "đường cong" tỉ lệ khác nhau theo yêu cầu Dev1002. Cấp KHÔNG có dòng
+  // ở 1 loại trứng = không bao giờ rơi ở trứng đó (xem eggs.service.ts#loadWeightedDrops).
+  const eggRarityWeightRows: { eggTypeId: string; rarity: Rarity; weight: number }[] = [];
+  const addWeights = (eggTypeId: string, weights: Partial<Record<Rarity, number>>) => {
+    for (const [rarity, weight] of Object.entries(weights)) {
+      eggRarityWeightRows.push({ eggTypeId, rarity: rarity as Rarity, weight: weight! });
+    }
+  };
+  // Rừng/Biển/Hoa: chỉ B/A/S — B cao, A trung bình, S thấp, KHÔNG bao giờ ra Thần Thú (SSR).
+  const BASIC_WEIGHTS: Partial<Record<Rarity, number>> = { B: 70, A: 25, S: 5 };
+  addWeights(eggForest.id, BASIC_WEIGHTS);
+  addWeights(eggSea.id, BASIC_WEIGHTS);
+  addWeights(eggPlant.id, BASIC_WEIGHTS);
+  // Bí Ẩn: A→SSR (không có B) — A cao, S thấp hơn, SS thấp hơn nữa, SSR cực kỳ thấp.
+  addWeights(eggMystery.id, { A: 65, S: 22, SS: 10, SSR: 3 });
+  // Truyền Thuyết: S→SSR (không có B/A) — S cao, SS trung bình, SSR trung bình (cao hơn hẳn Bí Ẩn
+  // vì đây là trứng phần thưởng Admin phát, không phải gacha ngẫu nhiên cho toàn bộ người chơi).
+  const LEGEND_WEIGHTS: Partial<Record<Rarity, number>> = { S: 55, SS: 25, SSR: 20 };
+  addWeights(eggLegendForest.id, LEGEND_WEIGHTS);
+  addWeights(eggLegendSea.id, LEGEND_WEIGHTS);
+  addWeights(eggLegendPlant.id, LEGEND_WEIGHTS);
+  await prisma.eggRarityWeight.createMany({ data: eggRarityWeightRows });
 
   console.log('Nạp vật phẩm cửa hàng...');
   await prisma.shopItem.create({
@@ -191,6 +240,15 @@ async function main() {
   });
   await prisma.shopItem.create({
     data: { name: eggMystery.name, description: 'Có tỉ lệ nhỏ nở ra Thần Thú huyền thoại', category: ShopCategory.EGG, priceCoin: eggMystery.priceCoin, eggTypeId: eggMystery.id },
+  });
+  await prisma.shopItem.create({
+    data: { name: eggLegendForest.name, description: 'Phần thưởng đặc biệt từ Admin — tỉ lệ cao gặp Thần Thú Rừng', category: ShopCategory.EGG, priceCoin: 0, purchasable: false, eggTypeId: eggLegendForest.id },
+  });
+  await prisma.shopItem.create({
+    data: { name: eggLegendSea.name, description: 'Phần thưởng đặc biệt từ Admin — tỉ lệ cao gặp Thần Thú Biển', category: ShopCategory.EGG, priceCoin: 0, purchasable: false, eggTypeId: eggLegendSea.id },
+  });
+  await prisma.shopItem.create({
+    data: { name: eggLegendPlant.name, description: 'Phần thưởng đặc biệt từ Admin — tỉ lệ cao gặp Thần Thú Hoa', category: ShopCategory.EGG, priceCoin: 0, purchasable: false, eggTypeId: eggLegendPlant.id },
   });
   await prisma.shopItem.createMany({
     data: [
@@ -338,8 +396,15 @@ async function main() {
         if (resultSpecies) {
           await prisma.collectionEntry.upsert({
             where: { userId_speciesId: { userId: user.id, speciesId: resultSpecies.id } },
-            create: { userId: user.id, speciesId: resultSpecies.id, hatchCount: 1, firstHatchedAt: cursor, lastHatchedAt: cursor },
-            update: { hatchCount: { increment: 1 }, lastHatchedAt: cursor },
+            create: {
+              userId: user.id,
+              speciesId: resultSpecies.id,
+              hatchCount: 1,
+              ownedCount: 1,
+              firstHatchedAt: cursor,
+              lastHatchedAt: cursor,
+            },
+            update: { hatchCount: { increment: 1 }, ownedCount: { increment: 1 }, lastHatchedAt: cursor },
           });
         }
       } else {
@@ -390,9 +455,12 @@ async function main() {
     for (const { species, count } of bonusPools) {
       const bonusSpecies = [...species].sort(() => rnd() - 0.5).slice(0, count);
       for (const s of bonusSpecies) {
+        // hatchCount>1 cho vài loài để tester luôn có sẵn hàng test bán ở Chợ (T-106) ngay
+        // sau khi reseed, không phải tự chơi để tích luỹ bản dư trước.
+        const count = 1 + Math.floor(rnd() * 3);
         await prisma.collectionEntry.upsert({
           where: { userId_speciesId: { userId: user.id, speciesId: s.id } },
-          create: { userId: user.id, speciesId: s.id, hatchCount: 1 + Math.floor(rnd() * 3), isFavorite: rnd() > 0.7 },
+          create: { userId: user.id, speciesId: s.id, hatchCount: count, ownedCount: count, isFavorite: rnd() > 0.7 },
           update: {},
         });
       }

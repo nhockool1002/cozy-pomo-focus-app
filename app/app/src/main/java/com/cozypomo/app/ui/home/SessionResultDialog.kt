@@ -1,6 +1,7 @@
 package com.cozypomo.app.ui.home
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
@@ -11,6 +12,7 @@ import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,7 +37,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -43,6 +48,8 @@ import androidx.compose.ui.window.Dialog
 import com.cozypomo.app.data.timer.SessionCompletionResult
 import com.cozypomo.app.ui.common.EggIcon
 import com.cozypomo.app.ui.common.SpeciesArtIcon
+import kotlin.math.cos
+import kotlin.math.sin
 
 /** Hiện sau khi 1 phiên kết thúc — chúc mừng khi trứng nở/ấp tiếp, chia buồn khi bỏ cuộc. */
 @Composable
@@ -104,47 +111,93 @@ fun SessionResultDialog(result: SessionResultUi, onDismiss: () -> Unit) {
     }
 }
 
+/** T-117 — cấp bậc "long trọng" của hiệu ứng nở: 0 = bình thường (B/A/S — có thể từ bất kỳ trứng
+ * nào), 1 = hiếm (SS — chỉ rơi từ Bí Ẩn/Truyền Thuyết, xem T-116), 2 = huyền thoại (SSR — Thần Thú,
+ * chỉ rơi từ Bí Ẩn/Truyền Thuyết). Suy ra thẳng từ cấp loài nở ra — không cần biết loại trứng gốc,
+ * vì sau T-116 chỉ 2 nhóm trứng "cao cấp" đó mới có thể cho ra SS/SSR. */
+private fun hatchTier(rarity: String?): Int = when (rarity) {
+    "SSR" -> 2
+    "SS" -> 1
+    else -> 0
+}
+
 @Composable
 private fun HatchedContent(hatch: SessionCompletionResult.Hatched, appeared: Boolean) {
     val ringColor = rarityColor(hatch.speciesRarity)
+    val tier = hatchTier(hatch.speciesRarity)
     val infiniteTransition = rememberInfiniteTransition(label = "hatchPulse")
     val pulse by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = 1.06f,
-        animationSpec = infiniteRepeatable(tween(900), repeatMode = RepeatMode.Reverse),
+        targetValue = if (tier == 2) 1.14f else if (tier == 1) 1.1f else 1.06f,
+        animationSpec = infiniteRepeatable(tween(if (tier == 2) 650 else 900), repeatMode = RepeatMode.Reverse),
         label = "pulseScale",
+    )
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(if (tier == 2) 4000 else 6000, easing = LinearEasing)),
+        label = "auraRotation",
     )
     val animatedCoins by animateIntAsState(
         targetValue = if (appeared) hatch.coinsEarned else 0,
         animationSpec = tween(durationMillis = 700),
         label = "coins",
     )
+    val ringSize = when (tier) { 2 -> 132.dp; 1 -> 112.dp; else -> 96.dp }
+    val iconSize = when (tier) { 2 -> 84.dp; 1 -> 76.dp; else -> 68.dp }
 
     Box(
-        modifier = Modifier
-            .size(96.dp)
-            .graphicsLayer { scaleX = pulse; scaleY = pulse }
-            .background(ringColor.copy(alpha = 0.18f), CircleShape),
+        modifier = Modifier.size(ringSize + 28.dp),
         contentAlignment = Alignment.Center,
     ) {
-        if (hatch.speciesCategory != null && hatch.speciesArchetype != null) {
-            SpeciesArtIcon(
-                category = hatch.speciesCategory,
-                archetype = hatch.speciesArchetype,
-                paletteIdx = hatch.speciesPaletteIdx ?: 0,
-                seed = hatch.speciesName ?: "?",
-                rarity = hatch.speciesRarity,
-                size = 68.dp,
+        // Tia hào quang toả xoay — chỉ SS/SSR mới có, đúng yêu cầu "hiệu ứng đặc biệt hơn" cho
+        // trứng Bí Ẩn/Truyền Thuyết (2 nhóm trứng DUY NHẤT có thể cho kết quả cấp này).
+        if (tier >= 1) {
+            RadianceRays(
+                sizeDp = ringSize + 28.dp,
+                rayCount = if (tier == 2) 16 else 10,
+                color = ringColor,
+                rotationDeg = rotation,
             )
-        } else {
-            // Dữ liệu loài không đủ (VD phiên cũ trước bản fix này) — vẫn hiện gì đó thay vì
-            // để trống hoàn toàn.
-            Box(modifier = Modifier.size(64.dp).background(ringColor, CircleShape))
+        }
+        Box(
+            modifier = Modifier
+                .size(ringSize)
+                .graphicsLayer { scaleX = pulse; scaleY = pulse }
+                .background(ringColor.copy(alpha = 0.18f), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (hatch.speciesCategory != null && hatch.speciesArchetype != null) {
+                SpeciesArtIcon(
+                    category = hatch.speciesCategory,
+                    archetype = hatch.speciesArchetype,
+                    paletteIdx = hatch.speciesPaletteIdx ?: 0,
+                    seed = hatch.speciesName ?: "?",
+                    rarity = hatch.speciesRarity,
+                    size = iconSize,
+                )
+            } else {
+                // Dữ liệu loài không đủ (VD phiên cũ trước bản fix này) — vẫn hiện gì đó thay vì
+                // để trống hoàn toàn.
+                Box(modifier = Modifier.size(64.dp).background(ringColor, CircleShape))
+            }
+        }
+        // Lấp lánh quay ngược chiều quanh viền — chỉ cấp huyền thoại (SSR/Thần Thú).
+        if (tier == 2) {
+            SparkleOrbit(sizeDp = ringSize + 20.dp, color = ringColor, rotationDeg = -rotation * 1.4f)
         }
     }
 
     Spacer(modifier = Modifier.height(20.dp))
-    Text("Chúc mừng! Trứng đã nở", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+    Text(
+        text = when (tier) {
+            2 -> "🌟 Huyền thoại! Thần Thú xuất hiện!"
+            1 -> "✨ Cực hiếm! Trứng đã nở"
+            else -> "Chúc mừng! Trứng đã nở"
+        },
+        style = MaterialTheme.typography.titleLarge,
+        textAlign = TextAlign.Center,
+    )
     Spacer(modifier = Modifier.height(8.dp))
     Text(
         text = hatch.speciesName ?: "Một loài bí ẩn",
@@ -165,6 +218,52 @@ private fun HatchedContent(hatch: SessionCompletionResult.Hatched, appeared: Boo
     }
     Spacer(modifier = Modifier.height(14.dp))
     ResultStatsRow(coinsEarned = animatedCoins, minutesAccumulated = hatch.minutesAccumulated)
+}
+
+/** Tia hào quang xoay quanh vòng loài — độ "long trọng" của hiệu ứng nở (T-117), chỉ dùng cho kết
+ * quả SS/SSR. Vẽ trong `Box` kích thước cố định [sizeDp], không bao giờ tràn ra ngoài bounds của
+ * chính nó nên không lặp lại lỗi Dialog cao vượt màn hình đã sửa ở `EggPickerDialog`. */
+@Composable
+private fun RadianceRays(sizeDp: androidx.compose.ui.unit.Dp, rayCount: Int, color: Color, rotationDeg: Float) {
+    Canvas(modifier = Modifier.size(sizeDp).graphicsLayer { rotationZ = rotationDeg }) {
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val innerR = size.minDimension * 0.36f
+        val outerR = size.minDimension * 0.5f
+        for (i in 0 until rayCount) {
+            val angle = (360f / rayCount) * i
+            val rad = Math.toRadians(angle.toDouble())
+            val dx = cos(rad).toFloat()
+            val dy = sin(rad).toFloat()
+            drawLine(
+                color = color.copy(alpha = 0.35f),
+                start = Offset(cx + dx * innerR, cy + dy * innerR),
+                end = Offset(cx + dx * outerR, cy + dy * outerR),
+                strokeWidth = 3f,
+                cap = StrokeCap.Round,
+            )
+        }
+    }
+}
+
+/** Chấm lấp lánh xoay quanh viền — chỉ hiện cho kết quả huyền thoại (SSR/Thần Thú, T-117). */
+@Composable
+private fun SparkleOrbit(sizeDp: androidx.compose.ui.unit.Dp, color: Color, rotationDeg: Float) {
+    Canvas(modifier = Modifier.size(sizeDp).graphicsLayer { rotationZ = rotationDeg }) {
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val r = size.minDimension * 0.5f
+        val sparkleCount = 6
+        for (i in 0 until sparkleCount) {
+            val angle = (360f / sparkleCount) * i
+            val rad = Math.toRadians(angle.toDouble())
+            val sx = cx + cos(rad).toFloat() * r
+            val sy = cy + sin(rad).toFloat() * r
+            val s = 3.5f
+            drawLine(color, Offset(sx - s, sy), Offset(sx + s, sy), strokeWidth = 1.6f, cap = StrokeCap.Round)
+            drawLine(color, Offset(sx, sy - s), Offset(sx, sy + s), strokeWidth = 1.6f, cap = StrokeCap.Round)
+        }
+    }
 }
 
 @Composable

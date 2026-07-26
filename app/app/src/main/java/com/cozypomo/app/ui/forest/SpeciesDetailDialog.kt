@@ -6,11 +6,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,12 +28,15 @@ import com.cozypomo.app.data.network.CollectionEntryDto
 import com.cozypomo.app.ui.common.RarityBadge
 import com.cozypomo.app.ui.common.SpeciesArtIcon
 
-/** T-036 — S-03 Chi tiết loài/Lore. Popup khi chạm thẻ đã mở khoá ở Khu rừng (S-04). */
+/** T-036 — S-03 Chi tiết loài/Lore. Popup khi chạm thẻ đã mở khoá ở Khu rừng (S-04).
+ * [onSell] chỉ được gọi khi nút "Đăng bán" hiện (T-110, `entry.ownedCount ≥ 1` — không cần "dư",
+ * xem plan.md Nhóm F). */
 @Composable
 fun SpeciesDetailDialog(
     entry: CollectionEntryDto,
     onDismiss: () -> Unit,
     onToggleFavorite: () -> Unit,
+    onSell: () -> Unit,
 ) {
     val species = entry.species
     Dialog(onDismissRequest = onDismiss) {
@@ -66,6 +71,11 @@ fun SpeciesDetailDialog(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Text(
+                    if (entry.ownedCount > 0) "Bạn đang sở hữu ${entry.ownedCount} bản" else "Đã bán hết — không sở hữu bản nào",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
@@ -77,12 +87,18 @@ fun SpeciesDetailDialog(
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
-                IconButton(onClick = onToggleFavorite) {
-                    Icon(
-                        imageVector = if (entry.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = "Yêu thích",
-                        tint = if (entry.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onToggleFavorite) {
+                        Icon(
+                            imageVector = if (entry.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = "Yêu thích",
+                            tint = if (entry.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (entry.ownedCount > 0) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(onClick = onSell, modifier = Modifier.weight(1f)) { Text("Đăng bán") }
+                    }
                 }
             }
         }

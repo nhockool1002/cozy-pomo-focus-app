@@ -1,0 +1,429 @@
+<title>CozyPomo — Khu vườn của tôi, chế độ xem Bản đồ mới cho Khu rừng</title>
+<style>
+:root{
+  --ivory:#F9F6F0;
+  --ivory-deep:#F1EADC;
+  --card:#FFFDF9;
+  --ink:#6D594E;
+  --ink-soft:rgba(109,89,78,0.55);
+  --ink-faint:rgba(109,89,78,0.16);
+  --matcha:#A8D08D;
+  --matcha-deep:#5E7F49;
+  --sun:#F4D160;
+  --terracotta:#E76F51;
+  --water:#8FB8C4;
+  --water-deep:#4F7A85;
+  --line:rgba(109,89,78,0.30);
+  --shadow:rgba(88,68,54,0.20);
+  --font-display:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+  --font-body:-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --font-mono:ui-monospace,'SF Mono','Cascadia Code',Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ivory:#241C17; --ivory-deep:#1B140F; --card:#2E241D;
+    --ink:#F1E6D8; --ink-soft:rgba(241,230,216,0.55); --ink-faint:rgba(241,230,216,0.14);
+    --matcha:#93C275; --matcha-deep:#BFE3A6;
+    --sun:#EFC948; --terracotta:#E27C5C;
+    --water:#6FA0AC; --water-deep:#A9D6DF;
+    --line:rgba(241,230,216,0.26); --shadow:rgba(0,0,0,0.5);
+  }
+}
+:root[data-theme="dark"]{
+  --ivory:#241C17; --ivory-deep:#1B140F; --card:#2E241D;
+  --ink:#F1E6D8; --ink-soft:rgba(241,230,216,0.55); --ink-faint:rgba(241,230,216,0.14);
+  --matcha:#93C275; --matcha-deep:#BFE3A6;
+  --sun:#EFC948; --terracotta:#E27C5C;
+  --water:#6FA0AC; --water-deep:#A9D6DF;
+  --line:rgba(241,230,216,0.26); --shadow:rgba(0,0,0,0.5);
+}
+:root[data-theme="light"]{
+  --ivory:#F9F6F0; --ivory-deep:#F1EADC; --card:#FFFDF9;
+  --ink:#6D594E; --ink-soft:rgba(109,89,78,0.55); --ink-faint:rgba(109,89,78,0.16);
+  --matcha:#A8D08D; --matcha-deep:#5E7F49;
+  --sun:#F4D160; --terracotta:#E76F51;
+  --water:#8FB8C4; --water-deep:#4F7A85;
+  --line:rgba(109,89,78,0.30); --shadow:rgba(88,68,54,0.20);
+}
+
+*{box-sizing:border-box;}
+body{margin:0;}
+.page{
+  font-family:var(--font-body);
+  color:var(--ink);
+  background:
+    radial-gradient(var(--ink-faint) 1px, transparent 1px) 0 0/22px 22px,
+    var(--ivory-deep);
+  padding:40px 16px 60px;
+}
+@media (prefers-reduced-motion: reduce){ * { animation:none !important; transition:none !important; } }
+
+/* ---------- cover ---------- */
+.cover{max-width:940px;margin:0 auto 46px;text-align:left;}
+.eyebrow{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase;
+  color:var(--matcha-deep); margin:0 0 10px;
+}
+.cover h1{
+  font-family:var(--font-display); font-weight:600; font-size:clamp(24px,3.6vw,36px);
+  margin:0 0 12px; text-wrap:balance; color:var(--ink);
+}
+.cover-sub{font-size:14.5px; line-height:1.65; color:var(--ink-soft); max-width:680px; margin:0 0 16px;}
+.cover-sub b{color:var(--ink);}
+.revision-note{
+  font-size:12.5px; color:var(--terracotta); background:rgba(231,111,81,0.1); border:1px solid rgba(231,111,81,0.35);
+  border-radius:10px; padding:9px 13px; max-width:680px; line-height:1.55; margin:0 0 16px;
+}
+.legend{display:flex; flex-wrap:wrap; gap:18px; align-items:center; font-size:12.5px; color:var(--ink-soft);}
+.legend-item{display:flex; align-items:center; gap:7px;}
+.swatch{width:26px; height:16px; border-radius:5px; border:2px solid var(--ink); background:var(--card); display:inline-block;}
+.swatch.dashed{border-style:dashed;}
+.chip-sample{font-size:10.5px; border:1px solid var(--line); border-radius:10px; padding:2px 8px; background:var(--card); color:var(--ink);}
+
+/* ---------- phase sections ---------- */
+.phase{max-width:1400px; margin:0 auto 54px;}
+.phase h2{
+  display:flex; align-items:baseline; gap:10px; font-family:var(--font-display); font-weight:600;
+  font-size:20px; margin:0 0 6px; padding-bottom:10px; border-bottom:1px solid var(--line);
+}
+.phase-no{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+  color:var(--card); background:var(--matcha-deep); padding:3px 9px; border-radius:20px;
+}
+.phase-intro{font-size:13px; color:var(--ink-soft); max-width:920px; line-height:1.6; margin:0 0 18px;}
+.row-note{font-size:12px; color:var(--ink-soft); margin:6px 2px 0;}
+.core-flow{display:flex; align-items:flex-start; gap:14px; overflow-x:auto; padding:6px 2px 20px;}
+.stack{display:flex; flex-direction:column; align-items:center; flex:0 0 auto;}
+
+/* ---------- phone chrome ---------- */
+.phone{
+  width:172px; flex:0 0 auto; border-radius:26px; border:2.5px solid var(--ink);
+  background:var(--card); box-shadow:0 10px 22px var(--shadow); overflow:hidden;
+  display:flex; flex-direction:column; position:relative;
+}
+.phone.tall{width:196px;}
+.phone .status{
+  flex:none; height:18px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 10px; font-family:var(--font-mono); font-size:7px; color:var(--ink-soft);
+}
+.status .dots{display:flex; gap:2px;}
+.status .dot{width:3px; height:3px; border-radius:50%; background:var(--ink-soft);}
+.screen{flex:1; padding:9px 8px 10px; display:flex; flex-direction:column; gap:6px; font-size:8.5px; color:var(--ink); position:relative; overflow:hidden;}
+.wf-row{display:flex; align-items:center; justify-content:space-between; gap:4px;}
+.wf-pill{border:1.2px solid var(--ink); border-radius:20px; padding:2px 6px; font-size:7px; white-space:nowrap;}
+.coin{width:8px; height:8px; border-radius:50%; background:var(--sun); border:1px solid var(--ink); flex:none;}
+.title-lg{font-family:var(--font-display); font-weight:600; font-size:11px;}
+.title-md{font-family:var(--font-display); font-weight:600; font-size:9.5px;}
+.tabs{display:flex; gap:4px; flex-wrap:wrap;}
+.tab{font-size:6.6px; padding:2px 5px; border-radius:10px; border:1px solid var(--ink-soft); color:var(--ink-soft);}
+.tab.active{border-color:var(--ink); color:var(--ink); background:rgba(168,208,141,0.35);}
+.badge{font-family:var(--font-mono); font-size:6.5px; border-radius:8px; padding:1px 5px; border:1px solid var(--ink);}
+.badge.ssr{background:var(--sun); border-color:var(--ink); box-shadow:0 0 0 2px rgba(244,209,96,0.35);}
+
+.grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:4px;}
+.card-sp{aspect-ratio:1; border-radius:6px; border:1.2px solid var(--ink-soft); display:flex; align-items:center; justify-content:center; font-size:6.5px; position:relative;}
+.card-sp.locked{background:var(--ink-faint); color:var(--ink-soft);}
+.card-sp.unlocked{background:rgba(168,208,141,0.4);}
+
+.bottom-nav{flex:none; height:32px; border-top:1.4px solid var(--ink); display:flex;}
+.bottom-nav .item{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; font-size:5.8px; color:var(--ink-soft);}
+.bottom-nav .item.active{color:var(--matcha-deep); font-weight:700;}
+.bottom-nav .icon{width:8px; height:8px; border:1.2px solid currentColor; border-radius:3px;}
+
+.phone-label{margin-top:9px; text-align:center; width:172px; flex:0 0 auto;}
+.phone.tall + .phone-label{width:196px;}
+.phone-label .pid{font-family:var(--font-mono); font-size:10.5px; color:var(--matcha-deep); font-weight:700; letter-spacing:0.02em;}
+.phone-label .pid.new{color:var(--terracotta);}
+.phone-label .pname{font-family:var(--font-display); font-size:13px; margin-top:1px;}
+.phone-label .ptask{font-family:var(--font-mono); font-size:9px; color:var(--ink-soft); margin-top:2px;}
+.state-note{font-size:9px; color:var(--ink-soft); text-align:center; max-width:196px; margin-top:7px; line-height:1.4;}
+
+.conn-h{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; flex:0 0 auto; width:70px; margin:0 -2px; align-self:center;}
+.conn-h .line{width:100%; height:2px; background:var(--line); position:relative;}
+.conn-h .line::after{content:'▸'; position:absolute; right:-7px; top:-6px; color:var(--ink-soft); font-size:11px;}
+.conn-h .label{font-size:9px; background:var(--ivory-deep); border:1px solid var(--line); border-radius:10px; padding:2px 7px; color:var(--ink); white-space:nowrap;}
+
+/* ---------- view-mode toggle ---------- */
+.view-toggle{display:flex; border:1.2px solid var(--ink); border-radius:12px; overflow:hidden; font-size:6.5px;}
+.view-toggle .opt{flex:1; text-align:center; padding:3px 4px; color:var(--ink-soft);}
+.view-toggle .opt.active{background:var(--matcha); color:#25331c; font-weight:700;}
+
+/* ---------- garden map (isometric hero) ---------- */
+.hero-map{
+  max-width:720px; margin:0 auto 6px; border:1.6px solid var(--ink); border-radius:20px; overflow:hidden;
+  background:var(--card); box-shadow:0 12px 28px var(--shadow);
+}
+.hero-map svg{display:block; width:100%; height:auto;}
+
+/* ---------- algorithm diagram ---------- */
+.algo-flow{display:flex; align-items:center; gap:10px; overflow-x:auto; padding:10px 2px 22px; max-width:1300px;}
+.algo-box{
+  flex:0 0 auto; width:200px; border:1.6px solid var(--ink); border-radius:14px; background:var(--card);
+  padding:12px 13px; box-shadow:0 6px 14px var(--shadow);
+}
+.algo-box.accent{border-color:var(--matcha-deep); background:rgba(168,208,141,0.14);}
+.algo-box h3{font-family:var(--font-display); font-size:13px; margin:0 0 6px; font-weight:600;}
+.algo-box p{font-size:11px; line-height:1.5; color:var(--ink-soft); margin:0;}
+.algo-box .field{font-family:var(--font-mono); font-size:10px; color:var(--ink); background:var(--ivory-deep); border-radius:5px; padding:1px 5px; display:inline-block; margin:2px 3px 0 0;}
+.algo-arrow{flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:4px; width:52px;}
+.algo-arrow .line{width:100%; height:2px; background:var(--line); position:relative;}
+.algo-arrow .line::after{content:'▸'; position:absolute; right:-7px; top:-6px; color:var(--ink-soft); font-size:12px;}
+.algo-arrow .txt{font-size:9.5px; color:var(--ink-soft); text-align:center;}
+
+/* ---------- footer mapping ---------- */
+.mapping{max-width:1150px; margin:60px auto 0;}
+.mapping h2{font-family:var(--font-display); font-weight:600; font-size:20px; margin:0 0 6px;}
+.mapping .sub{font-size:12.5px; color:var(--ink-soft); margin:0 0 18px;}
+.table-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:14px; background:var(--card);}
+table{border-collapse:collapse; width:100%; font-size:13px; min-width:760px;}
+thead th{
+  text-align:left; font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.05em; text-transform:uppercase;
+  color:var(--ink-soft); padding:10px 14px; border-bottom:1px solid var(--line);
+}
+tbody td{padding:10px 14px; border-bottom:1px solid var(--ink-faint); vertical-align:top;}
+tbody tr:last-child td{border-bottom:none;}
+.scr{font-family:var(--font-mono); color:var(--matcha-deep); font-weight:700; font-size:12px;}
+.status-pill{font-size:11px; padding:2px 9px; border-radius:10px; border:1px solid var(--line); white-space:nowrap;}
+.status-pill.todo{color:var(--terracotta); border-color:var(--terracotta);}
+</style>
+
+<div class="page">
+
+  <header class="cover">
+    <p class="eyebrow">CozyPomo · Đề xuất tính năng mới · Chưa build (T-112 → T-114) · Wireframe v2</p>
+    <h1>Khu vườn của tôi — thêm chế độ xem Bản đồ cho Khu rừng</h1>
+    <p class="cover-sub">Ý tưởng của Dev1002: bên cạnh lưới 3 cột hiện có (<b>giữ nguyên không đổi</b>), thêm 1 chế độ xem mới hiển thị các loài <b>đang sở hữu</b> (thú/thần thú/thực vật) như 1 khu vườn thật — mỗi loài đứng ở vị trí ngẫu nhiên nhưng tinh tế (không chồng lấn, không xếp hàng cứng nhắc), có âm thanh nền khi xem. Toàn bộ giao diện dùng lại đúng hệ màu/kiểu chữ/thành phần đã thiết lập ở <span class="scr">docs/wireframes/use-case-flow.html</span> — chỉ thêm đúng 1 màu mới (<span class="scr">--water</span>, xem Mô hình 2) cho sông/nước trong địa hình.</p>
+    <p class="revision-note">🔄 <b>Cập nhật theo ảnh tham khảo Dev1002 gửi (2026-07-26):</b> bản đầu vẽ 4 khối màu phẳng xếp chồng — không đúng ý. Sửa lại thành 1 địa hình <b>isometric</b> liền mạch (mặt đất, sông uốn lượn, cụm cây/đá, bệ toả sáng cho Thần thú), gần với phong cách ảnh tham khảo hơn nhiều. Xem toàn cảnh ở Mô hình 2.</p>
+    <div class="legend">
+      <span class="legend-item"><span class="swatch"></span> Màn hình đầy đủ</span>
+      <span class="legend-item"><span class="chip-sample">Bấm</span> Hành động người dùng</span>
+    </div>
+  </header>
+
+  <!-- PHASE 1: TWO MODES -->
+  <section class="phase">
+    <h2><span class="phase-no">Mô hình 1</span> 2 chế độ xem — mục đích khác nhau, không phải chỉ đổi layout</h2>
+    <p class="phase-intro"><b>Lưới</b> là "sổ sưu tập" — hiện cả ô khoá "?" để thôi thúc sưu tầm tiếp. <b>Khu vườn</b> là "khoe vườn của tôi" — chỉ hiện loài đang thực sự sở hữu, không có ô trống. Chuyển đổi qua 1 toggle 2 nút cạnh tiêu đề màn.</p>
+    <div class="core-flow">
+      <div class="stack">
+        <div class="phone">
+          <div class="status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="screen">
+            <div class="wf-row"><span class="title-md">Khu rừng</span><div class="view-toggle" style="width:60px;"><span class="opt active">Lưới</span><span class="opt">Vườn</span></div></div>
+            <div class="tabs"><span class="tab active">Tất cả</span><span class="tab">Rừng</span><span class="tab">Biển</span><span class="tab">Cây</span></div>
+            <div class="grid3">
+              <div class="card-sp unlocked">A</div><div class="card-sp unlocked">S</div><div class="card-sp locked">?</div>
+              <div class="card-sp locked">?</div><div class="card-sp unlocked">B</div><div class="card-sp unlocked">SSR</div>
+              <div class="card-sp locked">?</div><div class="card-sp locked">?</div><div class="card-sp unlocked">A</div>
+            </div>
+          </div>
+          <div class="bottom-nav">
+            <div class="item"><span class="icon"></span>Trang chủ</div>
+            <div class="item active"><span class="icon"></span>Khu rừng</div>
+            <div class="item"><span class="icon"></span>Kho đồ</div>
+            <div class="item"><span class="icon"></span>Thống kê</div>
+          </div>
+        </div>
+        <div class="phone-label"><div class="pid">S-04</div><div class="pname">Chế độ Lưới — giữ nguyên</div><div class="ptask">Y hệt hành vi/code hiện tại, không đổi</div></div>
+      </div>
+
+      <div class="conn-h"><div class="line"></div><div class="label">Bấm toggle<br>"Vườn"</div></div>
+
+      <div class="stack">
+        <div class="phone">
+          <div class="status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="screen">
+            <div class="wf-row"><span class="title-md">Khu rừng</span><div class="view-toggle" style="width:60px;"><span class="opt">Lưới</span><span class="opt active">Vườn</span></div></div>
+            <svg viewBox="0 0 150 90" style="width:100%;height:78px;border-radius:8px;" preserveAspectRatio="xMidYMid slice">
+              <path d="M20,20 C50,8 100,10 125,25 C145,38 138,60 115,72 C90,85 55,82 30,68 C10,58 8,35 20,20 Z" fill="var(--matcha)" opacity="0.28"/>
+              <path d="M45,30 C65,24 90,26 100,35" fill="none" stroke="var(--matcha-deep)" stroke-width="10" opacity="0.14" stroke-linecap="round"/>
+              <path d="M120,15 C100,30 95,45 75,55 C55,65 50,75 35,80" fill="none" stroke="var(--water)" stroke-width="5" stroke-linecap="round" opacity="0.85"/>
+              <g>
+                <rect x="27" y="35" width="2.4" height="7" fill="var(--ink-soft)"/>
+                <polygon points="28,20 24,36 32,36" fill="var(--matcha-deep)"/>
+                <rect x="44" y="24" width="2.4" height="7" fill="var(--ink-soft)"/>
+                <polygon points="45,10 41,25 49,25" fill="var(--matcha-deep)"/>
+                <rect x="60" y="40" width="2.4" height="6" fill="var(--ink-soft)"/>
+                <polygon points="61,28 57,41 65,41" fill="var(--matcha)"/>
+              </g>
+              <circle cx="35" cy="52" r="6" fill="var(--card)" stroke="var(--ink)" stroke-width="1"/>
+              <text x="35" y="55" font-size="7" text-anchor="middle">🦊</text>
+              <circle cx="95" cy="60" r="6" fill="var(--card)" stroke="var(--ink)" stroke-width="1"/>
+              <text x="95" y="63" font-size="7" text-anchor="middle">🐙</text>
+            </svg>
+          </div>
+          <div class="bottom-nav">
+            <div class="item"><span class="icon"></span>Trang chủ</div>
+            <div class="item active"><span class="icon"></span>Khu rừng</div>
+            <div class="item"><span class="icon"></span>Kho đồ</div>
+            <div class="item"><span class="icon"></span>Thống kê</div>
+          </div>
+        </div>
+        <div class="phone-label"><div class="pid new">S-04</div><div class="pname">Chế độ Khu vườn — mới</div><div class="ptask">Chỉ hiện loài đang sở hữu, không ô khoá</div></div>
+        <div class="state-note">Địa hình isometric (không phải khối màu phẳng nữa) — xem toàn cảnh chi tiết ở Mô hình 2. Tab category ẩn ở chế độ này vì bản đồ đã hiện đủ mọi khu cùng lúc.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASE 2: FULL MAP -->
+  <section class="phase">
+    <h2><span class="phase-no">Mô hình 2</span> Toàn cảnh địa hình isometric — theo đúng ảnh tham khảo Dev1002 gửi</h2>
+    <p class="phase-intro">Thay cho 4 khối màu phẳng ở bản trước: 1 mặt đất isometric liền mạch, sông uốn lượn, cụm cây/đá, khoảng cỏ hoa, và 1 bệ toả sáng riêng cho khu Thần thú — 4 khu vực hoà vào nhau tự nhiên thay vì có viền hộp cứng. Trên điện thoại đây là 1 mặt phẳng cuộn dọc (không pan/zoom) — minh hoạ dưới đây là toàn cảnh để thấy rõ bố cục. Bấm vào 1 sinh vật mở đúng popup Chi tiết loài (S-03) đã có sẵn.</p>
+    <div class="hero-map">
+      <svg viewBox="0 0 760 460" xmlns="http://www.w3.org/2000/svg">
+        <path d="M100,90 C180,40 320,30 420,55 C520,80 640,70 700,150 C740,205 720,270 680,310 C630,360 560,340 500,380 C430,425 320,430 240,400 C160,370 90,390 55,330 C20,270 40,200 60,160 C75,130 60,110 100,90 Z" fill="var(--matcha)" opacity="0.32"/>
+        <path d="M150,120 C220,90 320,95 380,130 C420,155 400,190 340,195 C270,200 190,180 160,150 Z" fill="var(--matcha-deep)" opacity="0.14"/>
+        <path d="M450,220 C520,200 600,220 630,260 C650,290 600,320 540,310 C480,300 430,260 450,220 Z" fill="var(--matcha-deep)" opacity="0.12"/>
+
+        <path d="M660,75 C600,110 610,170 540,200 C470,230 490,280 410,300 C330,320 350,370 270,385 C210,395 150,380 100,350" fill="none" stroke="var(--water-deep)" stroke-width="30" stroke-linecap="round" opacity="0.55"/>
+        <path d="M660,75 C600,110 610,170 540,200 C470,230 490,280 410,300 C330,320 350,370 270,385 C210,395 150,380 100,350" fill="none" stroke="var(--water)" stroke-width="22" stroke-linecap="round"/>
+
+        <!-- rocks -->
+        <ellipse cx="95" cy="345" rx="18" ry="5" fill="var(--ink)" opacity="0.1"/>
+        <polygon points="80,320 95,305 115,312 112,332 92,338" fill="var(--ink-faint)" stroke="var(--ink-soft)" stroke-width="1"/>
+        <ellipse cx="133" cy="358" rx="16" ry="5" fill="var(--ink)" opacity="0.1"/>
+        <polygon points="120,340 133,328 148,335 144,352 126,355" fill="var(--ink-faint)" stroke="var(--ink-soft)" stroke-width="1"/>
+        <ellipse cx="70" cy="365" rx="14" ry="4" fill="var(--ink)" opacity="0.1"/>
+        <polygon points="60,345 72,335 85,340 80,358 65,360" fill="var(--ink-faint)" stroke="var(--ink-soft)" stroke-width="1"/>
+
+        <!-- trees (Khu Rừng) -->
+        <g>
+          <ellipse cx="128" cy="150" rx="16" ry="4" fill="var(--ink)" opacity="0.1"/>
+          <rect x="120" y="140" width="5" height="16" fill="var(--ink-soft)"/>
+          <polygon points="122,95 108,148 137,148" fill="var(--matcha-deep)"/>
+          <ellipse cx="172" cy="130" rx="15" ry="4" fill="var(--ink)" opacity="0.1"/>
+          <rect x="165" y="120" width="5" height="14" fill="var(--ink-soft)"/>
+          <polygon points="167,80 154,128 181,128" fill="var(--matcha)"/>
+          <ellipse cx="102" cy="180" rx="15" ry="4" fill="var(--ink)" opacity="0.1"/>
+          <rect x="95" y="170" width="5" height="14" fill="var(--ink-soft)"/>
+          <polygon points="97,132 84,178 111,178" fill="var(--matcha-deep)"/>
+          <ellipse cx="212" cy="115" rx="17" ry="4" fill="var(--ink)" opacity="0.1"/>
+          <rect x="205" y="104" width="5" height="16" fill="var(--ink-soft)"/>
+          <polygon points="207,60 192,113 223,113" fill="var(--matcha)"/>
+          <ellipse cx="157" cy="200" rx="15" ry="4" fill="var(--ink)" opacity="0.1"/>
+          <rect x="150" y="190" width="5" height="14" fill="var(--ink-soft)"/>
+          <polygon points="152,152 139,198 166,198" fill="var(--matcha-deep)"/>
+          <ellipse cx="76" cy="160" rx="14" ry="4" fill="var(--ink)" opacity="0.1"/>
+          <rect x="69" y="150" width="5" height="14" fill="var(--ink-soft)"/>
+          <polygon points="71,112 58,158 85,158" fill="var(--matcha)"/>
+        </g>
+
+        <!-- meadow (Vườn Cây) -->
+        <g>
+          <circle cx="622" cy="342" r="11" fill="var(--matcha)" opacity="0.55"/>
+          <circle cx="602" cy="392" r="10" fill="var(--matcha)" opacity="0.55"/>
+          <g>
+            <circle cx="486" cy="348" r="3" fill="var(--sun)"/><circle cx="494" cy="344" r="3" fill="var(--sun)"/>
+            <circle cx="490" cy="352" r="3" fill="var(--sun)"/><circle cx="490" cy="348" r="2" fill="var(--terracotta)"/>
+          </g>
+          <g>
+            <circle cx="558" cy="372" r="3" fill="var(--sun)"/><circle cx="566" cy="368" r="3" fill="var(--sun)"/>
+            <circle cx="562" cy="376" r="3" fill="var(--sun)"/><circle cx="562" cy="372" r="2" fill="var(--terracotta)"/>
+          </g>
+        </g>
+
+        <!-- Điện Thần Thú -->
+        <circle cx="650" cy="140" r="55" fill="var(--sun)" opacity="0.16"/>
+        <circle cx="650" cy="140" r="36" fill="var(--sun)" opacity="0.26"/>
+        <ellipse cx="650" cy="165" rx="34" ry="12" fill="var(--ink)" opacity="0.12"/>
+        <ellipse cx="650" cy="150" rx="30" ry="14" fill="var(--sun)" stroke="var(--ink)" stroke-width="1.5"/>
+
+        <!-- creature sprites -->
+        <circle cx="135" cy="150" r="12" fill="var(--card)" stroke="var(--ink)" stroke-width="1.2"/><text x="135" y="154" font-size="12" text-anchor="middle">🦊</text>
+        <circle cx="188" cy="112" r="12" fill="var(--card)" stroke="var(--ink)" stroke-width="1.2"/><text x="188" y="116" font-size="12" text-anchor="middle">🦉</text>
+        <circle cx="75" cy="178" r="12" fill="var(--card)" stroke="var(--ink)" stroke-width="1.2"/><text x="75" y="182" font-size="12" text-anchor="middle">🐿️</text>
+        <circle cx="216" cy="176" r="15" fill="none" stroke="var(--sun)" stroke-width="2.5" opacity="0.6"/>
+        <circle cx="216" cy="176" r="12" fill="var(--card)" stroke="var(--ink)" stroke-width="1.2"/><text x="216" y="180" font-size="12" text-anchor="middle">🦌</text>
+
+        <circle cx="558" cy="195" r="12" fill="var(--card)" stroke="var(--ink)" stroke-width="1.2"/><text x="558" y="199" font-size="12" text-anchor="middle">🐙</text>
+        <circle cx="478" cy="255" r="12" fill="var(--card)" stroke="var(--ink)" stroke-width="1.2"/><text x="478" y="259" font-size="12" text-anchor="middle">🦑</text>
+        <circle cx="418" cy="300" r="12" fill="var(--card)" stroke="var(--ink)" stroke-width="1.2"/><text x="418" y="304" font-size="12" text-anchor="middle">🐠</text>
+
+        <circle cx="500" cy="358" r="12" fill="var(--card)" stroke="var(--ink)" stroke-width="1.2"/><text x="500" y="362" font-size="12" text-anchor="middle">🌵</text>
+        <circle cx="605" cy="370" r="12" fill="var(--card)" stroke="var(--ink)" stroke-width="1.2"/><text x="605" y="374" font-size="12" text-anchor="middle">🍄</text>
+
+        <circle cx="650" cy="146" r="16" fill="none" stroke="var(--sun)" stroke-width="2.5" opacity="0.7"/>
+        <circle cx="650" cy="146" r="13" fill="var(--card)" stroke="var(--ink)" stroke-width="1.2"/><text x="650" y="150" font-size="13" text-anchor="middle">🐉</text>
+
+        <!-- zone labels -->
+        <g font-family="var(--font-body)" font-size="12" font-weight="700" fill="var(--ink)">
+          <rect x="30" y="55" width="88" height="19" rx="9.5" fill="var(--card)" stroke="var(--line)"/>
+          <text x="74" y="68" text-anchor="middle">🌲 Khu Rừng</text>
+          <rect x="560" y="212" width="98" height="19" rx="9.5" fill="var(--card)" stroke="var(--line)"/>
+          <text x="609" y="225" text-anchor="middle">🌊 Vùng Biển</text>
+          <rect x="470" y="405" width="94" height="19" rx="9.5" fill="var(--card)" stroke="var(--line)"/>
+          <text x="517" y="418" text-anchor="middle">🌿 Vườn Cây</text>
+          <rect x="592" y="80" width="116" height="19" rx="9.5" fill="var(--card)" stroke="var(--line)"/>
+          <text x="650" y="93" text-anchor="middle">✨ Điện Thần Thú</text>
+        </g>
+      </svg>
+    </div>
+    <p class="row-note">Trên điện thoại, đây chính là nội dung cuộn dọc của màn Khu vườn (không phải ảnh trang trí tĩnh) — vị trí từng sinh vật tính bằng thuật toán ở Mô hình 3, còn địa hình (sông/cây/đá/bệ Thần thú) là nền cố định vẽ 1 lần bằng Canvas, không đổi theo dữ liệu người dùng.</p>
+  </section>
+
+  <!-- PHASE 3: PLACEMENT ALGORITHM -->
+  <section class="phase">
+    <h2><span class="phase-no">Mô hình 3</span> "Ngẫu nhiên nhưng tinh tế" — thuật toán bố trí vị trí</h2>
+    <p class="phase-intro">Tái dùng đúng kỹ thuật <span class="scr">mulberry32</span> seed theo <span class="scr">speciesId</span> đã có ở <span class="scr">SpeciesArt.kt</span>/<span class="scr">species-art.ts</span> — vị trí ổn định qua mỗi lần mở lại màn (không nhảy lung tung mỗi lần render), không phát minh thuật toán mới.</p>
+    <div class="algo-flow">
+      <div class="algo-box accent">
+        <h3>1. Vùng mềm theo khu vực</h3>
+        <p>Mỗi <span class="scr">SpeciesCategory</span> ứng với 1 vùng ảo hình ellipse/blob quanh tâm cụm trên địa hình (VD tâm cụm cây ở góc trái-trên) — chia ô thưa <span class="field">cols × rows</span> BÊN TRONG vùng đó, không phải hình chữ nhật toàn khung.</p>
+      </div>
+      <div class="algo-arrow"><div class="line"></div><div class="txt">Seed theo<br>speciesId</div></div>
+      <div class="algo-box">
+        <h3>2. Xáo trộn + gán ô</h3>
+        <p><span class="field">mulberry32(hash(speciesId))</span> xáo thứ tự ô trong vùng, gán mỗi loài 1 ô riêng — không loài nào trùng ô, không cần kiểm tra va chạm runtime.</p>
+      </div>
+      <div class="algo-arrow"><div class="line"></div><div class="txt">Lệch trong<br>ô ±30%</div></div>
+      <div class="algo-box">
+        <h3>3. Jitter vị trí + góc</h3>
+        <p>Trong ô được gán, lệch ngẫu nhiên ±30% vị trí + ±5–10% góc xoay/tỉ lệ — đúng công thức "jitter" đã dùng cho hào quang SSR, tạo cảm giác "được trồng tự nhiên" thay vì lưới cứng.</p>
+      </div>
+      <div class="algo-arrow"><div class="line"></div><div class="txt">Render</div></div>
+      <div class="algo-box accent">
+        <h3>4. Kết quả ổn định</h3>
+        <p>Cùng 1 loài luôn đứng đúng 1 chỗ mỗi lần mở lại Khu vườn (không phụ thuộc thứ tự tải dữ liệu) — cảm giác "vườn của tôi" nhất quán, không xáo trộn khó chịu.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASE 4: AMBIENT SOUND -->
+  <section class="phase">
+    <h2><span class="phase-no">Mô hình 4</span> Âm thanh nền — tái dùng SoundManager (T-042)</h2>
+    <p class="phase-intro">Không sinh asset mới, không xây hệ âm thanh riêng — gọi thẳng <span class="scr">SoundManager</span> đã build ở T-042.</p>
+    <div class="algo-flow">
+      <div class="algo-box">
+        <h3>Vào chế độ Khu vườn</h3>
+        <p><span class="field">soundManager.playAmbientTrack("forest")</span> — dùng lại <span class="field">ambient_forest.ogg</span> đã có sẵn, âm lượng nhỏ. Độc lập với <span class="scr">soundTheme</span> người dùng chọn ở Cài đặt (đó là nhạc lúc tập trung, khác mục đích).</p>
+      </div>
+      <div class="algo-arrow"><div class="line"></div><div class="txt">Rời chế độ /<br>rời màn</div></div>
+      <div class="algo-box">
+        <h3>Tự dừng</h3>
+        <p><span class="field">soundManager.stopAmbientTrack()</span> khi chuyển về Lưới hoặc rời Khu rừng — không để nhạc kêu ngầm khi đã sang tab khác.</p>
+      </div>
+      <div class="algo-arrow"><div class="line"></div><div class="txt">Trường hợp<br>đặc biệt</div></div>
+      <div class="algo-box accent">
+        <h3>Không chồng nhạc phiên tập trung</h3>
+        <p>Nếu đang có phiên <span class="field">RUNNING</span> ở Trang chủ (đã tự phát ambient theo <span class="scr">soundTheme</span>) → mở Khu vườn KHÔNG phát chồng track thứ 2, giữ nguyên nhạc phiên đang chạy.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAPPING -->
+  <footer class="mapping">
+    <h2>Đối chiếu đề xuất task (chưa build)</h2>
+    <p class="sub">Đề xuất mã task tiếp theo sau <span class="scr">T-111</span> (Nhóm F — Chợ) — chi tiết đầy đủ từng task xem <span class="scr">plan.md</span> mục "Chưa làm" › Nhóm G.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Task</th><th>Nội dung</th><th>Phía</th><th>Trạng thái</th></tr></thead>
+        <tbody>
+          <tr><td class="scr">T-112</td><td>Thuật toán bố trí (<span class="scr">GardenLayout.kt</span>, seed theo speciesId) + component vẽ bản đồ (<span class="scr">GardenMapView.kt</span>)</td><td>Android</td><td><span class="status-pill todo">⬜ Chưa làm</span></td></tr>
+          <tr><td class="scr">T-113</td><td>Toggle chế độ xem Lưới ⇄ Khu vườn trong <span class="scr">ForestScreen.kt</span> — chế độ Lưới giữ nguyên 100%</td><td>Android</td><td><span class="status-pill todo">⬜ Chưa làm</span></td></tr>
+          <tr><td class="scr">T-114</td><td>Gắn âm thanh nền (tái dùng <span class="scr">SoundManager</span> từ T-042) vào chế độ Khu vườn</td><td>Android</td><td><span class="status-pill todo">⬜ Chưa làm</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </footer>
+
+</div>

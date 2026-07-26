@@ -30,13 +30,15 @@ export class CollectionService {
     return { unlocked, total };
   }
 
-  /** Gọi khi 1 phiên ấp thành công — cộng dồn nếu đã có, tạo mới nếu lần đầu. */
+  /** Gọi khi 1 phiên ấp thành công — cộng dồn nếu đã có, tạo mới nếu lần đầu. `ownedCount` tăng
+   * cùng `hatchCount` (tự ấp luôn tạo thêm 1 bản đang sở hữu) — khác nhánh mua ở Chợ (T-106) chỉ
+   * tăng `ownedCount`, không đụng `hatchCount`. */
   recordHatch(userId: string, speciesId: string, tx?: Tx) {
     const client = tx ?? this.prisma;
     return client.collectionEntry.upsert({
       where: { userId_speciesId: { userId, speciesId } },
-      create: { userId, speciesId, hatchCount: 1 },
-      update: { hatchCount: { increment: 1 }, lastHatchedAt: new Date() },
+      create: { userId, speciesId, hatchCount: 1, ownedCount: 1 },
+      update: { hatchCount: { increment: 1 }, ownedCount: { increment: 1 }, lastHatchedAt: new Date() },
     });
   }
 

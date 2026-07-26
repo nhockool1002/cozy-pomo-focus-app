@@ -42,6 +42,11 @@ export class ShopService {
     if (!shopItem || !shopItem.isActive) {
       throw new NotFoundException('Không tìm thấy vật phẩm này');
     }
+    if (!shopItem.purchasable) {
+      // T-116 — trứng Truyền thuyết: hiện trong Cửa hàng để biết sự tồn tại nhưng chỉ Admin phát
+      // qua AdminJS (tạo thẳng `OwnedEgg`), chặn cả phía server phòng client bỏ qua UI disable.
+      throw new ForbiddenException('Vật phẩm này không bán — chỉ nhận được qua phần thưởng từ Admin');
+    }
 
     if (shopItem.category === ShopCategory.EGG) {
       if (!shopItem.eggType) {

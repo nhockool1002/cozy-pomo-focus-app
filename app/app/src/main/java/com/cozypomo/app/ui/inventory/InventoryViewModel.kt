@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cozypomo.app.data.events.CollectionEventBus
 import com.cozypomo.app.data.network.ApiService
+import com.cozypomo.app.data.network.CreateEggListingRequest
 import com.cozypomo.app.data.network.InventoryItemDto
 import com.cozypomo.app.data.network.OwnedEggDto
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 
 enum class InventoryTab(val label: String) {
@@ -31,6 +33,9 @@ data class InventoryUiState(
     /** id món đang chờ PATCH /equip trả về — chặn chạm thêm (cùng món hay món khác) trong lúc
      * chờ, xem [equip]. */
     val pendingEquipId: String? = null,
+    /** T-110 — trứng đang mở dialog "Đăng bán" (đặt giá) — null = không mở. */
+    val sellDialogFor: OwnedEggDto? = null,
+    val sellMessage: String? = null,
 )
 
 /** T-099 — Kho đồ (5th tab): gom bình/trứng/nhạc sở hữu vào 1 màn riêng, trước đây rải rác ở
@@ -94,4 +99,29 @@ class InventoryViewModel @Inject constructor(
             _uiState.update { it.copy(pendingEquipId = null) }
         }
     }
+
+    /** T-110 — Đăng bán trứng đang ấp ở Chợ. Backend tự chặn nếu trứng đang gắn 1 phiên RUNNING
+     * (client không biết trước điều này nên chỉ hiện lỗi từ server nếu có, không tự đoán). */
+    fun openSellDialog(egg: OwnedEggDto) = _uiState.update { it.copy(sellDialogFor = egg) }
+    fun closeSellDialog() = _uiState.update { it.copy(sellDialogFor = null) }
+
+    fun confirmSell(priceCoin: Int) {
+        val egg = _uiState.value.sellDialogFor ?: return
+        _uiState.update { it.copy(sellDialogFor = null) }
+        viewModelScope.launch {
+            val result = runCatching {
+                apiService.createEggListing(
+                    CreateEggListingRequest(ownedEggId = egg.id, priceCoin = priceCoin, clientEventId = UUID.randomUUID().toString()),
+                )
+            }
+            _uiState.update {
+                it.copy(
+                    sellMessage = if (result.isSuccess) "Đã đăng bán ${egg.eggType.name} ở Chợ!" else "Không đăng bán được — trứng có thể đang dùng trong 1 phiên tập trung.",
+                )
+            }
+            if (result.isSuccess) load()
+        }
+    }
+
+    fun dismissSellMessage() = _uiState.update { it.copy(sellMessage = null) }
 }

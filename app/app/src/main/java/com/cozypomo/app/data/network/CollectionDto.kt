@@ -8,6 +8,10 @@ data class CollectionEntryDto(
     val userId: String,
     val speciesId: String,
     val hatchCount: Int,
+    /** Số bản đang thực sự sở hữu NGAY BÂY GIỜ (T-106) — khác [hatchCount] (lịch sử, không giảm
+     * khi bán ở Chợ). Dùng để quyết định có hiện nút "Đăng bán" hay không, và chỉ loài có
+     * `ownedCount > 0` mới "đứng" trong Khu vườn (Nhóm G). */
+    val ownedCount: Int = 0,
     val isFavorite: Boolean = false,
     val firstHatchedAt: String,
     val lastHatchedAt: String,

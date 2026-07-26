@@ -125,7 +125,9 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
             options: { navigation: { name: 'Nội dung game' } },
           },
           {
-            resource: { model: getModelByName('RarityWeight'), client: prisma },
+            // T-116 — trọng số cấp bậc RIÊNG theo từng loại trứng (thay `RarityWeight` toàn cục
+            // cũ) — admin lọc theo `eggTypeId` để sửa từng "đường cong" tỉ lệ 1 loại trứng.
+            resource: { model: getModelByName('EggRarityWeight'), client: prisma },
             options: { navigation: { name: 'Nội dung game' } },
           },
           {
@@ -143,6 +145,13 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
                 bulkDelete: { isAccessible: false },
               },
             },
+          },
+          {
+            // Chợ (T-106) — Admin tạo tin đăng sellerType=ADMIN (vật phẩm siêu hiếm, giữ nguyên
+            // action `new` để làm việc này) + duyệt tin PENDING_APPROVAL của user (SSR/MYTHIC) qua
+            // đúng form edit chuẩn, chỉ cần đổi field `status` sang ACTIVE hoặc REJECTED.
+            resource: { model: getModelByName('MarketListing'), client: prisma },
+            options: { navigation: { name: 'Chợ' } },
           },
           {
             resource: { model: getModelByName('User'), client: prisma },
@@ -173,8 +182,18 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
             options: { navigation: { name: 'Người dùng' }, ...readOnly },
           },
           {
+            // T-116 — cho phép `new`: đây chính là cách Admin "phát thưởng" trứng Truyền Thuyết
+            // (chọn User + EggType, tạo thẳng 1 OwnedEgg INCUBATING) — vẫn khoá edit/delete để
+            // không ai chỉnh tay tiến độ ấp/kết quả nở (phải đi qua API để giữ đúng nghiệp vụ).
             resource: { model: getModelByName('OwnedEgg'), client: prisma },
-            options: { navigation: { name: 'Người dùng' }, ...readOnly },
+            options: {
+              navigation: { name: 'Người dùng' },
+              actions: {
+                edit: { isAccessible: false },
+                delete: { isAccessible: false },
+                bulkDelete: { isAccessible: false },
+              },
+            },
           },
         ],
         pages: {

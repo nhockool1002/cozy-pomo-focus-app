@@ -4,13 +4,16 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.cozypomo.app.data.local.session.SessionDao
 import com.cozypomo.app.data.local.session.SessionEntity
+import com.cozypomo.app.data.local.sync.SyncOutboxDao
+import com.cozypomo.app.data.local.sync.SyncOutboxEntity
 
 /**
- * DB local-first (T-029). Chỉ có bảng `sessions` ở phiên bản đầu — đủ cho TimerRepository
- * (T-030). Các bảng khác (inventory trứng, collection, settings) sẽ thêm dần khi xây các
- * Repository tương ứng (T-032/T-035/T-039) thay vì tạo trước schema chưa dùng tới.
+ * DB local-first (T-029). Bảng `sessions` là nguồn sự thật cho Foreground Service/TimerRepository
+ * (T-030). Bảng `sync_outbox` (T-043) là hàng đợi đồng bộ offline→online cho các thao tác phiên
+ * gọi backend thất bại lúc mất mạng — xem [com.cozypomo.app.data.sync.SyncOutboxWorker].
  */
-@Database(entities = [SessionEntity::class], version = 3, exportSchema = false)
+@Database(entities = [SessionEntity::class, SyncOutboxEntity::class], version = 4, exportSchema = false)
 abstract class CozyPomoDatabase : RoomDatabase() {
     abstract fun sessionDao(): SessionDao
+    abstract fun syncOutboxDao(): SyncOutboxDao
 }

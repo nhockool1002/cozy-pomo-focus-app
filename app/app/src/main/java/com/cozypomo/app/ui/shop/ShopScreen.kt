@@ -17,18 +17,23 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -46,9 +51,12 @@ import com.cozypomo.app.ui.common.MessageDialog
 import com.cozypomo.app.ui.common.parseEggColor
 
 /** T-037 — S-05 Cửa hàng: Trứng mới / Bình thuỷ tinh / Nhạc nền, item có hiệu ứng bồng bềnh nhẹ.
- * Số dư hiện qua bubble nổi dùng chung [CurrencyViewModel] (xem CozyPomoNavHost). */
+ * Số dư hiện qua bubble nổi dùng chung [CurrencyViewModel] (xem CozyPomoNavHost). Từ T-111, màn
+ * này không còn là tab Bottom Nav — vào qua [com.cozypomo.app.ui.common.ShopMarketToggleFab] ở
+ * Trang chủ, [onBack] đóng vai trò nút quay lại trên TopAppBar (giống Cài đặt/Giới thiệu). */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShopScreen(currencyViewModel: CurrencyViewModel, viewModel: ShopViewModel = hiltViewModel()) {
+fun ShopScreen(currencyViewModel: CurrencyViewModel, onBack: () -> Unit, viewModel: ShopViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
     val currencyState by currencyViewModel.uiState.collectAsState()
 
@@ -57,24 +65,26 @@ fun ShopScreen(currencyViewModel: CurrencyViewModel, viewModel: ShopViewModel = 
         if (uiState.lastMessage != null) currencyViewModel.refresh()
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        "Tiệm Tạp Hóa Rừng Xanh",
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+    Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    "Tiệm Tạp Hóa Rừng Xanh",
-                    style = MaterialTheme.typography.titleLarge,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -112,6 +122,7 @@ fun ShopScreen(currencyViewModel: CurrencyViewModel, viewModel: ShopViewModel = 
             }
         }
     }
+    } // Scaffold content
 
     uiState.lastMessage?.let { message ->
         MessageDialog(message = message, onDismiss = viewModel::dismissMessage)
@@ -149,14 +160,23 @@ private fun ShopItemRow(item: ShopItemDto, owned: Boolean, coinBalance: Int?, on
                 item.description?.let {
                     Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 }
-                Text(
-                    "${item.priceCoin} Xu" + if (item.category == "EGG") " · hoặc Giờ tích luỹ" else "",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
+                if (item.purchasable) {
+                    Text(
+                        "${item.priceCoin} Xu" + if (item.category == "EGG") " · hoặc Giờ tích luỹ" else "",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                } else {
+                    Text(
+                        "Chỉ nhận qua thưởng từ Admin",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(8.dp))
             when {
+                !item.purchasable -> OutlinedButton(onClick = {}, enabled = false) { Text("Không bán") }
                 owned -> OutlinedButton(onClick = {}, enabled = false) { Text("Đã sở hữu") }
                 item.category != "EGG" && (coinBalance == null || coinBalance < item.priceCoin) ->
                     Button(onClick = {}, enabled = false) { Text("Cần thêm Xu") }

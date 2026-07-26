@@ -43,12 +43,18 @@ import com.cozypomo.app.ui.about.AboutScreen
 import com.cozypomo.app.ui.forest.ForestScreen
 import com.cozypomo.app.ui.home.HomeScreen
 import com.cozypomo.app.ui.inventory.InventoryScreen
+import com.cozypomo.app.ui.market.MarketScreen
 import com.cozypomo.app.ui.settings.SettingsScreen
 import com.cozypomo.app.ui.shop.ShopScreen
 import com.cozypomo.app.ui.stats.StatsScreen
 
 private const val SettingsRoute = "settings"
 private const val AboutRoute = "about"
+
+// T-111 — Cửa hàng/Chợ rời khỏi Bottom Nav, sống ở đây như route trần (giống Settings/About) —
+// mở qua ShopMarketToggleFab ở Trang chủ thay vì tab riêng.
+private const val ShopRoute = "shop"
+private const val MarketRoute = "market"
 
 @Composable
 fun CozyPomoNavHost(onLogout: () -> Unit) {
@@ -139,12 +145,21 @@ fun CozyPomoNavHost(onLogout: () -> Unit) {
                 modifier = Modifier.padding(innerPadding),
             ) {
                 composable(CozyPomoDestination.Home.route) {
-                    HomeScreen(currencyViewModel = currencyViewModel)
+                    HomeScreen(
+                        currencyViewModel = currencyViewModel,
+                        onOpenShop = { navController.navigate(ShopRoute) { launchSingleTop = true } },
+                        onOpenMarket = { navController.navigate(MarketRoute) { launchSingleTop = true } },
+                    )
                 }
                 composable(CozyPomoDestination.Forest.route) { ForestScreen() }
-                composable(CozyPomoDestination.Shop.route) { ShopScreen(currencyViewModel = currencyViewModel) }
                 composable(CozyPomoDestination.Inventory.route) { InventoryScreen() }
                 composable(CozyPomoDestination.Stats.route) { StatsScreen() }
+                composable(ShopRoute) {
+                    ShopScreen(currencyViewModel = currencyViewModel, onBack = { navController.popBackStack() })
+                }
+                composable(MarketRoute) {
+                    MarketScreen(currencyViewModel = currencyViewModel, onBack = { navController.popBackStack() })
+                }
                 composable(SettingsRoute) {
                     SettingsScreen(
                         onBack = { navController.popBackStack() },
@@ -175,7 +190,7 @@ fun CozyPomoNavHost(onLogout: () -> Unit) {
             onGrantCoin = { cheatViewModel.cheatGrantCurrency("COIN", 1000, currencyViewModel::refresh) },
             onGrantFocusMinute = { cheatViewModel.cheatGrantCurrency("FOCUS_MINUTE", 1000, currencyViewModel::refresh) },
             onFastForwardSession = cheatViewModel::cheatFastForwardSession,
-            onGrantMysteryEgg = cheatViewModel::cheatGrantMysteryEgg,
+            onGrantEgg = cheatViewModel::cheatGrantEgg,
             onGrantRarity = cheatViewModel::cheatGrantSpecies,
         )
     }

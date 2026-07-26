@@ -126,15 +126,15 @@ Các "hàm API" dưới đây là ranh giới giữa ViewModel và tầng dữ l
 | `updateFocusDuration` | `minutes: Int` | `Unit` | Mặc định 25, khoảng 10–120 — Slider chỉ `PATCH /settings` khi thả tay |
 | `updateBreakDuration` | `minutes: Int` | `Unit` | Mặc định 5, khoảng 1–60 |
 | `setStrictMode` | `enabled: Boolean` | `Unit` | Bật/tắt cảnh báo thoát app |
-| `setSoundTheme` | `themeId: "default"\|"rain"\|"forest"\|"lofi"` | `Unit` | Chỉ **lưu lựa chọn** — chưa thật sự phát âm thanh, đó là việc của SoundManager (mục 3.9, T-042 chưa làm) |
+| `setSoundTheme` | `themeId: "default"\|"rain"\|"forest"\|"lofi"` | `Unit` | Lưu lựa chọn — SoundManager (mục 3.9, T-042 đã build) đọc giá trị này lúc `startSession` để phát nhạc nền tương ứng |
 
 ### 3.8 SyncRepository — ⛔ đã bỏ khỏi phạm vi (không phải "chưa làm")
 
 Dev1002 quyết định không làm Sao lưu & Đồng bộ Google Drive (S-07a) — mục này giữ lại trong tài liệu chỉ để tham khảo thiết kế ban đầu, **không nằm trong backlog nữa**. Nếu cần lại, phải bàn phạm vi từ đầu (bao gồm cả OAuth Google Drive scope, quyền truy cập `appDataFolder`).
 
-### 3.9 SoundManager / NotificationManager (service nội bộ, không phải Repository thuần) — ⬜ chưa làm (T-042)
+### 3.9 SoundManager / NotificationManager (service nội bộ, không phải Repository thuần) — ✅ đã build (T-042, 2026-07-25)
 
-Màn Cài đặt (S-07) đã có UI chọn `soundTheme` (mục 3.7), nhưng chưa có gì trong danh sách dưới đây được cài đặt thật — chọn xong chỉ lưu giá trị, không có âm thanh/thông báo nào thật sự chạy.
+`SoundManager` (`data/sound/`) đọc `soundTheme` từ Cài đặt (mục 3.7) lúc `TimerRepository.startSession` để phát nhạc nền qua Media3 `ExoPlayer` (loop); `playCompletionChime` qua `SoundPool`. `NotificationManager` thực ra là `SessionNotifier` (`data/notification/`) — lớp bảo hiểm độc lập dùng `AlarmManager` (không exact, không cần quyền `SCHEDULE_EXACT_ALARM`) báo hết giờ ngay cả khi màn hình khoá và Foreground Service bị hệ thống kill; đường chính vẫn là service tự gọi trực tiếp khi đếm về 0. **Chưa verify trên emulator/thiết bị thật** — chỉ mới xác nhận qua Gradle build, xem `plan.md`.
 
 | Hàm | Tham số | Trả về | Mô tả |
 |---|---|---|---|

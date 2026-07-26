@@ -17,9 +17,14 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Yard
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,7 +40,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.cozypomo.app.data.network.SpeciesDto
+import com.cozypomo.app.ui.common.MessageDialog
 import com.cozypomo.app.ui.common.RarityBadge
+import com.cozypomo.app.ui.common.SetPriceDialog
 import com.cozypomo.app.ui.common.SpeciesArtIcon
 
 /** T-035 — S-04 Khu rừng/Bộ sưu tập: lưới loài đã/chưa mở khoá, lọc theo nhóm. */
@@ -45,33 +52,42 @@ fun ForestScreen(viewModel: ForestViewModel = hiltViewModel()) {
 
     Column(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-            Text("Khu rừng của tôi", style = MaterialTheme.typography.headlineSmall)
-            uiState.progress?.let { progress ->
-                Text(
-                    "${progress.unlocked}/${progress.total} đã mở khoá",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Khu rừng của tôi", style = MaterialTheme.typography.headlineSmall)
+                    uiState.progress?.let { progress ->
+                        Text(
+                            "${progress.unlocked}/${progress.total} đã mở khoá",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                ViewModeToggle(mode = uiState.viewMode, onSelect = viewModel::selectViewMode)
             }
         }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            SpeciesCategoryFilter.entries.forEach { category ->
-                FilterChip(
-                    selected = uiState.category == category,
-                    onClick = { viewModel.selectCategory(category) },
-                    label = { Text(category.label, maxLines = 1) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-                )
+        // T-113 — tab category chỉ có ý nghĩa ở chế độ Lưới; Khu vườn đã tự hiện đủ 4 khu cùng
+        // lúc (cuộn dọc), không cần lọc thêm.
+        if (uiState.viewMode == ForestViewMode.GRID) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                SpeciesCategoryFilter.entries.forEach { category ->
+                    FilterChip(
+                        selected = uiState.category == category,
+                        onClick = { viewModel.selectCategory(category) },
+                        label = { Text(category.label, maxLines = 1) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                    )
+                }
             }
         }
 
@@ -79,6 +95,11 @@ fun ForestScreen(viewModel: ForestViewModel = hiltViewModel()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
+        } else if (uiState.viewMode == ForestViewMode.GARDEN) {
+            GardenMapView(
+                entries = uiState.collectionBySpeciesId.values.toList(),
+                onOpenSpecies = viewModel::openSpecies,
+            )
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
@@ -104,7 +125,44 @@ fun ForestScreen(viewModel: ForestViewModel = hiltViewModel()) {
                 entry = entry,
                 onDismiss = viewModel::closeSpecies,
                 onToggleFavorite = { viewModel.toggleFavorite(speciesId) },
+                onSell = { viewModel.openSellDialog(entry) },
             )
+        }
+    }
+
+    uiState.sellDialogFor?.let { entry ->
+        SetPriceDialog(
+            title = "Đăng bán ${entry.species.name}",
+            subtitle = "Bạn đang sở hữu ${entry.ownedCount} bản — đăng bán 1 bản ở Chợ",
+            onConfirm = viewModel::confirmSell,
+            onDismiss = viewModel::closeSellDialog,
+        )
+    }
+
+    uiState.sellMessage?.let { message ->
+        MessageDialog(message = message, onDismiss = viewModel::dismissSellMessage)
+    }
+}
+
+/** T-113 — toggle 2 icon Lưới ⇄ Khu vườn cạnh tiêu đề màn. */
+@Composable
+private fun ViewModeToggle(mode: ForestViewMode, onSelect: (ForestViewMode) -> Unit) {
+    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+        Row {
+            IconButton(onClick = { onSelect(ForestViewMode.GRID) }) {
+                Icon(
+                    Icons.Filled.GridView,
+                    contentDescription = ForestViewMode.GRID.label,
+                    tint = if (mode == ForestViewMode.GRID) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(onClick = { onSelect(ForestViewMode.GARDEN) }) {
+                Icon(
+                    Icons.Filled.Yard,
+                    contentDescription = ForestViewMode.GARDEN.label,
+                    tint = if (mode == ForestViewMode.GARDEN) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

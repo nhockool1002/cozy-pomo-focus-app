@@ -42,7 +42,13 @@ export class CurrencyService {
     userId: string,
     amount: number,
     reason: LedgerReason,
-    opts: { currency?: CurrencyType; refSessionId?: string; clientEventId?: string; tx?: Tx } = {},
+    opts: {
+      currency?: CurrencyType;
+      refSessionId?: string;
+      refMarketListingId?: string;
+      clientEventId?: string;
+      tx?: Tx;
+    } = {},
   ) {
     if (amount <= 0) return null;
     const client = opts.tx ?? this.prisma;
@@ -53,6 +59,7 @@ export class CurrencyService {
         currency: opts.currency ?? CurrencyType.COIN,
         reason,
         refSessionId: opts.refSessionId,
+        refMarketListingId: opts.refMarketListingId,
         clientEventId: opts.clientEventId,
       },
     });
@@ -63,7 +70,13 @@ export class CurrencyService {
     userId: string,
     amount: number,
     reason: LedgerReason,
-    opts: { currency?: CurrencyType; refShopItemId?: string; clientEventId?: string; tx?: Tx } = {},
+    opts: {
+      currency?: CurrencyType;
+      refShopItemId?: string;
+      refMarketListingId?: string;
+      clientEventId?: string;
+      tx?: Tx;
+    } = {},
   ) {
     const currency = opts.currency ?? CurrencyType.COIN;
     const client = opts.tx ?? this.prisma;
@@ -78,6 +91,7 @@ export class CurrencyService {
         currency,
         reason,
         refShopItemId: opts.refShopItemId,
+        refMarketListingId: opts.refMarketListingId,
         clientEventId: opts.clientEventId,
       },
     });

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.cozypomo.app.data.local.CozyPomoDatabase
 import com.cozypomo.app.data.local.session.SessionDao
+import com.cozypomo.app.data.local.sync.SyncOutboxDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -27,4 +28,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideSessionDao(database: CozyPomoDatabase): SessionDao = database.sessionDao()
+
+    @Provides
+    @Singleton
+    fun provideSyncOutboxDao(database: CozyPomoDatabase): SyncOutboxDao = database.syncOutboxDao()
 }

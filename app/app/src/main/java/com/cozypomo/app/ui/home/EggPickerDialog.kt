@@ -11,9 +11,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -99,14 +102,22 @@ fun EggPickerDialog(
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                }
-
-                ownedEggs.forEach { egg ->
-                    OwnedEggRow(
-                        egg = egg,
-                        selected = selectedOwnedEgg?.id == egg.id,
-                        onClick = { onSelect(egg) },
-                    )
+                } else {
+                    // T-117 — trước đây `Column` + `forEach` không giới hạn chiều cao: sở hữu càng
+                    // nhiều loại trứng (giờ có 7 loại + cheat cấp tự do) danh sách càng dài, khiến
+                    // `Dialog` (mặc định wrap-content, tự căn giữa màn hình) cao vượt màn hình —
+                    // phần trên bị đẩy lên che mất/tràn lên trên vùng thanh trạng thái, phần dưới
+                    // tràn ra ngoài luôn. Đổi sang `LazyColumn` có trần chiều cao — danh sách dài tự
+                    // cuộn bên trong, Dialog không bao giờ cao hơn vùng an toàn.
+                    LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
+                        items(ownedEggs, key = { it.id }) { egg ->
+                            OwnedEggRow(
+                                egg = egg,
+                                selected = selectedOwnedEgg?.id == egg.id,
+                                onClick = { onSelect(egg) },
+                            )
+                        }
+                    }
                 }
             }
         }

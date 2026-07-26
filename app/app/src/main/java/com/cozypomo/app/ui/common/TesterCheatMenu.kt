@@ -35,8 +35,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 
-private val MYSTERY_EGG_TINT = Color(0xFF8B6FD6)
 private val RARITY_ORDER = listOf("B", "A", "S", "SS", "SSR")
+
+private data class EggCheatOption(val label: String, val eggTypeName: String, val tint: Color)
+
+/** T-117 — trước chỉ cấp được "Trứng Bí Ẩn"; giờ đủ cả 7 loại (kể cả 3 Truyền Thuyết chỉ Admin
+ * phát ở luồng thật) để tester tự kiểm thử luồng ấp/hiệu ứng nở từng loại. Tên PHẢI khớp tuyệt đối
+ * `EggType.name` trong `prisma/seed.ts` — backend tra theo tên (`debug/grant-egg`). */
+private val EGG_CHEAT_OPTIONS = listOf(
+    EggCheatOption("Rừng", "Trứng Rừng", Color(0xFF7C9A5A)),
+    EggCheatOption("Biển", "Trứng Biển", Color(0xFF6FB6A8)),
+    EggCheatOption("Hoa", "Trứng Hoa", Color(0xFFE7A8B0)),
+    EggCheatOption("Bí Ẩn", "Trứng Bí Ẩn", Color(0xFFE3B04B)),
+    EggCheatOption("TT.Rừng", "Trứng Truyền Thuyết Rừng", Color(0xFF3F5C2E)),
+    EggCheatOption("TT.Biển", "Trứng Truyền Thuyết Biển", Color(0xFF2E5A66)),
+    EggCheatOption("TT.Hoa", "Trứng Truyền Thuyết Hoa", Color(0xFFB23F6A)),
+)
 
 /** Menu cheat cho tester (chỉ mục đích debug/QA) — mở khi chạm bubble nổi (xem CheatBubble).
  * Bố trí dạng lưới thẻ nhỏ (thay LazyColumn nút full-width cũ) — gọn và "tinh tế" hơn, cùng
@@ -47,7 +61,7 @@ fun TesterCheatMenu(
     onGrantCoin: () -> Unit,
     onGrantFocusMinute: () -> Unit,
     onFastForwardSession: () -> Unit,
-    onGrantMysteryEgg: () -> Unit,
+    onGrantEgg: (String) -> Unit,
     onGrantRarity: (String) -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
@@ -86,20 +100,36 @@ fun TesterCheatMenu(
                 }
 
                 Spacer(modifier = Modifier.height(18.dp))
-                CheatSectionLabel("Trứng & loài")
+                CheatSectionLabel("Trứng (7 loại — cả Truyền Thuyết)")
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // T-117 — LazyVerticalGrid LUÔN cuộn bên trong khi vượt chiều cao cho — khác
+                // `Column`+`forEach` không giới hạn đã gây lỗi Dialog cao vượt màn hình ở
+                // EggPickerDialog. Đặt trần cố định ở ĐÂY thay vì tính theo số item, để về sau có
+                // thêm loại trứng nào cũng không lặp lại lỗi cũ.
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.height(220.dp),
+                ) {
+                    items(EGG_CHEAT_OPTIONS) { opt ->
+                        CheatActionCard(label = opt.label, tint = opt.tint, onClick = { onGrantEgg(opt.eggTypeName) }) {
+                            EggIcon(color = opt.tint, size = 26.dp)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+                CheatSectionLabel("Loài ngẫu nhiên theo cấp")
                 Spacer(modifier = Modifier.height(8.dp))
 
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.height(184.dp),
+                    modifier = Modifier.height(114.dp),
                 ) {
-                    item {
-                        CheatActionCard(label = "Trứng\nBí Ẩn", tint = MYSTERY_EGG_TINT, onClick = onGrantMysteryEgg) {
-                            EggIcon(color = MYSTERY_EGG_TINT, size = 26.dp)
-                        }
-                    }
                     items(RARITY_ORDER) { rarity ->
                         val colors = RARITY_BADGE.getValue(rarity)
                         CheatActionCard(label = "Ngẫu nhiên", tint = colors.fg, onClick = { onGrantRarity(rarity) }) {

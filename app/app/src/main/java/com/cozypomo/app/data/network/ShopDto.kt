@@ -10,6 +10,8 @@ data class ShopItemDto(
     val category: String, // EGG | JAR_SKIN | MUSIC
     val priceCoin: Int,
     val isActive: Boolean = true,
+    /** T-116 — false = trứng Truyền thuyết: hiện trong Cửa hàng nhưng không bán, chỉ Admin phát. */
+    val purchasable: Boolean = true,
     val eggTypeId: String? = null,
     val eggType: EggTypeDto? = null,
 )

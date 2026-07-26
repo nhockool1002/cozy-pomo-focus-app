@@ -28,8 +28,8 @@ android {
         applicationId = "com.cozypomo.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 6
-        versionName = "0.6.0"
+        versionCode = 8
+        versionName = "0.8.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -122,4 +122,11 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     implementation(libs.datastore.preferences)
+
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.common)
+
+    implementation(libs.work.runtime.ktx)
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.work.compiler)
 }

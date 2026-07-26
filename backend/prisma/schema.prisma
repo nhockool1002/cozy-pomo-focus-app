@@ -44,6 +44,8 @@ enum LedgerReason {
   PURCHASE
   REFUND
   ADMIN_ADJUST
+  MARKET_BUY
+  MARKET_SELL
 }
 
 /// Xu Lá (COIN) và Giờ tích luỹ (FOCUS_MINUTE, lưu bằng phút) — 2 loại tiền tệ độc lập,
@@ -56,6 +58,27 @@ enum CurrencyType {
 enum OwnedEggStatus {
   INCUBATING
   HATCHED
+}
+
+/// Chợ (T-106) — người chơi bán bản sao dư/trứng đang ấp, Admin bán vật phẩm siêu hiếm.
+enum MarketItemType {
+  SPECIES
+  EGG
+}
+
+enum MarketListingSellerType {
+  USER
+  ADMIN
+}
+
+/// PENDING_APPROVAL chỉ áp dụng cho tin SPECIES rarity SSR hoặc category MYTHIC do USER đăng —
+/// Admin duyệt (ACTIVE) hoặc từ chối (REJECTED) qua AdminJS trước khi hiện công khai.
+enum MarketListingStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  SOLD
+  CANCELLED
+  REJECTED
 }
 
 model User {
@@ -73,6 +96,9 @@ model User {
   collection CollectionEntry[]
   inventory  InventoryItem[]
   ownedEggs  OwnedEgg[]
+
+  marketListingsSold   MarketListing[] @relation("MarketListingsSold")
+  marketListingsBought MarketListing[] @relation("MarketListingsBought")
 
   @@map("users")
 }
@@ -101,6 +127,7 @@ model Species {
   eggDrops        EggDropEntry[]
   collectionRows  CollectionEntry[]
   ownedEggResults OwnedEgg[]
+  marketListings  MarketListing[]
 
   @@map("species")
 }
@@ -115,9 +142,10 @@ model EggType {
   /// Thời gian ấp cần thiết (phút) để trứng loại này nở — mỗi loại khác nhau, admin cấu hình.
   hatchDurationMin Int    @default(60)
 
-  drops     EggDropEntry[]
-  shopItems ShopItem[]
-  ownedEggs OwnedEgg[]
+  drops        EggDropEntry[]
+  rarityWeights EggRarityWeight[]
+  shopItems    ShopItem[]
+  ownedEggs    OwnedEgg[]
 
   @@map("egg_types")
 }
@@ -137,7 +165,8 @@ model OwnedEgg {
   resultSpecies   Species?       @relation(fields: [resultSpeciesId], references: [id])
   resultSpeciesId String?
 
-  sessions Session[]
+  sessions       Session[]
+  marketListings MarketListing[]
 
   @@index([userId, status])
   @@map("owned_eggs")
@@ -149,6 +178,10 @@ model GameSettings {
   /// Số Xu Lá nhận được cho mỗi phút tập trung hoàn thành (khi người dùng chọn nhận Xu Lá) —
   /// khớp tỉ giá quy đổi 1 phút Giờ tích luỹ = 10 Xu Lá dùng trong Cửa hàng.
   coinsPerFocusMinute Float @default(10)
+  /// % phí giao dịch Chợ (T-106) — trừ vào phần người bán nhận được, không hoàn ai (currency sink).
+  marketFeePercent Float @default(10)
+  /// Số tin đăng bán ACTIVE tối đa/user cùng lúc trên Chợ (T-106) — chống spam thị trường.
+  maxActiveListingsPerUser Int @default(10)
 
   @@map("game_settings")
 }
@@ -165,11 +198,19 @@ model EggDropEntry {
   @@map("egg_drop_table")
 }
 
-model RarityWeight {
-  rarity Rarity @id
-  weight Int
+/// Trọng số cấp bậc RIÊNG theo từng loại trứng (T-116) — thay cho bảng `rarity_weights` toàn cục
+/// cũ (1 trọng số dùng chung mọi trứng). Mỗi loại trứng có 1 "đường cong" tỉ lệ khác nhau (VD
+/// trứng thường chỉ rơi B/A/S, trứng Bí Ẩn rơi A→SSR, trứng Truyền thuyết rơi S→SSR) — admin sửa
+/// trực tiếp từng dòng qua AdminJS. Vắng mặt (không có dòng nào) = cấp đó không bao giờ rơi ở
+/// trứng này, xem `eggs.service.ts#loadWeightedDrops`.
+model EggRarityWeight {
+  eggType   EggType @relation(fields: [eggTypeId], references: [id], onDelete: Cascade)
+  eggTypeId String
+  rarity    Rarity
+  weight    Int
 
-  @@map("rarity_weights")
+  @@id([eggTypeId, rarity])
+  @@map("egg_rarity_weights")
 }
 
 model ShopItem {
@@ -179,6 +220,10 @@ model ShopItem {
   category    ShopCategory
   priceCoin   Int
   isActive    Boolean      @default(true)
+  /// T-116 — false = hiện trong Cửa hàng nhưng KHÔNG bán được (không hiện giá, nút mua bị khoá) —
+  /// dùng cho trứng Truyền thuyết mà Admin phát trực tiếp qua `OwnedEgg` (đã là resource AdminJS
+  /// sẵn có), không phải mua bằng Xu Lá/Giờ tích luỹ.
+  purchasable Boolean      @default(true)
   eggType     EggType?     @relation(fields: [eggTypeId], references: [id])
   eggTypeId   String?
 
@@ -238,6 +283,7 @@ model LedgerEntry {
   reason        LedgerReason
   refSessionId  String?
   refShopItemId String?
+  refMarketListingId String?
   clientEventId String?      @unique
   createdAt     DateTime     @default(now())
 
@@ -252,10 +298,40 @@ model CollectionEntry {
   species        Species  @relation(fields: [speciesId], references: [id], onDelete: Cascade)
   speciesId      String
   hatchCount     Int      @default(0)
+  /// Số bản đang thực sự sở hữu NGAY BÂY GIỜ (T-106) — khác hatchCount (lịch sử, không giảm khi
+  /// bán). Tăng khi nở HOẶC mua ở Chợ, giảm khi bán, có thể về 0 (không xoá CollectionEntry —
+  /// loài vẫn hiện đã mở khoá, chỉ không còn "đứng" trong Khu vườn nữa, xem Nhóm G).
+  ownedCount     Int      @default(0)
   isFavorite     Boolean  @default(false)
   firstHatchedAt DateTime @default(now())
   lastHatchedAt  DateTime @default(now())
 
   @@unique([userId, speciesId])
   @@map("user_collection")
+}
+
+/// Chợ (T-106, docs/wireframes/market-feature.html) — user bán bản sao dư loài/thực vật/trứng,
+/// Admin bán vật phẩm siêu hiếm. `itemType` quyết định speciesId hay ownedEggId có giá trị.
+model MarketListing {
+  id         String                  @id @default(uuid())
+  itemType   MarketItemType
+  sellerType MarketListingSellerType @default(USER)
+  seller     User?                   @relation("MarketListingsSold", fields: [sellerId], references: [id])
+  sellerId   String?
+  species    Species?                @relation(fields: [speciesId], references: [id])
+  speciesId  String?
+  ownedEgg   OwnedEgg?               @relation(fields: [ownedEggId], references: [id])
+  ownedEggId String?
+  priceCoin  Int
+  status     MarketListingStatus    @default(ACTIVE)
+  buyer      User?                   @relation("MarketListingsBought", fields: [buyerId], references: [id])
+  buyerId    String?
+  clientEventId String?              @unique
+  createdAt  DateTime                @default(now())
+  soldAt     DateTime?
+  cancelledAt DateTime?
+
+  @@index([status, itemType])
+  @@index([sellerId, status])
+  @@map("market_listings")
 }

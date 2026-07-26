@@ -73,10 +73,14 @@ class TesterCheatViewModel @Inject constructor(
         }
     }
 
-    fun cheatGrantMysteryEgg() {
+    /** T-117 — trước chỉ cấp được "Trứng Bí Ẩn" cố định; giờ nhận tên bất kỳ trong 7 loại trứng
+     * (kể cả 3 Truyền Thuyết chỉ Admin phát ở luồng thật) để tester tự kiểm thử luồng ấp/hiệu ứng
+     * nở cho từng loại mà không cần nhờ Admin/chỉnh DB tay. Endpoint backend `debug/grant-egg` đã
+     * nhận `eggTypeName` tự do từ trước — chỉ cần Android truyền đúng tên thay vì bỏ trống. */
+    fun cheatGrantEgg(eggTypeName: String) {
         viewModelScope.launch {
-            val result = runCatching { apiService.debugGrantEgg(GrantEggRequest()) }
-            reportCheatResult(result.isSuccess, "Trứng Bí Ẩn")
+            val result = runCatching { apiService.debugGrantEgg(GrantEggRequest(eggTypeName)) }
+            reportCheatResult(result.isSuccess, eggTypeName)
             if (result.isSuccess) collectionEventBus.notifyChanged()
         }
     }

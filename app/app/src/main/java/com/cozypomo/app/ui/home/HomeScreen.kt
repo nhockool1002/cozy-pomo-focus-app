@@ -51,14 +51,19 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.cozypomo.app.data.timer.SessionUiState
 import com.cozypomo.app.ui.common.CurrencyViewModel
 import com.cozypomo.app.ui.common.JarMark
+import com.cozypomo.app.ui.common.ShopMarketToggleFab
 import com.cozypomo.app.ui.common.jarTintFor
 import com.cozypomo.app.ui.common.parseEggColor
 
 /** S-01 — Trang chủ/Timer, lõi sản phẩm. Xem docs/technical-spec.md §2. Số dư Xu Lá/Giờ tích luỹ
- * hiện qua bubble nổi dùng chung [CurrencyViewModel] (xem CozyPomoNavHost) — không tự tải riêng ở đây nữa. */
+ * hiện qua bubble nổi dùng chung [CurrencyViewModel] (xem CozyPomoNavHost) — không tự tải riêng ở đây nữa.
+ * [onOpenShop]/[onOpenMarket] — T-111, mở qua [ShopMarketToggleFab] góc phải-dưới (Cửa hàng/Chợ
+ * không còn là tab Bottom Nav riêng). */
 @Composable
 fun HomeScreen(
     currencyViewModel: CurrencyViewModel,
+    onOpenShop: () -> Unit,
+    onOpenMarket: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -91,6 +96,7 @@ fun HomeScreen(
     }
     val jarProgress = (liveIncubatedMin / hatchDurationMin).coerceIn(0f, 1f)
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -239,6 +245,15 @@ fun HomeScreen(
             }
         }
     }
+
+    ShopMarketToggleFab(
+        onOpenShop = onOpenShop,
+        onOpenMarket = onOpenMarket,
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(end = 16.dp, bottom = 12.dp),
+    )
+    } // Box
 
     if (uiState.showGiveUpConfirm) {
         AlertDialog(

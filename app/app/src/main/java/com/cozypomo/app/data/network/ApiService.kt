@@ -116,4 +116,31 @@ interface ApiService {
     @Headers("Requires-Auth: true")
     @POST("debug/grant-species")
     suspend fun debugGrantSpecies(@Body body: GrantSpeciesRequest): CollectionEntryDto
+
+    /** Hàng đợi outbox offline→online (T-043) — xem `SyncOutboxWorker`. */
+    @Headers("Requires-Auth: true")
+    @POST("sync/batch")
+    suspend fun syncBatch(@Body body: SyncBatchRequest): List<SyncResultDto>
+
+    // --- Chợ (T-106) ---
+
+    @Headers("Requires-Auth: true")
+    @GET("market/listings")
+    suspend fun getMarketListings(@Query("mine") mine: Boolean? = null): List<MarketListingDto>
+
+    @Headers("Requires-Auth: true")
+    @POST("market/listings/species")
+    suspend fun createSpeciesListing(@Body body: CreateSpeciesListingRequest): MarketListingDto
+
+    @Headers("Requires-Auth: true")
+    @POST("market/listings/eggs")
+    suspend fun createEggListing(@Body body: CreateEggListingRequest): MarketListingDto
+
+    @Headers("Requires-Auth: true")
+    @PATCH("market/listings/{id}/cancel")
+    suspend fun cancelListing(@Path("id") id: String): MarketListingDto
+
+    @Headers("Requires-Auth: true")
+    @POST("market/listings/{id}/buy")
+    suspend fun buyListing(@Path("id") id: String, @Body body: BuyListingRequest): MarketListingDto
 }

@@ -39,10 +39,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.material3.Button
 import com.cozypomo.app.data.network.InventoryItemDto
 import com.cozypomo.app.data.network.OwnedEggDto
 import com.cozypomo.app.ui.common.EggIcon
 import com.cozypomo.app.ui.common.JarMark
+import com.cozypomo.app.ui.common.MessageDialog
+import com.cozypomo.app.ui.common.SetPriceDialog
 import com.cozypomo.app.ui.common.jarTintFor
 import com.cozypomo.app.ui.common.parseEggColor
 
@@ -100,9 +103,22 @@ fun InventoryScreen(viewModel: InventoryViewModel = hiltViewModel()) {
                     MusicCard(item = item, pending = uiState.pendingEquipId == item.id, onClick = { viewModel.equip(item.id) })
                 }
 
-                InventoryTab.EGG -> EggCardGrid(eggs = uiState.ownedEggs)
+                InventoryTab.EGG -> EggCardGrid(eggs = uiState.ownedEggs, onSell = viewModel::openSellDialog)
             }
         }
+    }
+
+    uiState.sellDialogFor?.let { egg ->
+        SetPriceDialog(
+            title = "Đăng bán ${egg.eggType.name}",
+            subtitle = "Đã ấp ${egg.incubatedMin}/${egg.eggType.hatchDurationMin} phút — người mua nhận nguyên tiến trình này",
+            onConfirm = viewModel::confirmSell,
+            onDismiss = viewModel::closeSellDialog,
+        )
+    }
+
+    uiState.sellMessage?.let { message ->
+        MessageDialog(message = message, onDismiss = viewModel::dismissSellMessage)
     }
 }
 
@@ -196,7 +212,7 @@ private fun MusicCard(item: InventoryItemDto, pending: Boolean, onClick: () -> U
 }
 
 @Composable
-private fun EggCardGrid(eggs: List<OwnedEggDto>) {
+private fun EggCardGrid(eggs: List<OwnedEggDto>, onSell: (OwnedEggDto) -> Unit) {
     if (eggs.isEmpty()) {
         EmptyState("Chưa có trứng nào đang ấp — ghé Cửa hàng để mua nhé")
         return
@@ -207,21 +223,21 @@ private fun EggCardGrid(eggs: List<OwnedEggDto>) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(eggs, key = { it.id }) { egg -> EggProgressCard(egg) }
+        items(eggs, key = { it.id }) { egg -> EggProgressCard(egg, onSell = { onSell(egg) }) }
     }
 }
 
 @Composable
-private fun EggProgressCard(egg: OwnedEggDto) {
+private fun EggProgressCard(egg: OwnedEggDto, onSell: () -> Unit) {
     val hatchDuration = egg.eggType.hatchDurationMin.coerceAtLeast(1)
     val progress = (egg.incubatedMin.toFloat() / hatchDuration).coerceIn(0f, 1f)
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().aspectRatio(0.9f),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -241,6 +257,8 @@ private fun EggProgressCard(egg: OwnedEggDto) {
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(onClick = onSell, modifier = Modifier.fillMaxWidth()) { Text("Đăng bán") }
         }
     }
 }

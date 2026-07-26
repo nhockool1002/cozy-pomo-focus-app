@@ -49,8 +49,8 @@ export class DebugService {
     const species = candidates[Math.floor(Math.random() * candidates.length)];
     return this.prisma.collectionEntry.upsert({
       where: { userId_speciesId: { userId, speciesId: species.id } },
-      create: { userId, speciesId: species.id, hatchCount: 1 },
-      update: { hatchCount: { increment: 1 }, lastHatchedAt: new Date() },
+      create: { userId, speciesId: species.id, hatchCount: 1, ownedCount: 1 },
+      update: { hatchCount: { increment: 1 }, ownedCount: { increment: 1 }, lastHatchedAt: new Date() },
       include: { species: true },
     });
   }

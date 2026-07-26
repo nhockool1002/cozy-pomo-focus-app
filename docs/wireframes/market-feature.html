@@ -1,0 +1,548 @@
+<title>CozyPomo — Chợ (Marketplace), đề xuất tính năng mới</title>
+<style>
+:root{
+  --ivory:#F9F6F0;
+  --ivory-deep:#F1EADC;
+  --card:#FFFDF9;
+  --ink:#6D594E;
+  --ink-soft:rgba(109,89,78,0.55);
+  --ink-faint:rgba(109,89,78,0.16);
+  --matcha:#A8D08D;
+  --matcha-deep:#5E7F49;
+  --sun:#F4D160;
+  --terracotta:#E76F51;
+  --line:rgba(109,89,78,0.30);
+  --shadow:rgba(88,68,54,0.20);
+  --font-display:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+  --font-body:-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --font-mono:ui-monospace,'SF Mono','Cascadia Code',Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ivory:#241C17; --ivory-deep:#1B140F; --card:#2E241D;
+    --ink:#F1E6D8; --ink-soft:rgba(241,230,216,0.55); --ink-faint:rgba(241,230,216,0.14);
+    --matcha:#93C275; --matcha-deep:#BFE3A6;
+    --sun:#EFC948; --terracotta:#E27C5C;
+    --line:rgba(241,230,216,0.26); --shadow:rgba(0,0,0,0.5);
+  }
+}
+:root[data-theme="dark"]{
+  --ivory:#241C17; --ivory-deep:#1B140F; --card:#2E241D;
+  --ink:#F1E6D8; --ink-soft:rgba(241,230,216,0.55); --ink-faint:rgba(241,230,216,0.14);
+  --matcha:#93C275; --matcha-deep:#BFE3A6;
+  --sun:#EFC948; --terracotta:#E27C5C;
+  --line:rgba(241,230,216,0.26); --shadow:rgba(0,0,0,0.5);
+}
+:root[data-theme="light"]{
+  --ivory:#F9F6F0; --ivory-deep:#F1EADC; --card:#FFFDF9;
+  --ink:#6D594E; --ink-soft:rgba(109,89,78,0.55); --ink-faint:rgba(109,89,78,0.16);
+  --matcha:#A8D08D; --matcha-deep:#5E7F49;
+  --sun:#F4D160; --terracotta:#E76F51;
+  --line:rgba(109,89,78,0.30); --shadow:rgba(88,68,54,0.20);
+}
+
+*{box-sizing:border-box;}
+body{margin:0;}
+.page{
+  font-family:var(--font-body);
+  color:var(--ink);
+  background:
+    radial-gradient(var(--ink-faint) 1px, transparent 1px) 0 0/22px 22px,
+    var(--ivory-deep);
+  padding:40px 16px 60px;
+}
+@media (prefers-reduced-motion: reduce){ * { animation:none !important; transition:none !important; } }
+
+/* ---------- cover ---------- */
+.cover{max-width:940px;margin:0 auto 46px;text-align:left;}
+.eyebrow{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase;
+  color:var(--matcha-deep); margin:0 0 10px;
+}
+.cover h1{
+  font-family:var(--font-display); font-weight:600; font-size:clamp(24px,3.6vw,36px);
+  margin:0 0 12px; text-wrap:balance; color:var(--ink);
+}
+.cover-sub{font-size:14.5px; line-height:1.65; color:var(--ink-soft); max-width:680px; margin:0 0 16px;}
+.cover-sub b{color:var(--ink);}
+.revision-note{
+  font-size:12.5px; color:var(--terracotta); background:rgba(231,111,81,0.1); border:1px solid rgba(231,111,81,0.35);
+  border-radius:10px; padding:9px 13px; max-width:680px; line-height:1.55; margin:0 0 16px;
+}
+.legend{display:flex; flex-wrap:wrap; gap:18px; align-items:center; font-size:12.5px; color:var(--ink-soft);}
+.legend-item{display:flex; align-items:center; gap:7px;}
+.swatch{width:26px; height:16px; border-radius:5px; border:2px solid var(--ink); background:var(--card); display:inline-block;}
+.swatch.dashed{border-style:dashed;}
+.chip-sample{font-size:10.5px; border:1px solid var(--line); border-radius:10px; padding:2px 8px; background:var(--card); color:var(--ink);}
+
+/* ---------- phase sections ---------- */
+.phase{max-width:1400px; margin:0 auto 54px;}
+.phase h2{
+  display:flex; align-items:baseline; gap:10px; font-family:var(--font-display); font-weight:600;
+  font-size:20px; margin:0 0 6px; padding-bottom:10px; border-bottom:1px solid var(--line);
+}
+.phase-no{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+  color:var(--card); background:var(--matcha-deep); padding:3px 9px; border-radius:20px;
+}
+.phase-intro{font-size:13px; color:var(--ink-soft); max-width:920px; line-height:1.6; margin:0 0 18px;}
+.row-note, .entry-note{font-size:12px; color:var(--ink-soft); margin:6px 2px 0;}
+.row{display:flex; align-items:flex-start; gap:6px; overflow-x:auto; padding:6px 2px 14px;}
+
+/* ---------- phone chrome ---------- */
+.phone{
+  width:172px; flex:0 0 auto; border-radius:26px; border:2.5px solid var(--ink);
+  background:var(--card); box-shadow:0 10px 22px var(--shadow); overflow:hidden;
+  display:flex; flex-direction:column; position:relative;
+}
+.phone.popup{border-style:dashed; box-shadow:0 6px 14px var(--shadow);}
+.phone .status{
+  flex:none; height:18px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 10px; font-family:var(--font-mono); font-size:7px; color:var(--ink-soft);
+}
+.status .dots{display:flex; gap:2px;}
+.status .dot{width:3px; height:3px; border-radius:50%; background:var(--ink-soft);}
+.screen{flex:1; padding:9px 8px 10px; display:flex; flex-direction:column; gap:6px; font-size:8.5px; color:var(--ink); position:relative;}
+.wf-row{display:flex; align-items:center; justify-content:space-between; gap:4px;}
+.wf-pill{border:1.2px solid var(--ink); border-radius:20px; padding:2px 6px; font-size:7px; white-space:nowrap;}
+.coin{width:8px; height:8px; border-radius:50%; background:var(--sun); border:1px solid var(--ink); flex:none;}
+.title-lg{font-family:var(--font-display); font-weight:600; font-size:11px;}
+.title-md{font-family:var(--font-display); font-weight:600; font-size:9.5px;}
+.wf-img{
+  flex:none; border:1.2px solid var(--ink-soft); border-radius:10px; position:relative;
+  background:
+    linear-gradient(135deg, transparent calc(50% - 0.5px), var(--ink-faint) calc(50% - 0.5px), var(--ink-faint) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(45deg, transparent calc(50% - 0.5px), var(--ink-faint) calc(50% - 0.5px), var(--ink-faint) calc(50% + 0.5px), transparent calc(50% + 0.5px));
+}
+.wf-line{height:4.5px; border-radius:3px; background:var(--ink-faint);}
+.wf-btn{border-radius:20px; text-align:center; padding:6px 4px; font-size:8px; font-weight:700; border:1.4px solid var(--ink);}
+.wf-btn.primary{background:var(--matcha); border-color:var(--matcha-deep); color:#25331c;}
+.wf-btn.warning{background:var(--terracotta); border-color:var(--terracotta); color:#391711;}
+.wf-btn.ghost{background:transparent;}
+.wf-btn.disabled{background:var(--ink-faint); border-color:transparent; color:var(--ink-soft); font-weight:600;}
+.wf-input{border:1.2px solid var(--ink-soft); border-radius:8px; padding:5px 6px; font-size:7.5px; color:var(--ink-soft);}
+.tabs{display:flex; gap:4px; flex-wrap:wrap;}
+.tab{font-size:6.6px; padding:2px 5px; border-radius:10px; border:1px solid var(--ink-soft); color:var(--ink-soft);}
+.tab.active{border-color:var(--ink); color:var(--ink); background:rgba(168,208,141,0.35);}
+.badge{font-family:var(--font-mono); font-size:6.5px; border-radius:8px; padding:1px 5px; border:1px solid var(--ink);}
+.badge.ssr{background:var(--sun); border-color:var(--ink); box-shadow:0 0 0 2px rgba(244,209,96,0.35);}
+
+.bottom-nav{flex:none; height:32px; border-top:1.4px solid var(--ink); display:flex;}
+.bottom-nav .item{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; font-size:5.8px; color:var(--ink-soft);}
+.bottom-nav .item.active{color:var(--matcha-deep); font-weight:700;}
+.bottom-nav .icon{width:8px; height:8px; border:1.2px solid currentColor; border-radius:3px;}
+
+.phone-label{margin-top:9px; text-align:center; width:172px; flex:0 0 auto;}
+.phone-label .pid{font-family:var(--font-mono); font-size:10.5px; color:var(--matcha-deep); font-weight:700; letter-spacing:0.02em;}
+.phone-label .pid.new{color:var(--terracotta);}
+.phone-label .pname{font-family:var(--font-display); font-size:13px; margin-top:1px;}
+.phone-label .ptask{font-family:var(--font-mono); font-size:9px; color:var(--ink-soft); margin-top:2px;}
+
+.node{display:flex; flex-direction:column; align-items:center; flex:0 0 auto;}
+
+/* ---------- connectors ---------- */
+.conn-h{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; flex:0 0 auto; width:70px; margin:0 -2px; align-self:center;}
+.conn-h .line{width:100%; height:2px; background:var(--line); position:relative;}
+.conn-h .line::after{content:'▸'; position:absolute; right:-7px; top:-6px; color:var(--ink-soft); font-size:11px;}
+.conn-h .label{font-size:9px; background:var(--ivory-deep); border:1px solid var(--line); border-radius:10px; padding:2px 7px; color:var(--ink); white-space:nowrap;}
+
+.conn-v{display:flex; flex-direction:column; align-items:center; gap:3px; padding:2px 0;}
+.conn-v .line{width:2px; height:22px; background:var(--line); position:relative;}
+.conn-v .line::after{content:'▾'; position:absolute; bottom:-7px; left:-5px; color:var(--ink-soft); font-size:10px;}
+.conn-v .label{font-size:9px; background:var(--ivory-deep); border:1px solid var(--line); border-radius:10px; padding:2px 7px; color:var(--ink); white-space:nowrap; text-align:center;}
+
+.stack{display:flex; flex-direction:column; align-items:center; flex:0 0 auto;}
+.core-flow{display:flex; align-items:flex-start; gap:14px; overflow-x:auto; padding:6px 2px 20px;}
+
+.state-note{font-size:9px; color:var(--ink-soft); text-align:center; max-width:172px; margin-top:7px; line-height:1.4;}
+
+/* nav illustration */
+.navbar-illustration{
+  display:flex; max-width:620px; border:1.6px solid var(--ink); border-radius:16px; overflow:hidden;
+  margin-bottom:10px; background:var(--card);
+}
+.nb-item{flex:1; padding:12px 4px; text-align:center; font-size:10px; border-right:1px solid var(--line);}
+.nb-item:last-child{border-right:none;}
+.nb-item .sh{width:14px; height:14px; border:1.6px solid currentColor; border-radius:4px; margin:0 auto 6px;}
+
+.col{display:flex; flex-direction:column; align-items:center; flex:0 0 auto;}
+
+/* ---------- listing card (market-specific) ---------- */
+.listing-card{
+  border:1.2px solid var(--ink-faint); border-radius:9px; padding:5px 6px; display:flex; gap:5px; align-items:center;
+}
+.listing-thumb{width:22px;height:22px;border-radius:6px;flex:none;border:1px solid var(--ink-soft); position:relative;
+  background:
+    linear-gradient(135deg, transparent calc(50% - 0.5px), var(--ink-faint) calc(50% - 0.5px), var(--ink-faint) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(45deg, transparent calc(50% - 0.5px), var(--ink-faint) calc(50% - 0.5px), var(--ink-faint) calc(50% + 0.5px), transparent calc(50% + 0.5px));
+}
+.listing-thumb.egg{border-radius:50% 50% 46% 46%; background:rgba(244,209,96,0.28);}
+.listing-meta{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px;}
+.listing-name{font-size:7.3px; font-weight:700; display:flex; align-items:center; gap:3px;}
+.listing-seller{font-size:6px; color:var(--ink-soft);}
+.listing-price{font-size:6.6px; display:flex; align-items:center; gap:2px; font-weight:700;}
+.kind-tag{font-family:var(--font-mono); font-size:5.6px; color:var(--ink-soft); border:1px solid var(--ink-faint); border-radius:6px; padding:0 3px;}
+
+/* ---------- FAB toggle demo ---------- */
+.fab-anchor{position:absolute; right:8px; bottom:36px; display:flex; flex-direction:column; align-items:center; gap:5px;}
+.fab-sub{display:flex; align-items:center; gap:4px;}
+.fab-sub-label{font-size:6.2px; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:2px 5px; white-space:nowrap; box-shadow:0 2px 5px var(--shadow);}
+.fab-sub-btn{width:20px; height:20px; border-radius:50%; border:1.4px solid var(--ink); display:flex; align-items:center; justify-content:center; font-size:9px; box-shadow:0 3px 7px var(--shadow);}
+.fab-sub-btn.shop{background:var(--matcha); border-color:var(--matcha-deep);}
+.fab-sub-btn.market{background:var(--terracotta); border-color:#8f3a26; color:#fff;}
+.fab-main{width:28px; height:28px; border-radius:50%; background:var(--matcha); border:1.6px solid var(--matcha-deep); display:flex; align-items:center; justify-content:center; font-size:12px; box-shadow:0 4px 10px var(--shadow);}
+.fab-main.open{background:var(--ivory-deep); border-style:dashed;}
+
+/* ---------- domain-model diagram (non-phone) ---------- */
+.model-flow{display:flex; align-items:center; gap:10px; overflow-x:auto; padding:10px 2px 22px; max-width:1300px;}
+.model-box{
+  flex:0 0 auto; width:190px; border:1.6px solid var(--ink); border-radius:14px; background:var(--card);
+  padding:12px 13px; box-shadow:0 6px 14px var(--shadow);
+}
+.model-box.accent{border-color:var(--matcha-deep); background:rgba(168,208,141,0.14);}
+.model-box h3{font-family:var(--font-display); font-size:13px; margin:0 0 6px; font-weight:600;}
+.model-box p{font-size:11px; line-height:1.5; color:var(--ink-soft); margin:0;}
+.model-box .field{font-family:var(--font-mono); font-size:10px; color:var(--ink); background:var(--ivory-deep); border-radius:5px; padding:1px 5px; display:inline-block; margin:2px 3px 0 0;}
+.model-arrow{flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:4px; width:52px;}
+.model-arrow .line{width:100%; height:2px; background:var(--line); position:relative;}
+.model-arrow .line::after{content:'▸'; position:absolute; right:-7px; top:-6px; color:var(--ink-soft); font-size:12px;}
+.model-arrow .txt{font-size:9.5px; color:var(--ink-soft); text-align:center;}
+
+/* ---------- footer mapping ---------- */
+.mapping{max-width:1150px; margin:60px auto 0;}
+.mapping h2{font-family:var(--font-display); font-weight:600; font-size:20px; margin:0 0 6px;}
+.mapping .sub{font-size:12.5px; color:var(--ink-soft); margin:0 0 18px;}
+.table-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:14px; background:var(--card);}
+table{border-collapse:collapse; width:100%; font-size:13px; min-width:760px;}
+thead th{
+  text-align:left; font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.05em; text-transform:uppercase;
+  color:var(--ink-soft); padding:10px 14px; border-bottom:1px solid var(--line);
+}
+tbody td{padding:10px 14px; border-bottom:1px solid var(--ink-faint); vertical-align:top;}
+tbody tr:last-child td{border-bottom:none;}
+.scr{font-family:var(--font-mono); color:var(--matcha-deep); font-weight:700; font-size:12px;}
+.status-pill{font-size:11px; padding:2px 9px; border-radius:10px; border:1px solid var(--line); white-space:nowrap;}
+.status-pill.todo{color:var(--terracotta); border-color:var(--terracotta);}
+</style>
+
+<div class="page">
+
+  <header class="cover">
+    <p class="eyebrow">CozyPomo · Đề xuất tính năng mới · Chưa build (T-106 → T-111) · Bản sửa lần 2</p>
+    <h1>Chợ &amp; Cửa hàng — 2 màn riêng, mở qua 1 nút nổi dễ thương trên Trang chủ</h1>
+    <p class="cover-sub">Wireframe cho ý tưởng của Dev1002: người chơi đăng bán thú/thực vật/<b>trứng</b> họ sở hữu — kể cả khi chỉ có đúng <b>1 bản duy nhất</b>, không bắt buộc phải dư mới bán được. Admin vẫn đăng được vật phẩm siêu hiếm, nhưng không còn gắn nhãn "Chính thức" nữa — tin đăng nào cũng hiện như nhau. Toàn bộ giao diện dùng lại nguyên hệ màu/kiểu chữ/thành phần đã có ở <span class="scr">docs/wireframes/use-case-flow.html</span>.</p>
+    <p class="revision-note">🔄 <b>Cập nhật theo phản hồi Dev1002 (2026-07-26):</b> huỷ quyết định "gộp Chợ vào tab Cửa hàng" ở bản trước. Giờ Chợ và Cửa hàng là 2 màn tách biệt như thiết kế gốc, nhưng <b>cả 2 cùng rời khỏi Bottom Nav</b> — Bottom Nav quay về 4 tab, truy cập Chợ/Cửa hàng qua 1 nút tròn nổi (FAB) ở Trang chủ, bung ra 2 lựa chọn khi bấm. Xem Mô hình 2.</p>
+    <div class="legend">
+      <span class="legend-item"><span class="swatch"></span> Màn hình đầy đủ</span>
+      <span class="legend-item"><span class="swatch dashed"></span> Popup / Dialog</span>
+      <span class="legend-item"><span class="chip-sample">Bấm</span> Hành động người dùng</span>
+    </div>
+  </header>
+
+  <!-- PHASE 1: DATA MODEL -->
+  <section class="phase">
+    <h2><span class="phase-no">Mô hình 1</span> Bán tới bản cuối cùng — tách "đã từng nở" khỏi "đang giữ"</h2>
+    <p class="phase-intro">Trước đây bắt buộc giữ lại 1 bản mới cho bán phần dư. Theo yêu cầu mới: <b>bán được cả khi chỉ có 1 bản</b>. Vì hệ thống collection hiện tại chỉ có 1 bộ đếm <span class="scr">hatchCount</span> dùng chung cho cả "lịch sử đã nở" lẫn "đang sở hữu", cần tách thành 2 cột riêng để bán không làm sai lệch thống kê "đã nở N lần".</p>
+    <div class="model-flow">
+      <div class="model-box accent">
+        <h3>Khu rừng của người bán</h3>
+        <p>Cáo Pomodoro <span class="badge">A</span><br><span class="field">hatchCount: 3</span> (lịch sử, không đổi)<br><span class="field">ownedCount: 1</span> (đang giữ) → vẫn bán được nốt bản này</p>
+      </div>
+      <div class="model-arrow"><div class="line"></div><div class="txt">Đăng bán<br>(dù chỉ còn 1)</div></div>
+      <div class="model-box">
+        <h3>MarketListing <span class="badge">mới</span></h3>
+        <p><span class="field">itemType: SPECIES</span><span class="field">speciesId</span><span class="field">priceCoin</span><span class="field">status: ACTIVE</span></p>
+      </div>
+      <div class="model-arrow"><div class="line"></div><div class="txt">Người khác<br>bấm Mua</div></div>
+      <div class="model-box accent">
+        <h3>Giao dịch (1 transaction)</h3>
+        <p>Trừ Xu Lá người mua → cộng Xu Lá người bán → <span class="field">ownedCount −1</span> (bán, có thể về 0) → <span class="field">ownedCount +1</span> hoặc tạo mới (mua) → listing → <span class="field">SOLD</span></p>
+      </div>
+      <div class="model-arrow"><div class="line"></div><div class="txt">ownedCount = 0<br>ở người bán</div></div>
+      <div class="model-box">
+        <h3>Khu rừng người bán (sau khi bán hết)</h3>
+        <p><span class="scr">CollectionEntry</span> KHÔNG bị xoá — loài vẫn hiện đã mở khoá (lore/huy hiệu/yêu thích giữ nguyên), chỉ đổi dòng trạng thái: "Đã bán hết — không sở hữu bản nào". Nút Đăng bán tự ẩn.</p>
+      </div>
+    </div>
+    <div class="model-flow" style="margin-top:-6px;">
+      <div class="model-box">
+        <h3>Bán trứng — không cần đổi cấu trúc</h3>
+        <p>Mỗi <span class="field">OwnedEgg</span> vốn đã là 1 dòng riêng (không phải bộ đếm) — bán = chuyển thẳng <span class="field">userId</span> sang người mua, giữ nguyên <span class="field">incubatedMin</span> đã ấp dở. Chỉ chặn nếu trứng đang gắn 1 phiên <span class="field">RUNNING</span>.</p>
+      </div>
+      <div class="model-arrow"><div class="line"></div><div class="txt">Admin vẫn<br>đăng được</div></div>
+      <div class="model-box">
+        <h3>Vật phẩm siêu hiếm từ Admin</h3>
+        <p>Admin tạo thẳng <span class="field">MarketListing</span> qua AdminJS, <span class="field">sellerType: ADMIN</span>, không cần sở hữu. <b>Không còn badge "Chính thức"</b> — hiện lẫn trong danh sách như tin thường, chỉ khác dòng người bán ghi "CozyPomo".</p>
+      </div>
+    </div>
+    <p class="row-note">Ràng buộc chống lạm dụng (chi tiết ở plan.md): không tự mua tin của chính mình; số bản còn lại kiểm tra lại ngay lúc mua; mua/hủy đều idempotent qua <span class="scr">clientEventId</span> như các luồng khác.</p>
+  </section>
+
+  <!-- PHASE 2: FAB TOGGLE -->
+  <section class="phase">
+    <h2><span class="phase-no">Mô hình 2</span> Nút nổi (FAB) trên Trang chủ — thay cho việc thêm/đổi tab Bottom Nav</h2>
+    <p class="phase-intro">Bottom Nav quay lại đúng 4 tab gốc trước khi có Kho đồ mở rộng lần này (Trang chủ/Khu rừng/Kho đồ/Thống kê) — Cửa hàng &amp; Chợ đều rời hẳn khỏi đó. Không phải kiến trúc mới: <span class="scr">SettingsScreen</span>/<span class="scr">AboutScreen</span> đã sống ngoài Bottom Nav từ trước (mở qua icon riêng, `navController.navigate()` trần) — nút FAB này dùng lại đúng cơ chế đó. Vị trí theo đề xuất của Dev1002: góc phải-dưới, ngay phía trên Bottom Nav, chỉ hiện ở Trang chủ (S-01).</p>
+    <div class="navbar-illustration">
+      <div class="nb-item"><div class="sh"></div>Trang chủ</div>
+      <div class="nb-item"><div class="sh"></div>Khu rừng</div>
+      <div class="nb-item"><div class="sh"></div>Kho đồ</div>
+      <div class="nb-item"><div class="sh"></div>Thống kê</div>
+    </div>
+    <div class="core-flow" style="margin-top:18px;">
+      <div class="stack">
+        <div class="phone">
+          <div class="status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="screen">
+            <div class="wf-row"><span class="wf-pill">⚙</span><span style="display:flex;gap:3px;"><span class="wf-pill"><span class="coin"></span> 128</span></span></div>
+            <div class="wf-img" style="height:60px;"></div>
+            <div style="text-align:center;font-family:var(--font-display);font-size:17px;">25:00</div>
+            <div class="fab-anchor">
+              <div class="fab-main">🧺</div>
+            </div>
+          </div>
+          <div class="bottom-nav">
+            <div class="item active"><span class="icon"></span>Trang chủ</div>
+            <div class="item"><span class="icon"></span>Khu rừng</div>
+            <div class="item"><span class="icon"></span>Kho đồ</div>
+            <div class="item"><span class="icon"></span>Thống kê</div>
+          </div>
+        </div>
+        <div class="phone-label"><div class="pid">S-01</div><div class="pname">Trang chủ — đóng</div><div class="ptask">Nút tròn nhỏ, góc phải-dưới</div></div>
+      </div>
+
+      <div class="conn-h"><div class="line"></div><div class="label">Bấm nút tròn</div></div>
+
+      <div class="stack">
+        <div class="phone">
+          <div class="status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="screen">
+            <div class="wf-row"><span class="wf-pill">⚙</span><span style="display:flex;gap:3px;"><span class="wf-pill"><span class="coin"></span> 128</span></span></div>
+            <div class="wf-img" style="height:60px;opacity:0.5;"></div>
+            <div style="text-align:center;font-family:var(--font-display);font-size:17px;opacity:0.5;">25:00</div>
+            <div class="fab-anchor">
+              <div class="fab-sub"><span class="fab-sub-label">Chợ</span><div class="fab-sub-btn market">🤝</div></div>
+              <div class="fab-sub"><span class="fab-sub-label">Cửa hàng</span><div class="fab-sub-btn shop">🏪</div></div>
+              <div class="fab-main open">✕</div>
+            </div>
+          </div>
+          <div class="bottom-nav">
+            <div class="item active"><span class="icon"></span>Trang chủ</div>
+            <div class="item"><span class="icon"></span>Khu rừng</div>
+            <div class="item"><span class="icon"></span>Kho đồ</div>
+            <div class="item"><span class="icon"></span>Thống kê</div>
+          </div>
+        </div>
+        <div class="phone-label"><div class="pid new">S-01</div><div class="pname">Trang chủ — đã bung</div><div class="ptask">2 nút con nảy lên + fade nền mờ phía sau</div></div>
+        <div class="state-note">Icon đề xuất: Cửa hàng = <span class="scr">Icons.Filled.Storefront</span> (màu <span class="field" style="background:none;padding:0;">--matcha</span>, gian hàng có mái che — "sạp chính thức"); Chợ = <span class="scr">Icons.Filled.Handshake</span> (màu <span class="field" style="background:none;padding:0;">--terracotta</span>, cái bắt tay — đúng bản chất trao đổi giữa người chơi, tách bạch rõ với Cửa hàng dù cùng cỡ nút nhỏ).</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASE 3: MARKET LISTING SCREEN -->
+  <section class="phase">
+    <h2><span class="phase-no">Mô hình 3</span> S-08 Chợ — danh sách trộn thú/thực vật/trứng, không badge "Chính thức"</h2>
+    <p class="phase-intro">Màn riêng hoàn toàn (không sống trong Cửa hàng nữa). Danh sách không còn phân tab Người chơi/CozyPomo — mọi tin đăng hiện chung 1 luồng, chỉ khác dòng tên người bán.</p>
+    <div class="core-flow">
+      <div class="stack">
+        <div class="phone">
+          <div class="status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="screen">
+            <div class="wf-row"><span class="title-md">Chợ</span><span class="wf-pill"><span class="coin"></span> 128</span></div>
+            <div class="tabs"><span class="tab active">Tất cả</span><span class="tab">Của tôi</span></div>
+            <div class="listing-card">
+              <div class="listing-thumb"></div>
+              <div class="listing-meta">
+                <div class="listing-name">Hạc Băng <span class="badge ssr">SSR</span></div>
+                <div class="listing-seller">bởi CozyPomo</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+                <span class="listing-price"><span class="coin"></span>1200</span>
+                <span class="wf-btn primary" style="padding:1px 5px;font-size:6px;">Mua</span>
+              </div>
+            </div>
+            <div class="listing-card">
+              <div class="listing-thumb"></div>
+              <div class="listing-meta">
+                <div class="listing-name">Cáo Pomodoro <span class="badge">A</span></div>
+                <div class="listing-seller">bởi @tester07 · bản cuối cùng</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+                <span class="listing-price"><span class="coin"></span>85</span>
+                <span class="wf-btn primary" style="padding:1px 5px;font-size:6px;">Mua</span>
+              </div>
+            </div>
+            <div class="listing-card">
+              <div class="listing-thumb egg"></div>
+              <div class="listing-meta">
+                <div class="listing-name">Trứng Rừng <span class="kind-tag">TRỨNG</span></div>
+                <div class="listing-seller">bởi @tester03 · đã ấp 120/180p</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+                <span class="listing-price"><span class="coin"></span>60</span>
+                <span class="wf-btn disabled" style="padding:1px 5px;font-size:6px;">Cần thêm</span>
+              </div>
+            </div>
+          </div>
+          <div class="bottom-nav">
+            <div class="item"><span class="icon"></span>Trang chủ</div>
+            <div class="item"><span class="icon"></span>Khu rừng</div>
+            <div class="item"><span class="icon"></span>Kho đồ</div>
+            <div class="item"><span class="icon"></span>Thống kê</div>
+          </div>
+        </div>
+        <div class="phone-label"><div class="pid new">S-08</div><div class="pname">Chợ</div><div class="ptask">GET /market/listings</div></div>
+        <div class="state-note">Trứng đang ấp dở hiện rõ % tiến trình trước khi mua (tránh hiểu lầm "mua trứng mới"). Nút Mua tự đổi "Cần thêm" nếu không đủ Xu Lá — cùng quy tắc đã dùng ở Cửa hàng.</div>
+      </div>
+
+      <div class="conn-h"><div class="line"></div><div class="label">Chạm 1 tin đăng</div></div>
+
+      <div class="stack">
+        <div class="phone popup" style="width:158px;">
+          <div class="screen" style="align-items:center;text-align:center;">
+            <div class="wf-img" style="width:56px;height:56px;border-radius:12px;margin-top:4px;position:relative;">
+              <span class="badge ssr" style="position:absolute;top:-4px;right:-4px;">A</span>
+            </div>
+            <div class="title-md">Cáo Pomodoro</div>
+            <div style="font-size:6.5px;color:var(--ink-soft);">bởi @tester07 · bản cuối cùng của người bán</div>
+            <div class="wf-line" style="width:80%;"></div>
+            <div class="wf-pill">Số dư sau: <span class="coin" style="margin-left:2px;"></span>43</div>
+            <div style="display:flex;gap:4px;width:100%;margin-top:4px;">
+              <div class="wf-btn ghost" style="flex:1;">Huỷ</div>
+              <div class="wf-btn primary" style="flex:1;">Mua ngay</div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label"><div class="pid new">Dialog</div><div class="pname">Xác nhận mua</div><div class="ptask">POST /market/listings/:id/buy</div></div>
+        <div class="state-note">Nếu tin đã bị mua trước (race) → báo lỗi "Tin đăng không còn nữa", tự làm mới danh sách — cùng idiom idempotent như mua ở Cửa hàng.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASE 4: SELL FLOW -->
+  <section class="phase">
+    <h2><span class="phase-no">Mô hình 4</span> Đăng bán — thú/thực vật (không cần dư) &amp; trứng</h2>
+    <div class="core-flow">
+      <div class="stack">
+        <div class="phone popup" style="width:158px;">
+          <div class="screen" style="align-items:center;text-align:center;">
+            <div class="wf-img" style="width:52px;height:52px;border-radius:10px;margin-top:6px;"></div>
+            <div class="title-md">Cáo Pomodoro <span class="badge">A</span></div>
+            <div class="wf-line" style="width:90%;"></div>
+            <div class="wf-pill" style="background:rgba(168,208,141,0.3);">Bạn đang sở hữu 1 bản</div>
+            <div style="display:flex;gap:4px;width:100%;">
+              <div class="wf-btn ghost" style="flex:1;">♥ Yêu thích</div>
+              <div class="wf-btn primary" style="flex:1;">Đăng bán</div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label"><div class="pid">S-03</div><div class="pname">Chi tiết loài (đã có)</div><div class="ptask">Nút Đăng bán hiện dù chỉ còn 1 bản</div></div>
+      </div>
+
+      <div class="conn-h"><div class="line"></div><div class="label">Bấm Đăng bán</div></div>
+
+      <div class="stack">
+        <div class="phone popup" style="width:158px;">
+          <div class="screen" style="align-items:center;text-align:center;">
+            <div class="title-md" style="margin-top:6px;">Đặt giá bán</div>
+            <div class="wf-img" style="width:40px;height:40px;border-radius:8px;"></div>
+            <div style="font-size:7px;">Cáo Pomodoro <span class="badge">A</span></div>
+            <div class="wf-input" style="width:100%;text-align:center;">Giá: 85 Xu Lá</div>
+            <div style="font-size:6px;color:var(--ink-soft);">Gợi ý theo cấp bậc A: 60–120 Xu Lá</div>
+            <div style="display:flex;gap:4px;width:100%;margin-top:4px;">
+              <div class="wf-btn ghost" style="flex:1;">Huỷ</div>
+              <div class="wf-btn primary" style="flex:1;">Đăng bán</div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label"><div class="pid new">Dialog</div><div class="pname">Đặt giá bán</div><div class="ptask">POST /market/listings/species</div></div>
+      </div>
+
+      <div class="conn-h"><div class="line"></div><div class="label">— hoặc từ Kho đồ —</div></div>
+
+      <div class="stack">
+        <div class="phone">
+          <div class="status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="screen">
+            <div class="title-md">Kho đồ</div>
+            <div class="tabs"><span class="tab">Bình</span><span class="tab active">Trứng</span><span class="tab">Âm thanh</span></div>
+            <div class="listing-card">
+              <div class="listing-thumb egg"></div>
+              <div class="listing-meta">
+                <div class="listing-name">Trứng Rừng</div>
+                <div class="listing-seller">120/180 phút ấp</div>
+              </div>
+              <span class="wf-btn primary" style="padding:1px 5px;font-size:6px;">Đăng bán</span>
+            </div>
+          </div>
+          <div class="bottom-nav">
+            <div class="item"><span class="icon"></span>Trang chủ</div>
+            <div class="item"><span class="icon"></span>Khu rừng</div>
+            <div class="item active"><span class="icon"></span>Kho đồ</div>
+            <div class="item"><span class="icon"></span>Thống kê</div>
+          </div>
+        </div>
+        <div class="phone-label"><div class="pid new">S-07b</div><div class="pname">Kho đồ — nút Đăng bán mới</div><div class="ptask">POST /market/listings/eggs</div></div>
+        <div class="state-note">Chỉ trứng <span class="scr">INCUBATING</span> và không thuộc phiên đang <span class="scr">RUNNING</span> mới có nút này.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASE 5: MY LISTINGS -->
+  <section class="phase">
+    <h2><span class="phase-no">Mô hình 5</span> Chip "Của tôi" trong Chợ — quản lý tin đăng</h2>
+    <div class="row">
+      <div class="node">
+        <div class="phone">
+          <div class="status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="screen">
+            <div class="wf-row"><span class="title-md">Chợ</span><span class="wf-pill"><span class="coin"></span> 128</span></div>
+            <div class="tabs"><span class="tab">Tất cả</span><span class="tab active">Của tôi</span></div>
+            <div class="listing-card">
+              <div class="listing-thumb"></div>
+              <div class="listing-meta">
+                <div class="listing-name">Cáo Pomodoro <span class="badge">A</span></div>
+                <div class="listing-seller">Đang bán · 85 Xu Lá</div>
+              </div>
+              <span class="wf-btn warning" style="padding:1px 5px;font-size:6px;">Huỷ</span>
+            </div>
+            <div class="listing-card" style="opacity:0.6;">
+              <div class="listing-thumb"></div>
+              <div class="listing-meta">
+                <div class="listing-name">Hoa Sen Đá <span class="badge">B</span></div>
+                <div class="listing-seller">Đã bán · +30 Xu Lá</div>
+              </div>
+            </div>
+          </div>
+          <div class="bottom-nav">
+            <div class="item"><span class="icon"></span>Trang chủ</div>
+            <div class="item"><span class="icon"></span>Khu rừng</div>
+            <div class="item"><span class="icon"></span>Kho đồ</div>
+            <div class="item"><span class="icon"></span>Thống kê</div>
+          </div>
+        </div>
+        <div class="phone-label"><div class="pid">S-08</div><div class="pname">Chợ — Của tôi</div><div class="ptask">GET /market/listings?mine=true</div></div>
+        <div class="state-note">"Huỷ" gọi <span class="scr">PATCH /market/listings/:id/cancel</span> — không hoàn Xu Lá vì huỷ tin chưa từng có ai trả tiền. "Đã bán" chỉ để xem lịch sử.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAPPING -->
+  <footer class="mapping">
+    <h2>Đối chiếu đề xuất task (chưa build)</h2>
+    <p class="sub">Đề xuất mã task tiếp theo sau <span class="scr">T-105</span> — chi tiết đầy đủ từng task xem <span class="scr">plan.md</span> mục "Chưa làm".</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Task</th><th>Nội dung</th><th>Phía</th><th>Trạng thái</th></tr></thead>
+        <tbody>
+          <tr><td class="scr">T-106</td><td>Schema + module Market (thêm cột <span class="scr">ownedCount</span>, <span class="scr">MarketListing</span> hỗ trợ cả loài lẫn trứng, service list/create/cancel/buy trong 1 transaction)</td><td>Backend</td><td><span class="status-pill todo">⬜ Chưa làm</span></td></tr>
+          <tr><td class="scr">T-107</td><td>AdminJS resource cho <span class="scr">MarketListing</span> — Admin tự đăng vật phẩm siêu hiếm (<span class="scr">sellerType: ADMIN</span>, không hiện badge riêng)</td><td>Backend/Admin</td><td><span class="status-pill todo">⬜ Chưa làm</span></td></tr>
+          <tr><td class="scr">T-108</td><td>MarketRepository + DTO (loài + trứng) + endpoint trong <span class="scr">ApiService</span></td><td>Android</td><td><span class="status-pill todo">⬜ Chưa làm</span></td></tr>
+          <tr><td class="scr">T-109</td><td>Màn Chợ (S-08) độc lập — danh sách trộn thú/thực vật/trứng, dialog Xác nhận mua</td><td>Android</td><td><span class="status-pill todo">⬜ Chưa làm</span></td></tr>
+          <tr><td class="scr">T-110</td><td>Đăng bán từ Chi tiết loài (bỏ điều kiện "phải dư") + từ Kho đồ (trứng) + chip "Của tôi"</td><td>Android</td><td><span class="status-pill todo">⬜ Chưa làm</span></td></tr>
+          <tr><td class="scr">T-111</td><td>Nút FAB "Cửa hàng/Chợ" trên Trang chủ + rút Bottom Nav về 4 tab</td><td>Android</td><td><span class="status-pill todo">⬜ Chưa làm</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </footer>
+
+</div>
