@@ -42,6 +42,18 @@ export class CollectionService {
     });
   }
 
+  /** T-120 — Admin phát quà (AdminJS "Phát quà"): cộng `quantity` cùng lúc, cùng ngữ nghĩa với
+   * `recordHatch` (tăng cả `hatchCount` lẫn `ownedCount` — loài coi như đã "mở khoá" thật sự cho
+   * user, không phải kiểu chuyển nhượng tạm như mua ở Chợ chỉ tăng `ownedCount`). */
+  grantMany(userId: string, speciesId: string, quantity: number, tx?: Tx) {
+    const client = tx ?? this.prisma;
+    return client.collectionEntry.upsert({
+      where: { userId_speciesId: { userId, speciesId } },
+      create: { userId, speciesId, hatchCount: quantity, ownedCount: quantity },
+      update: { hatchCount: { increment: quantity }, ownedCount: { increment: quantity }, lastHatchedAt: new Date() },
+    });
+  }
+
   async toggleFavorite(userId: string, speciesId: string) {
     const entry = await this.prisma.collectionEntry.findUnique({
       where: { userId_speciesId: { userId, speciesId } },

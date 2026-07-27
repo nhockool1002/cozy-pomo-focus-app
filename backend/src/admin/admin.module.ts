@@ -1,8 +1,13 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as path from 'path';
+import * as fs from 'fs';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
+import { CollectionModule } from '../collection/collection.module';
+import { CollectionService } from '../collection/collection.service';
+import { OwnedEggsModule } from '../owned-eggs/owned-eggs.module';
+import { OwnedEggsService } from '../owned-eggs/owned-eggs.service';
 import { ADMIN_VI_TRANSLATIONS } from './admin-i18n';
 
 // Bảng màu CozyPomo chính thức — xem docs/technical-spec.md / Brand Field Guide.
@@ -38,6 +43,7 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
   const SpeciesShow = componentLoader.add('SpeciesShow', path.join(COMPONENTS_DIR, 'SpeciesShow'));
   const EggTypeList = componentLoader.add('EggTypeList', path.join(COMPONENTS_DIR, 'EggTypeList'));
   const ApiExplorer = componentLoader.add('ApiExplorer', path.join(COMPONENTS_DIR, 'ApiExplorer'));
+  const GiftPage = componentLoader.add('GiftPage', path.join(COMPONENTS_DIR, 'GiftPage'));
 
   // Các bảng dữ liệu người dùng chỉ xem, không sửa/xoá qua admin — tránh làm hỏng
   // tính toàn vẹn ledger/collection (sửa trực tiếp nên đi qua API để giữ đúng nghiệp vụ).
@@ -51,9 +57,14 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
   };
 
   return AdminJSNestModule.createAdminAsync({
-    imports: [ConfigModule, PrismaModule],
-    inject: [ConfigService, PrismaService],
-    useFactory: (config: ConfigService, prisma: PrismaService) => ({
+    imports: [ConfigModule, PrismaModule, CollectionModule, OwnedEggsModule],
+    inject: [ConfigService, PrismaService, CollectionService, OwnedEggsService],
+    useFactory: (
+      config: ConfigService,
+      prisma: PrismaService,
+      collectionService: CollectionService,
+      ownedEggsService: OwnedEggsService,
+    ) => ({
       adminJsOptions: {
         rootPath: '/admin',
         componentLoader,
@@ -199,6 +210,103 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
         pages: {
           'api-explorer': {
             component: ApiExplorer,
+          },
+          'gift-items': {
+            label: 'Phát quà',
+            component: GiftPage,
+            handler: async (request: any) => {
+              if (request.method !== 'post') {
+                return { ok: true };
+              }
+              try {
+                const payload = request.payload ?? {};
+                const recipientsText: string = payload.recipientsText ?? '';
+                let grants: Array<{ kind: 'SPECIES' | 'EGG'; id: string; quantity: number }> = [];
+                try {
+                  grants = JSON.parse(payload.grants ?? '[]');
+                } catch {
+                  return { ok: false, error: 'Dữ liệu vật phẩm không hợp lệ' };
+                }
+
+                // Gom token người nhận từ textarea + file CSV (nếu có) — 1 cột ID hoặc email,
+                // chấp nhận cả 2 định dạng cùng lúc (dòng nào giống UUID thì tra theo id, còn
+                // lại tra theo email), bỏ qua dòng tiêu đề CSV thường gặp (id/email/userId).
+                const tokens = new Set<string>();
+                recipientsText
+                  .split(/[\n,]/)
+                  .map((s: string) => s.trim())
+                  .filter(Boolean)
+                  .forEach((t: string) => tokens.add(t));
+
+                const csvFile = payload.csvFile;
+                if (csvFile && csvFile.path) {
+                  try {
+                    const content = fs.readFileSync(csvFile.path, 'utf-8');
+                    content
+                      .split(/\r?\n/)
+                      .map((line: string) => line.split(',')[0]?.trim())
+                      .filter((t: string) => t && !['id', 'email', 'userid'].includes(t.toLowerCase()))
+                      .forEach((t: string) => tokens.add(t));
+                  } catch {
+                    // Đọc file lỗi — vẫn tiếp tục với token đã có từ textarea, không chặn cả submit.
+                  }
+                }
+
+                if (tokens.size === 0) {
+                  return { ok: false, error: 'Chưa nhập người nhận nào' };
+                }
+                if (grants.length === 0) {
+                  return { ok: false, error: 'Chưa chọn vật phẩm nào' };
+                }
+
+                const tokenList = [...tokens];
+                const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                const idTokens = tokenList.filter((t) => uuidRe.test(t));
+                const emailTokens = tokenList.filter((t) => !uuidRe.test(t));
+
+                const users = await prisma.user.findMany({
+                  where: { OR: [{ id: { in: idTokens } }, { email: { in: emailTokens } }] },
+                  select: { id: true, email: true },
+                });
+                const foundTokens = new Set<string>();
+                users.forEach((u) => {
+                  foundTokens.add(u.id);
+                  foundTokens.add(u.email);
+                });
+                const recipientsNotFound = tokenList.filter((t) => !foundTokens.has(t));
+
+                let grantsApplied = 0;
+                const errors: string[] = [];
+                for (const user of users) {
+                  for (const g of grants) {
+                    try {
+                      await prisma.$transaction(async (tx) => {
+                        if (g.kind === 'SPECIES') {
+                          await collectionService.grantMany(user.id, g.id, g.quantity, tx);
+                        } else {
+                          for (let i = 0; i < g.quantity; i++) {
+                            await ownedEggsService.create(user.id, g.id, tx);
+                          }
+                        }
+                      });
+                      grantsApplied += 1;
+                    } catch (err: any) {
+                      errors.push(`${user.email}: ${err.message}`);
+                    }
+                  }
+                }
+
+                return {
+                  ok: true,
+                  recipientsResolved: users.length,
+                  recipientsNotFound,
+                  grantsApplied,
+                  errors,
+                };
+              } catch (err: any) {
+                return { ok: false, error: err?.message ?? 'Có lỗi xảy ra, thử lại sau' };
+              }
+            },
           },
         },
       },
