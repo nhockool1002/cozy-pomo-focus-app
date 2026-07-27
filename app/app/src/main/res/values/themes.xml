@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Theme khung XML tối thiểu — giao diện thật nằm ở Compose (ui/theme/Theme.kt) -->
-    <style name="Theme.CozyPomo" parent="android:Theme.Material.Light.NoActionBar" />
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Theme khung XML tối thiểu — giao diện thật nằm ở Compose (ui/theme/Theme.kt).
+
+         Edge-to-edge (Play Console pre-launch report gắn cờ "deprecated APIs/parameters" +
+         "may not display for all users" — targetSdk 37 (Android 15+) bật edge-to-edge mặc định):
+         MainActivity đã gọi enableEdgeToEdge() (tự set icon status/nav bar sáng/tối đúng theo
+         dark/light runtime, KHÔNG hardcode windowLightStatusBar ở đây kẻo ghi đè sai khi user bật
+         chế độ tối) — nhưng report soi theo theme XML tĩnh nên vẫn cần khai TRỰC TIẾP 2 dòng dưới
+         (trong suốt + tắt scrim tương phản) thay vì chỉ dựa vào runtime, mới hết cảnh báo. -->
+    <style name="Theme.CozyPomo" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:enforceStatusBarContrast" tools:targetApi="q">false</item>
+        <item name="android:enforceNavigationBarContrast" tools:targetApi="q">false</item>
+    </style>
 </resources>
