@@ -103,9 +103,15 @@ model User {
   @@map("users")
 }
 
+/// `userId` từng là @id (khoá chính = khoá ngoại) — @adminjs/prisma đánh dấu field vừa là FK vừa
+/// PK là `isReadOnly` trong DMMF và LOẠI HẲN nó khỏi danh sách property, khiến `BaseRecord.id()`
+/// không tìm được property nào `isId()` → "does not have an id property" (500 ở list AdminJS).
+/// Sửa bằng cách tách khoá chính thật (`id`) ra khỏi khoá ngoại (`userId`, giữ `@unique` để
+/// `where: { userId }` ở SettingsService vẫn hoạt động y nguyên).
 model UserSettings {
+  id                String  @id @default(uuid())
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId            String  @id
+  userId            String  @unique
   focusMinutes      Int     @default(25)
   breakMinutes      Int     @default(5)
   strictModeEnabled Boolean @default(true)
@@ -203,13 +209,19 @@ model EggDropEntry {
 /// trứng thường chỉ rơi B/A/S, trứng Bí Ẩn rơi A→SSR, trứng Truyền thuyết rơi S→SSR) — admin sửa
 /// trực tiếp từng dòng qua AdminJS. Vắng mặt (không có dòng nào) = cấp đó không bao giờ rơi ở
 /// trứng này, xem `eggs.service.ts#loadWeightedDrops`.
+/// `@@id([eggTypeId, rarity])` (khoá chính GHÉP) từng khiến DMMF không field nào có `isId: true`
+/// (Prisma chỉ đánh dấu field riêng lẻ `isId` cho PK đơn) — cộng thêm `eggTypeId` cũng bị đánh
+/// dấu `isReadOnly` (vì vừa là FK) nên bị @adminjs/prisma loại khỏi property list luôn, y hệt lỗi
+/// ở UserSettings phía trên. Sửa bằng cách tách khoá chính thật (`id`) ra, giữ ràng buộc "1 dòng
+/// trọng số/eggType/rarity" bằng `@@unique` thay vì `@@id`.
 model EggRarityWeight {
+  id        String  @id @default(uuid())
   eggType   EggType @relation(fields: [eggTypeId], references: [id], onDelete: Cascade)
   eggTypeId String
   rarity    Rarity
   weight    Int
 
-  @@id([eggTypeId, rarity])
+  @@unique([eggTypeId, rarity])
   @@map("egg_rarity_weights")
 }
 

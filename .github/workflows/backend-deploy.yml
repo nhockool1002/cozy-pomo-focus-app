@@ -13,11 +13,19 @@ on:
         type: boolean
         default: false
       reseed:
-        description: "[HUỶ DIỆT] Xoá sạch DB production và chạy lại prisma/seed.ts — mất toàn bộ user/session/ledger thật. Chỉ chạy khi confirm_reseed khớp."
+        description: "[HUỶ DIỆT — KHÔNG DÙNG NỮA KHI ĐÃ CÓ USER THẬT] Xoá sạch DB production (kể cả user thật) và chạy lại prisma/seed.ts. Chỉ chạy khi confirm_reseed khớp."
         type: boolean
         default: false
       confirm_reseed:
         description: "Gõ đúng chữ RESEED để xác nhận (chỉ cần khi reseed=true)"
+        type: string
+        default: ""
+      reseed_testers:
+        description: "An toàn hơn: chỉ cập nhật giá 4 trứng thường + xoá/tạo lại NGẪU NHIÊN 10 tester (tester01..10@cozypomo.dev). KHÔNG đụng Species/EggType/user khác (kể cả tài khoản thật)."
+        type: boolean
+        default: false
+      confirm_reseed_testers:
+        description: "Gõ đúng chữ RESEED_TESTERS để xác nhận (chỉ cần khi reseed_testers=true)"
         type: string
         default: ""
 
@@ -87,9 +95,10 @@ jobs:
   reseed-production:
     # Chạy tay riêng, KHÔNG gắn với release/deploy tự động — xoá sạch user/session/ledger
     # thật trên production rồi seed lại dữ liệu demo (175 loài, 4 loại trứng economy v2,
-    # 10 tài khoản tester). Chỉ dùng khi sản phẩm còn ở giai đoạn phát triển, chưa có
-    # người dùng thật cần giữ lại. Cổng an toàn kép: input `reseed` phải bật VÀ
-    # `confirm_reseed` phải gõ đúng "RESEED" — thiếu 1 trong 2 thì job tự bỏ qua.
+    # 10 tài khoản tester). CẢNH BÁO (2026-07-27): từ khi có tài khoản thật
+    # (nhininh410@gmail.com) trên production, job này sẽ xoá LUÔN cả tài khoản đó — dùng
+    # `reseed-testers` bên dưới thay thế trừ khi thật sự cần xoá sạch toàn bộ. Cổng an toàn kép:
+    # input `reseed` phải bật VÀ `confirm_reseed` phải gõ đúng "RESEED".
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.reseed == true && inputs.confirm_reseed == 'RESEED' }}
     runs-on: ubuntu-latest
     steps:
@@ -104,3 +113,25 @@ jobs:
             CID=$(docker compose -f docker-compose.prod.yml ps -q api)
             docker exec "$CID" npm install --no-save ts-node typescript
             docker exec "$CID" npx prisma db seed
+
+  reseed-testers:
+    # An toàn cho production: KHÔNG xoá Species/EggType/user khác — chỉ cập nhật giá 4 trứng
+    # thường (Rừng/Biển/Hoa 300 Xu, Bí Ẩn 450 Xu) rồi xoá + tạo lại NGẪU NHIÊN đúng 10 tài khoản
+    # tester (tester01..10@cozypomo.dev). Tài khoản thật (kể cả nhininh410@gmail.com — id/email/
+    # password/lịch sử/item) không nằm trong danh sách bị xoá nên giữ nguyên 100%. Xem
+    # `prisma/reseed-testers.ts`. Cổng an toàn kép: input `reseed_testers` phải bật VÀ
+    # `confirm_reseed_testers` phải gõ đúng "RESEED_TESTERS".
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.reseed_testers == true && inputs.confirm_reseed_testers == 'RESEED_TESTERS' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reseed testers via SSH (cài tạm ts-node/typescript trong container rồi chạy reseed-testers.ts)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            CID=$(docker compose -f docker-compose.prod.yml ps -q api)
+            docker exec "$CID" npm install --no-save ts-node typescript
+            docker exec "$CID" npx ts-node --compiler-options '{"module":"commonjs"}' prisma/reseed-testers.ts

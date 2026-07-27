@@ -55,9 +55,17 @@ export function renderEggArt(params: { colorHex: string; name: string }): string
 
 export type EggTier = 'common' | 'rare' | 'legendary';
 
+/**
+ * Ngưỡng giá cũ (150/60) được viết trước T-116 khi giá trứng còn ở thang thấp — sau khi T-116
+ * tăng giá 4 loại trứng mua được lên 300–1500 Xu, MỌI loại đều rơi vào nhánh `legendary` theo
+ * ngưỡng cũ. Trong khi đó 3 Trứng Truyền Thuyết (T-116, chỉ Admin phát qua `OwnedEgg`, không
+ * bán qua Cửa hàng) luôn có `priceCoin = 0` nên lại rơi vào `common` — ngược hoàn toàn với thiết
+ * kế thật (Truyền Thuyết mới là Huyền thoại). Tín hiệu đúng không phải "giá cao/thấp" mà là
+ * "có bán hay không": `priceCoin = 0` = Admin-only = Huyền thoại, còn lại đều là trứng mua được
+ * bình thường trong Cửa hàng nên xếp chung `common`.
+ */
 export function eggTierForPrice(priceCoin: number): EggTier {
-  if (priceCoin >= 150) return 'legendary';
-  if (priceCoin >= 60) return 'rare';
+  if (priceCoin === 0) return 'legendary';
   return 'common';
 }
 

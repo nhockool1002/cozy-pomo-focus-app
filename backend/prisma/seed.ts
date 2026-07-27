@@ -20,6 +20,11 @@ import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+// LƯU Ý: script này xoá sạch TOÀN BỘ User/Species/EggType rồi tạo lại từ đầu (ID mới hoàn
+// toàn) — không dùng để chạy trên production đang có tài khoản thật cần giữ nguyên lịch sử
+// (xem `reseed-testers.ts` — script riêng chỉ xoá/tạo lại 10 tester, không đụng Species/EggType
+// hiện có nên an toàn để chạy trên production).
+
 // ---------- PRNG & rarity hash — y hệt hệ thống trong Creature Atlas artifact ----------
 function hashStr(s: string): number {
   let h = 1779033703;
@@ -160,18 +165,21 @@ async function main() {
   // hatchDurationMin/priceHours/priceCoin chỉ là giá trị khởi tạo — admin chỉnh trực tiếp qua AdminJS.
   // Tỉ giá quy đổi cố định: 1 phút Giờ tích luỹ = 10 Xu Lá — priceCoin luôn bằng priceHours * 10
   // để 2 cách trả tiền công bằng như nhau (không có cách nào rẻ hơn cách còn lại).
+  // Giá theo yêu cầu Dev1002 (2026-07-27): Rừng/Biển/Hoa đồng giá 300 Xu, Bí Ẩn 450 Xu — priceHours
+  // tự tính = priceCoin / COIN_PER_HOUR_MINUTE, không hardcode riêng để luôn khớp tỉ giá.
   const COIN_PER_HOUR_MINUTE = 10;
+  const priceCoinToHours = (priceCoin: number) => priceCoin / COIN_PER_HOUR_MINUTE;
   const eggForest = await prisma.eggType.create({
-    data: { name: 'Trứng Rừng', colorHex: PALETTE_HEX[2], priceCoin: 90 * COIN_PER_HOUR_MINUTE, priceHours: 90, hatchDurationMin: 180 },
+    data: { name: 'Trứng Rừng', colorHex: PALETTE_HEX[2], priceCoin: 300, priceHours: priceCoinToHours(300), hatchDurationMin: 180 },
   });
   const eggSea = await prisma.eggType.create({
-    data: { name: 'Trứng Biển', colorHex: PALETTE_HEX[9], priceCoin: 60 * COIN_PER_HOUR_MINUTE, priceHours: 60, hatchDurationMin: 120 },
+    data: { name: 'Trứng Biển', colorHex: PALETTE_HEX[9], priceCoin: 300, priceHours: priceCoinToHours(300), hatchDurationMin: 120 },
   });
   const eggPlant = await prisma.eggType.create({
-    data: { name: 'Trứng Hoa', colorHex: PALETTE_HEX[4], priceCoin: 30 * COIN_PER_HOUR_MINUTE, priceHours: 30, hatchDurationMin: 60 },
+    data: { name: 'Trứng Hoa', colorHex: PALETTE_HEX[4], priceCoin: 300, priceHours: priceCoinToHours(300), hatchDurationMin: 60 },
   });
   const eggMystery = await prisma.eggType.create({
-    data: { name: 'Trứng Bí Ẩn', colorHex: PALETTE_HEX[12], priceCoin: 150 * COIN_PER_HOUR_MINUTE, priceHours: 150, hatchDurationMin: 300 },
+    data: { name: 'Trứng Bí Ẩn', colorHex: PALETTE_HEX[12], priceCoin: 450, priceHours: priceCoinToHours(450), hatchDurationMin: 300 },
   });
   // 3 trứng Truyền Thuyết: priceCoin/priceHours = 0 — không bán ở Cửa hàng (ShopItem.purchasable
   // = false bên dưới), Admin phát trực tiếp bằng cách tạo `OwnedEgg` qua AdminJS (resource có sẵn).
@@ -263,7 +271,6 @@ async function main() {
   const jarSkins = await prisma.shopItem.findMany({ where: { category: ShopCategory.JAR_SKIN } });
   const musicItems = await prisma.shopItem.findMany({ where: { category: ShopCategory.MUSIC } });
 
-  console.log('Tạo 10 tài khoản tester với lịch sử phiên/Xu Lá/bộ sưu tập...');
   const eggPools: { egg: typeof eggForest; species: typeof forestSpecies }[] = [
     { egg: eggForest, species: forestSpecies },
     { egg: eggSea, species: seaSpecies },
@@ -286,20 +293,9 @@ async function main() {
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
   const DURATIONS = [10, 15, 20, 25, 25, 30, 45, 60];
 
-  for (let i = 1; i <= 10; i++) {
-    const email = `tester${String(i).padStart(2, '0')}@cozypomo.dev`;
-    const rnd = rngFor(email);
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        authProvider: AuthProvider.LOCAL,
-        displayName: `Tester ${String(i).padStart(2, '0')}`,
-        settings: { create: { focusMinutes: 25, breakMinutes: 5, strictModeEnabled: rnd() > 0.3 } },
-      },
-    });
-
-    const sessionCount = 12 + i * 2; // 14..32 phiên/tester — độ "dày" dữ liệu tăng dần theo tester
+  /** Sinh dữ liệu demo (phiên/Xu Lá/trứng ấp/bộ sưu tập) cho 1 tester đã tồn tại. */
+  async function seedDemoDataForUser(user: { id: string; email: string }, sessionCount: number) {
+    const rnd = rngFor(user.email);
     let balance = 0; // Xu Lá — dùng để mô phỏng mua sắm bên dưới
     let cursor = new Date(); // đi ngược thời gian từ hiện tại
     // Mỗi loại trứng có 1 quả đang ấp tại 1 thời điểm — ấp đủ `hatchDurationMin` (cộng dồn qua
@@ -466,7 +462,24 @@ async function main() {
       }
     }
 
-    console.log(`  ✓ ${email} — ${sessionCount} phiên, số dư còn lại ${balance} Xu Lá`);
+    console.log(`  ✓ ${user.email} — ${sessionCount} phiên, số dư còn lại ${balance} Xu Lá`);
+  }
+
+  console.log('Tạo 10 tài khoản tester với lịch sử phiên/Xu Lá/bộ sưu tập...');
+  for (let i = 1; i <= 10; i++) {
+    const email = `tester${String(i).padStart(2, '0')}@cozypomo.dev`;
+    const rnd = rngFor(email);
+    const user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        authProvider: AuthProvider.LOCAL,
+        displayName: `Tester ${String(i).padStart(2, '0')}`,
+        settings: { create: { focusMinutes: 25, breakMinutes: 5, strictModeEnabled: rnd() > 0.3 } },
+      },
+    });
+    const sessionCount = 12 + i * 2; // 14..32 phiên/tester — độ "dày" dữ liệu tăng dần theo tester
+    await seedDemoDataForUser(user, sessionCount);
   }
 
   console.log('Xong.');
