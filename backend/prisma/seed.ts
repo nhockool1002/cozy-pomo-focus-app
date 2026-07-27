@@ -58,7 +58,7 @@ const PALETTE_HEX = [
 type SpeciesSeed = [name: string, archetype: string, paletteIdx: number];
 
 const forestNames: SpeciesSeed[] = [
-  ['Cáo Pomodoro', 'fox', 0], ['Cáo Buổi Sớm', 'fox', 7], ['Cáo Áo Len', 'fox', 12], ['Cáo Sương Mù', 'fox', 3], ['Cáo Lá Phong', 'fox', 7],
+  ['Cáo Pomodoro', 'fox', 0], ['Cáo Buổi Sớm', 'fox', 7], ['Cáo Áo Len', 'fox', 12], ['Cáo Sương Mù', 'fox', 3], ['Cáo Lá Phong', 'fox', 9],
   ['Thỏ Mộng Mơ', 'rabbit', 4], ['Thỏ Bông Gòn', 'rabbit', 1], ['Thỏ Trà Chiều', 'rabbit', 8], ['Thỏ Cỏ Ba Lá', 'rabbit', 2], ['Thỏ Đêm Trăng', 'rabbit', 11],
   ['Gấu Ngái Ngủ', 'bear', 8], ['Gấu Mật Ong', 'bear', 12], ['Gấu Chăn Ấm', 'bear', 6], ['Gấu Bánh Quy', 'bear', 1], ['Gấu Rừng Thông', 'bear', 9],
   ['Mèo Lười Nắng', 'cat', 12], ['Mèo Đọc Sách', 'cat', 11], ['Mèo Tách Trà', 'cat', 5], ['Mèo Cuộn Len', 'cat', 4], ['Mèo Đêm Sao', 'cat', 3],
@@ -71,23 +71,23 @@ const forestNames: SpeciesSeed[] = [
 ];
 
 const seaNames: SpeciesSeed[] = [
-  ['Rùa May Mắn', 'turtle', 9], ['Rùa Đá Cuội', 'turtle', 8], ['Rùa Lá Sen', 'turtle', 2], ['Rùa Ngọc Bích', 'turtle', 9], ['Rùa Sóng Vỗ', 'turtle', 3],
+  ['Rùa May Mắn', 'turtle', 9], ['Rùa Đá Cuội', 'turtle', 8], ['Rùa Lá Sen', 'turtle', 2], ['Rùa Ngọc Bích', 'turtle', 13], ['Rùa Sóng Vỗ', 'turtle', 3],
   ['Cua Nắng Chiều', 'crab', 7], ['Cua Bọt Biển', 'crab', 3], ['Cua Vỏ Sò', 'crab', 4], ['Cua San Hô', 'crab', 10], ['Cua Đá Ngầm', 'crab', 11],
   ['Ốc Anh Vũ', 'snail', 5], ['Ốc Mộng Mơ', 'snail', 10], ['Ốc Cầu Vồng', 'snail', 13], ['Ốc Xoáy Nước', 'snail', 3], ['Ốc Biếc Ngọc', 'snail', 9],
   ['Cá Vàng Nhỏ', 'fish', 12], ['Cá San Hô', 'fish', 7], ['Cá Vằn Đốm', 'fish', 3], ['Cá Bảy Màu', 'fish', 5], ['Cá Ánh Bạc', 'fish', 11],
   ['Sao Biển Lấp Lánh', 'starfish', 12], ['Sao Biển Cam', 'starfish', 7], ['Sao Biển Đêm', 'starfish', 5], ['Sao Biển Hồng Phấn', 'starfish', 4], ['Sao Biển Sương', 'starfish', 3],
   ['Hải Cẩu Lười', 'seal', 11], ['Hải Cẩu Vịnh Xanh', 'seal', 9], ['Hải Cẩu Băng Giá', 'seal', 3], ['Hải Cẩu Nắng Chiều', 'seal', 7], ['Hải Cẩu Vui Tính', 'seal', 12],
-  ['Cá Heo Vui Vẻ', 'dolphin', 3], ['Cá Heo Sóng Nhẹ', 'dolphin', 9], ['Cá Heo Ánh Trăng', 'dolphin', 11], ['Cá Heo Bọt Sóng', 'dolphin', 2], ['Cá Heo Mưa Rào', 'dolphin', 9],
-  ['Sứa Đèn Lồng', 'jellyfish', 4], ['Sứa Ánh Trăng', 'jellyfish', 5], ['Sứa Pha Lê', 'jellyfish', 3], ['Sứa Hồng Nhạt', 'jellyfish', 4], ['Sứa Đêm Sâu', 'jellyfish', 11],
+  ['Cá Heo Vui Vẻ', 'dolphin', 3], ['Cá Heo Sóng Nhẹ', 'dolphin', 9], ['Cá Heo Ánh Trăng', 'dolphin', 11], ['Cá Heo Bọt Sóng', 'dolphin', 2], ['Cá Heo Mưa Rào', 'dolphin', 7],
+  ['Sứa Đèn Lồng', 'jellyfish', 4], ['Sứa Ánh Trăng', 'jellyfish', 5], ['Sứa Pha Lê', 'jellyfish', 3], ['Sứa Hồng Nhạt', 'jellyfish', 10], ['Sứa Đêm Sâu', 'jellyfish', 11],
   ['Bạch Tuộc Tò Mò', 'octopus', 10], ['Bạch Tuộc Mực Tím', 'octopus', 5], ['Bạch Tuộc Cầu Vồng', 'octopus', 13], ['Bạch Tuộc Đá San Hô', 'octopus', 7], ['Bạch Tuộc Mực Đen', 'octopus', 11],
-  ['Cá Ngựa Vằn', 'seahorse', 9], ['Cá Ngựa San Hô', 'seahorse', 7], ['Cá Ngựa Hoàng Hôn', 'seahorse', 10], ['Cá Ngựa Lá Rong', 'seahorse', 2], ['Cá Ngựa Sương Mai', 'seahorse', 9],
+  ['Cá Ngựa Vằn', 'seahorse', 9], ['Cá Ngựa San Hô', 'seahorse', 7], ['Cá Ngựa Hoàng Hôn', 'seahorse', 10], ['Cá Ngựa Lá Rong', 'seahorse', 2], ['Cá Ngựa Sương Mai', 'seahorse', 5],
 ];
 
 const plantNames: SpeciesSeed[] = [
-  ['Hoa Tulip', 'flowerRound', 4], ['Hoa Cúc Nắng', 'flowerRound', 12], ['Hoa Anh Đào Nhỏ', 'flowerRound', 4], ['Hoa Mẫu Đơn', 'flowerRound', 10], ['Hoa Oải Hương Mini', 'flowerRound', 5],
+  ['Hoa Tulip', 'flowerRound', 4], ['Hoa Cúc Nắng', 'flowerRound', 12], ['Hoa Anh Đào Nhỏ', 'flowerRound', 8], ['Hoa Mẫu Đơn', 'flowerRound', 10], ['Hoa Oải Hương Mini', 'flowerRound', 5],
   ['Hoa Sao Biếc', 'flowerStar', 3], ['Hoa Dạ Yến Sao', 'flowerStar', 5], ['Hoa Cẩm Tú Sao', 'flowerStar', 9], ['Hoa Bìm Bìm Sao', 'flowerStar', 11], ['Hoa Thảo Nguyên Sao', 'flowerStar', 13],
   ['Nấm Chấm Bi', 'mushroom', 7], ['Nấm Rêu Phong', 'mushroom', 2], ['Nấm Đèn Lồng', 'mushroom', 12], ['Nấm San Hô', 'mushroom', 10], ['Nấm Cổ Tích', 'mushroom', 5],
-  ['Dương Xỉ Xoăn', 'fern', 2], ['Dương Xỉ Sương Mai', 'fern', 9], ['Dương Xỉ Lá Kim', 'fern', 6], ['Dương Xỉ Rừng Sâu', 'fern', 13], ['Dương Xỉ Ngọc Bích', 'fern', 9],
+  ['Dương Xỉ Xoăn', 'fern', 2], ['Dương Xỉ Sương Mai', 'fern', 9], ['Dương Xỉ Lá Kim', 'fern', 6], ['Dương Xỉ Rừng Sâu', 'fern', 13], ['Dương Xỉ Ngọc Bích', 'fern', 11],
   ['Sen Đá Hồng', 'succulent', 4], ['Sen Đá Ngọc', 'succulent', 13], ['Sen Đá Mật Ong', 'succulent', 12], ['Sen Đá Tuyết', 'succulent', 3], ['Sen Đá Rêu', 'succulent', 2],
   ['Xương Rồng Tí Hon', 'cactus', 6], ['Xương Rồng Sa Mạc', 'cactus', 8], ['Xương Rồng Hoa Nở', 'cactus', 10], ['Xương Rồng Chấm Sao', 'cactus', 2], ['Xương Rồng Mini Chum', 'cactus', 13],
   ['Bụi Dâu Rừng', 'berry', 10], ['Bụi Việt Quất', 'berry', 11], ['Bụi Phúc Bồn Tử', 'berry', 7], ['Bụi Dâu Tằm', 'berry', 5], ['Bụi Quả Chuông', 'berry', 4],

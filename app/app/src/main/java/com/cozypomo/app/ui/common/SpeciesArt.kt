@@ -43,39 +43,56 @@ data class SpeciesPalette(val base: Color, val dark: Color, val light: Color)
 
 private fun hex(s: String) = Color(android.graphics.Color.parseColor(s))
 
+// Bảng màu "hầm hố dễ thương" (T-124) — base là màu kẹo bão hoà, dark là 1 tông đậm hơn CÙNG
+// gam màu (không còn gần đen như bản nháp đầu), "light" đổi vai trò thành glow: điểm nhấn sáng vui
+// (mắt, sparkle) thay vì tông pastel nhạt như bản gốc. Tham khảo hướng creature-collector kiểu
+// Coromon/Palia theo yêu cầu Dev1002 (2026-07-27) — không đổi tên field `light` để không phải sửa
+// lại mọi chỗ archetype đã dùng `p.light` làm màu điểm nhấn (hoa/nấm/mai...).
 val SPECIES_PALETTE = listOf(
-    SpeciesPalette(hex("#E2965F"), hex("#B9713D"), hex("#F6D9BB")),
-    SpeciesPalette(hex("#F0D98C"), hex("#C9A94A"), hex("#FBF0D0")),
-    SpeciesPalette(hex("#9CB380"), hex("#6E8455"), hex("#DCE6CC")),
-    SpeciesPalette(hex("#9AC0D9"), hex("#5E92AE"), hex("#DCEBF3")),
-    SpeciesPalette(hex("#E7A8B0"), hex("#C06E7C"), hex("#F8E0E3")),
-    SpeciesPalette(hex("#B58BC4"), hex("#875B9C"), hex("#E9DAF0")),
-    SpeciesPalette(hex("#7C9A5A"), hex("#516B37"), hex("#CFE0BC")),
-    SpeciesPalette(hex("#E8876B"), hex("#C25A3D"), hex("#F8D5C8")),
-    SpeciesPalette(hex("#D9C29A"), hex("#AC8F5C"), hex("#F1E7D2")),
-    SpeciesPalette(hex("#6FB6A8"), hex("#3F8778"), hex("#CDE9E2")),
-    SpeciesPalette(hex("#C9607A"), hex("#9A3E55"), hex("#F0C7D2")),
-    SpeciesPalette(hex("#7E8FB0"), hex("#556487"), hex("#D6DCEA")),
-    SpeciesPalette(hex("#E3B04B"), hex("#B3831F"), hex("#F7E2AE")),
-    SpeciesPalette(hex("#8FCDB0"), hex("#5A9C80"), hex("#D3EEE0")),
+    SpeciesPalette(hex("#FF9466"), hex("#B24E32"), hex("#FFD166")),
+    SpeciesPalette(hex("#FFDD59"), hex("#C9A227"), hex("#FF8FD1")),
+    SpeciesPalette(hex("#8BD17E"), hex("#4F8C45"), hex("#FFEA8A")),
+    SpeciesPalette(hex("#6C9EFF"), hex("#3D5AC2"), hex("#7CF2E0")),
+    SpeciesPalette(hex("#FF8FAE"), hex("#C24E72"), hex("#FFF07C")),
+    SpeciesPalette(hex("#B98FE8"), hex("#7A4FB8"), hex("#7CF2E0")),
+    SpeciesPalette(hex("#5FBF52"), hex("#357A2C"), hex("#FFD166")),
+    SpeciesPalette(hex("#FF8A65"), hex("#C2502E"), hex("#7CF2E0")),
+    SpeciesPalette(hex("#E8C97A"), hex("#B8933D"), hex("#FF8FD1")),
+    SpeciesPalette(hex("#2FD9C4"), hex("#1C8C94"), hex("#FF8FD1")),
+    SpeciesPalette(hex("#E8559C"), hex("#A8306E"), hex("#7CFFC4")),
+    SpeciesPalette(hex("#8FA8E8"), hex("#4F5FA8"), hex("#FFD166")),
+    SpeciesPalette(hex("#FFC94A"), hex("#C9860F"), hex("#7CFFC4")),
+    SpeciesPalette(hex("#6FE0B8"), hex("#359C78"), hex("#FFD166")),
 )
-private val LEAF_BASE = hex("#8FB36B")
-private val LEAF_DARK = hex("#5F7F45")
+private val LEAF_BASE = hex("#6FCB5A")
+private val LEAF_DARK = hex("#3F8C32")
 private val INK = hex("#6D594E")
-private val MOUND = hex("#D9C29A")
-private val GOLD = hex("#F4D160")
-private val FLAME = hex("#FF8A3D")
-private val EMBER = hex("#E76F51")
+private val MOUND = hex("#E8D4A8")
+private val SHINE = hex("#FFFBF3")
+private val GLOW_GOLD = hex("#FFD166")
+private val GLOW_PINK = hex("#FF8FD1")
+private val GLOW_MINT = hex("#7CFFC4")
 
-val RARITY_COLORS = mapOf("B" to hex("#B7A896"), "A" to hex("#A8D08D"), "S" to GOLD, "SS" to EMBER, "SSR" to GOLD)
+val RARITY_COLORS = mapOf("B" to hex("#FFE9B8"), "A" to hex("#7CF2E0"), "S" to GLOW_GOLD, "SS" to GLOW_PINK, "SSR" to GLOW_GOLD)
 data class RarityBadgeColors(val fg: Color, val bg: Color)
 val RARITY_BADGE = mapOf(
-    "B" to RarityBadgeColors(hex("#7A6C5C"), hex("#EFE4C8")),
-    "A" to RarityBadgeColors(hex("#3F5C2E"), hex("#E9F2E0")),
-    "S" to RarityBadgeColors(hex("#8A6A10"), hex("#FBF0CE")),
-    "SS" to RarityBadgeColors(hex("#B23F22"), hex("#FBE0D7")),
-    "SSR" to RarityBadgeColors(GOLD, hex("#2A1F16")),
+    "B" to RarityBadgeColors(hex("#8A7A5E"), hex("#FFF3D8")),
+    "A" to RarityBadgeColors(hex("#2E7A5E"), hex("#DFF7EE")),
+    "S" to RarityBadgeColors(hex("#8A6A10"), hex("#FFF3D0")),
+    "SS" to RarityBadgeColors(hex("#C23E8A"), hex("#FFE3F3")),
+    "SSR" to RarityBadgeColors(hex("#C9860F"), hex("#FFF7DD")),
 )
+
+/** Hoạ tiết sparkle (✦) dùng chung — 1 điểm nhấn nhỏ trên mỗi loài + vòng hào quang rarity, cho
+ * cảm giác "lấp lánh" nhất quán xuyên suốt thay vì mảng màu phẳng. */
+private fun sparkleMark(cx: Float, cy: Float, r: Float): Path {
+    val r2 = r * 0.35f
+    return Path().apply {
+        moveTo(cx, cy - r); lineTo(cx + r2, cy - r2); lineTo(cx + r, cy); lineTo(cx + r2, cy + r2)
+        lineTo(cx, cy + r); lineTo(cx - r2, cy + r2); lineTo(cx - r, cy); lineTo(cx - r2, cy - r2)
+        close()
+    }
+}
 
 // ---------- PRNG (mulberry32 + fnv-ish hash), y hệt species-art.ts để rotation "jitter" ổn định theo seed ----------
 private fun hashStr(s: String): Int {
@@ -148,21 +165,33 @@ private fun DrawScope.landArt(archetype: String, p: SpeciesPalette, rot: Float) 
         }
     }
     ellipseAt(p.base, 50f, 62f, 26f, 22f)
+    ellipseAt(SHINE, 44f, 68f, 8f, 11f, alpha = 0.85f)
     when (o.ear) {
-        "pointy" -> { drawPath(tri(32f, 30f, 26f, 10f, 40f, 26f), p.dark); drawPath(tri(68f, 30f, 74f, 10f, 60f, 26f), p.dark) }
+        "pointy" -> {
+            drawPath(tri(32f, 30f, 26f, 10f, 40f, 26f), p.dark)
+            drawPath(tri(68f, 30f, 74f, 10f, 60f, 26f), p.dark)
+            drawPath(tri(33f, 27f, 29f, 15f, 37f, 27f), p.light, alpha = 0.55f)
+            drawPath(tri(67f, 27f, 71f, 15f, 63f, 27f), p.light, alpha = 0.55f)
+        }
         "round" -> { circleAt(p.dark, 34f, 22f, 8f); circleAt(p.dark, 66f, 22f, 8f) }
         "long" -> { ellipseAt(p.dark, 38f, 10f, 6f, 16f); ellipseAt(p.dark, 62f, 10f, 6f, 16f) }
         "tiny" -> { circleAt(p.dark, 36f, 20f, 4f); circleAt(p.dark, 64f, 20f, 4f) }
-        "tuft" -> { circleAt(p.dark, 34f, 22f, 7f); circleAt(p.dark, 66f, 22f, 7f) }
+        "tuft" -> {
+            circleAt(p.dark, 34f, 22f, 7f); circleAt(p.dark, 66f, 22f, 7f)
+            circleAt(p.light, 34f, 20f, 2.6f, alpha = 0.55f); circleAt(p.light, 66f, 20f, 2.6f, alpha = 0.55f)
+        }
     }
     circleAt(p.base, 50f, 35f, 19f)
     when (o.snout) {
-        "fox" -> drawPath(tri(50f, 40f, 42f, 48f, 58f, 48f), p.light)
-        "bear" -> ellipseAt(p.light, 50f, 42f, 9f, 7f)
+        "fox" -> drawPath(tri(50f, 40f, 42f, 48f, 58f, 48f), SHINE)
+        "bear" -> ellipseAt(SHINE, 50f, 42f, 9f, 7f)
         "beak" -> drawPath(tri(50f, 38f, 41f, 44f, 50f, 46f), p.dark)
     }
-    circleAt(INK, 43f, 34f, 2.6f)
-    circleAt(INK, 57f, 34f, 2.6f)
+    circleAt(INK, 43f, 33.5f, 3.2f)
+    circleAt(INK, 57f, 33.5f, 3.2f)
+    circleAt(SHINE, 41.8f, 32.3f, 1f)
+    circleAt(SHINE, 55.8f, 32.3f, 1f)
+    drawPath(sparkleMark(50f, 8f, 4f), p.light, alpha = 0.9f)
     when (o.pattern) {
         "stripe" -> drawPath(Path().apply { moveTo(28f, 56f); quadraticTo(50f, 62f, 72f, 56f) }, p.dark, alpha = 0.45f, style = Stroke(3f))
         "mask" -> drawPath(Path().apply { moveTo(34f, 32f); quadraticTo(50f, 40f, 66f, 32f) }, p.dark, alpha = 0.85f, style = Stroke(7f, cap = StrokeCap.Round))
@@ -192,26 +221,61 @@ private val SEA_ARCH = mapOf(
     "seahorse" to SeaOpts("seahorse"),
 )
 
+/** Mắt hí nhỏ dạng hạt sáng (thay chấm mực INK) — dùng cho toàn bộ sinh vật biển, tinh nghịch hơn
+ * chấm tròn đơn sắc, màu lấy từ `p.light` (glow) nên đổi theo từng palette được gán. */
+private fun DrawScope.seaEye(color: Color, cx: Float, cy: Float, r: Float = 2.6f) {
+    drawPath(
+        Path().apply { moveTo(cx - r, cy); quadraticTo(cx, cy - r, cx + r, cy); quadraticTo(cx, cy + r, cx - r, cy); close() },
+        color,
+    )
+}
+
 private fun DrawScope.seaArt(archetype: String, p: SpeciesPalette, rot: Float) = rotate(rot, pivot = Offset(50f, 50f)) {
     val o = SEA_ARCH[archetype] ?: SEA_ARCH.getValue("fish")
     when (o.shape) {
         "shell" -> when (o.shellType) {
-            "dome" -> { circleAt(p.base, 24f, 54f, 10f); ellipseAt(p.dark, 54f, 56f, 26f, 19f); ellipseAt(p.light, 54f, 52f, 9f, 9f, alpha = 0.55f); circleAt(INK, 24f, 52f, 2.2f) }
-            "claws" -> { ellipseAt(p.base, 50f, 58f, 27f, 15f); circleAt(p.dark, 22f, 40f, 8f); circleAt(p.dark, 78f, 40f, 8f); circleAt(INK, 42f, 54f, 2.2f); circleAt(INK, 58f, 54f, 2.2f) }
-            else -> { circleAt(p.base, 46f, 52f, 17f); circleAt(p.dark, 46f, 52f, 12f, alpha = 0.5f); ellipseAt(p.base, 68f, 66f, 14f, 9f); circleAt(INK, 78f, 62f, 2.2f) }
+            "dome" -> {
+                circleAt(p.base, 24f, 54f, 10f)
+                ellipseAt(p.dark, 54f, 56f, 26f, 19f)
+                ellipseAt(SHINE, 54f, 50f, 9f, 6f, alpha = 0.6f)
+                seaEye(p.light, 24f, 52f, 2.2f)
+                drawPath(sparkleMark(70f, 40f, 3.6f), p.light, alpha = 0.85f)
+            }
+            "claws" -> {
+                ellipseAt(p.base, 50f, 58f, 27f, 15f)
+                circleAt(p.dark, 22f, 40f, 8f); circleAt(p.dark, 78f, 40f, 8f)
+                ellipseAt(SHINE, 44f, 52f, 8f, 4f, alpha = 0.6f)
+                seaEye(p.light, 42f, 54f, 2.2f); seaEye(p.light, 58f, 54f, 2.2f)
+                drawPath(sparkleMark(50f, 36f, 3.6f), p.light, alpha = 0.85f)
+            }
+            else -> {
+                circleAt(p.base, 46f, 52f, 17f); circleAt(p.dark, 46f, 52f, 12f, alpha = 0.5f)
+                ellipseAt(p.base, 68f, 66f, 14f, 9f)
+                seaEye(p.light, 78f, 62f, 2.2f)
+                drawPath(sparkleMark(38f, 40f, 3.6f), p.light, alpha = 0.85f)
+            }
         }
         "fish" -> {
             drawPath(Path().apply { moveTo(78f, 50f); lineTo(94f, 40f); lineTo(90f, 50f); lineTo(94f, 60f); close() }, p.dark)
             drawPath(Path().apply { moveTo(28f, 50f); cubicTo(28f, 30f, 72f, 30f, 76f, 50f); cubicTo(72f, 70f, 28f, 70f, 28f, 50f); close() }, p.base)
-            circleAt(INK, 42f, 48f, 2.6f)
+            ellipseAt(SHINE, 38f, 58f, 8f, 5f, alpha = 0.55f)
+            seaEye(p.light, 42f, 48f, 2.8f)
+            drawPath(sparkleMark(58f, 34f, 3.6f), p.light, alpha = 0.85f)
         }
-        "star" -> { drawPath(starPath(50f, 54f, 30f, 13f, 5, -Math.PI.toFloat() / 2), p.base); circleAt(INK, 44f, 48f, 2.2f); circleAt(INK, 56f, 48f, 2.2f) }
+        "star" -> {
+            drawPath(starPath(50f, 54f, 30f, 13f, 5, -Math.PI.toFloat() / 2), p.base)
+            circleAt(SHINE, 50f, 44f, 4f, alpha = 0.5f)
+            seaEye(p.dark, 44f, 48f, 2.2f); seaEye(p.dark, 56f, 48f, 2.2f)
+            drawPath(sparkleMark(50f, 14f, 3.6f), p.light, alpha = 0.9f)
+        }
         "blob" -> {
             drawPath(Path().apply { moveTo(80f, 50f); lineTo(94f, 42f); lineTo(90f, 58f); lineTo(94f, 68f); lineTo(80f, 60f); close() }, p.dark)
             ellipseAt(p.base, 48f, 55f, 30f, 21f)
+            ellipseAt(SHINE, 38f, 62f, 9f, 6f, alpha = 0.6f)
             if (o.fin == "dorsal") drawPath(tri(58f, 34f, 66f, 16f, 68f, 36f), p.dark)
             else { ellipseAt(p.dark, 24f, 58f, 8f, 4f); ellipseAt(p.dark, 76f, 58f, 8f, 4f) }
-            circleAt(INK, 66f, 48f, 2.4f)
+            seaEye(p.light, 66f, 48f, 2.6f)
+            drawPath(sparkleMark(56f, 30f, 3.6f), p.light, alpha = 0.85f)
         }
         "tentacle" -> {
             val n = o.legs
@@ -223,7 +287,9 @@ private fun DrawScope.seaArt(archetype: String, p: SpeciesPalette, rot: Float) =
             if (o.dome) {
                 drawPath(Path().apply { moveTo(24f, 58f); arcTo(Rect(Offset(24f, 32f), Size(52f, 52f)), 180f, 180f, false); close() }, p.base)
             } else circleAt(p.base, 50f, 48f, 24f)
-            circleAt(INK, 42f, 48f, 2.4f); circleAt(INK, 58f, 48f, 2.4f)
+            ellipseAt(SHINE, 40f, 38f, 8f, 5f, alpha = 0.55f)
+            seaEye(p.light, 42f, 48f, 2.6f); seaEye(p.light, 58f, 48f, 2.6f)
+            drawPath(sparkleMark(50f, 20f, 3.8f), p.light, alpha = 0.9f)
         }
         "seahorse" -> {
             drawPath(
@@ -235,7 +301,9 @@ private fun DrawScope.seaArt(archetype: String, p: SpeciesPalette, rot: Float) =
                 },
                 p.base, style = Stroke(13f, cap = StrokeCap.Round),
             )
-            circleAt(INK, 58f, 30f, 2.4f)
+            ellipseAt(SHINE, 40f, 66f, 4f, 6f, alpha = 0.55f)
+            seaEye(p.light, 58f, 30f, 2.4f)
+            drawPath(sparkleMark(34f, 44f, 3.4f), p.light, alpha = 0.85f)
         }
     }
 }
@@ -255,21 +323,28 @@ private fun DrawScope.plantArt(archetype: String, p: SpeciesPalette, lean: Float
                 circleAt(p.base, 50f + 16 * cos(a), 30f + 16 * sin(a), 9f)
             }
             circleAt(p.light, 50f, 30f, 7f)
+            drawPath(sparkleMark(70f, 18f, 3.6f), p.light, alpha = 0.85f)
         }
         "flowerStar" -> {
             stemAndLeaves()
             drawPath(starPath(50f, 30f, 15f, 7f, 6, 0f), p.base)
             circleAt(p.light, 50f, 30f, 4f)
+            drawPath(sparkleMark(72f, 20f, 3.6f), p.light, alpha = 0.85f)
         }
         "mushroom" -> {
             drawRoundRect(hex("#F1E6D2"), topLeft = Offset(44f, 52f), size = Size(12f, 32f), cornerRadius = CornerRadius(5f), style = androidx.compose.ui.graphics.drawscope.Fill)
             drawRoundRect(p.dark, topLeft = Offset(44f, 52f), size = Size(12f, 32f), cornerRadius = CornerRadius(5f), style = Stroke(1.5f))
             drawPath(Path().apply { moveTo(24f, 52f); arcTo(Rect(Offset(24f, 32f), Size(52f, 40f)), 180f, 180f, false); close() }, p.base)
             circleAt(p.light, 38f, 42f, 3f); circleAt(p.light, 58f, 38f, 3.4f)
+            drawPath(sparkleMark(70f, 30f, 3.4f), p.light, alpha = 0.85f)
         }
-        "fern" -> for (i in 0 until 3) {
-            val dx = (i - 1) * 16f
-            drawPath(Path().apply { moveTo(50f, 84f); quadraticTo(50f + dx, 50f, 50f + dx * 1.4f, 24f) }, LEAF_BASE, style = Stroke(4f, cap = StrokeCap.Round))
+        "fern" -> {
+            for (i in 0 until 3) {
+                val dx = (i - 1) * 16f
+                drawPath(Path().apply { moveTo(50f, 84f); quadraticTo(50f + dx, 50f, 50f + dx * 1.4f, 24f) }, p.base, style = Stroke(4f, cap = StrokeCap.Round))
+                circleAt(p.dark, 50f + dx * 1.4f, 24f, 2.6f)
+            }
+            drawPath(sparkleMark(68f, 30f, 3.6f), p.light, alpha = 0.85f)
         }
         "succulent" -> {
             for (i in 0 until 7) {
@@ -277,22 +352,37 @@ private fun DrawScope.plantArt(archetype: String, p: SpeciesPalette, lean: Float
                 ellipseAt(p.base, 50f + 15 * cos(a), 66f + 15 * sin(a) * 0.6f, 9f, 14f)
             }
             circleAt(p.light, 50f, 66f, 7f)
+            drawPath(sparkleMark(70f, 40f, 3.6f), p.light, alpha = 0.85f)
         }
         "cactus" -> {
-            drawRoundRect(p.base, topLeft = Offset(38f, 30f), size = Size(24f, 54f), cornerRadius = CornerRadius(12f))
-            drawRoundRect(p.base, topLeft = Offset(20f, 46f), size = Size(16f, 11f), cornerRadius = CornerRadius(6f))
-            drawRoundRect(p.base, topLeft = Offset(64f, 40f), size = Size(16f, 11f), cornerRadius = CornerRadius(6f))
-            circleAt(p.light, 50f, 26f, 6f)
+            drawPath(
+                Path().apply { moveTo(36f, 86f); lineTo(34f, 50f); lineTo(40f, 36f); lineTo(60f, 36f); lineTo(66f, 50f); lineTo(64f, 86f); close() },
+                p.base,
+            )
+            drawPath(Path().apply { moveTo(42f, 42f); lineTo(42f, 80f) }, p.dark, alpha = 0.4f, style = Stroke(1.4f))
+            drawPath(Path().apply { moveTo(50f, 38f); lineTo(50f, 82f) }, p.dark, alpha = 0.4f, style = Stroke(1.4f))
+            drawPath(Path().apply { moveTo(58f, 42f); lineTo(58f, 80f) }, p.dark, alpha = 0.4f, style = Stroke(1.4f))
+            for (ty in floatArrayOf(46f, 62f, 74f)) {
+                drawPath(tri(34f, ty, 25f, ty - 2f, 34f, ty + 4f), p.dark)
+                drawPath(tri(66f, ty, 75f, ty - 2f, 66f, ty + 4f), p.dark)
+            }
+            drawPath(starPath(50f, 26f, 11f, 4.5f, 5, -Math.PI.toFloat() / 2), p.light)
+            circleAt(SHINE, 55f, 24f, 1.6f, alpha = 0.9f)
         }
         "berry" -> {
             ellipseAt(LEAF_BASE, 40f, 60f, 16f, 14f); ellipseAt(LEAF_BASE, 62f, 56f, 15f, 13f)
             circleAt(p.base, 38f, 58f, 3.4f); circleAt(p.base, 52f, 66f, 3.4f); circleAt(p.base, 62f, 54f, 3.4f)
+            circleAt(SHINE, 37f, 56.5f, 1f, alpha = 0.8f)
+            drawPath(sparkleMark(68f, 34f, 3.6f), p.light, alpha = 0.85f)
         }
-        "bamboo" -> for (i in 0 until 3) {
-            val x = 38f + i * 12f
-            drawRoundRect(LEAF_BASE, topLeft = Offset(x - 4f, 20f), size = Size(8f, 64f), cornerRadius = CornerRadius(4f))
-            drawRect(LEAF_DARK, topLeft = Offset(x - 4f, 36f), size = Size(8f, 3f))
-            drawRect(LEAF_DARK, topLeft = Offset(x - 4f, 54f), size = Size(8f, 3f))
+        "bamboo" -> {
+            for (i in 0 until 3) {
+                val x = 38f + i * 12f
+                drawRoundRect(p.base, topLeft = Offset(x - 4f, 20f), size = Size(8f, 64f), cornerRadius = CornerRadius(4f))
+                drawRect(p.dark, topLeft = Offset(x - 4f, 36f), size = Size(8f, 3f))
+                drawRect(p.dark, topLeft = Offset(x - 4f, 54f), size = Size(8f, 3f))
+            }
+            drawPath(sparkleMark(66f, 26f, 3.6f), p.light, alpha = 0.85f)
         }
         "vine" -> {
             drawPath(
@@ -300,10 +390,12 @@ private fun DrawScope.plantArt(archetype: String, p: SpeciesPalette, lean: Float
                 LEAF_BASE, style = Stroke(4f, cap = StrokeCap.Round),
             )
             circleAt(p.base, 40f, 20f, 6f)
+            drawPath(sparkleMark(64f, 34f, 3.6f), p.light, alpha = 0.85f)
         }
         "tree" -> {
             drawRoundRect(hex("#B98A5D"), topLeft = Offset(45f, 50f), size = Size(10f, 34f), cornerRadius = CornerRadius(4f))
             circleAt(p.base, 40f, 38f, 16f); circleAt(p.base, 60f, 36f, 14f); circleAt(p.light, 50f, 26f, 15f)
+            drawPath(sparkleMark(74f, 20f, 3.6f), p.light, alpha = 0.85f)
         }
     }
 }
@@ -319,30 +411,42 @@ private fun DrawScope.mythicArt(archetype: String, p: SpeciesPalette, rot: Float
             drawPath(Path().apply { moveTo(34f, 50f); quadraticTo(8f, 38f, 6f, 60f); quadraticTo(24f, 68f, 38f, 58f); close() }, p.base)
             drawPath(Path().apply { moveTo(66f, 50f); quadraticTo(92f, 38f, 94f, 60f); quadraticTo(76f, 68f, 62f, 58f); close() }, p.base)
             ellipseAt(p.base, 50f, 56f, 16f, 20f)
+            ellipseAt(SHINE, 46f, 60f, 5f, 8f, alpha = 0.5f)
             circleAt(p.base, 50f, 34f, 12f)
             drawPath(tri(50f, 22f, 45f, 8f, 55f, 14f), p.dark)
-            circleAt(INK, 54f, 32f, 2f)
+            seaEye(p.light, 54f, 32f, 2f)
+            drawPath(sparkleMark(74f, 44f, 3.6f), p.light, alpha = 0.85f)
         }
         "qilin" -> {
             ellipseAt(p.dark, 36f, 82f, 5f, 8f); ellipseAt(p.dark, 64f, 82f, 5f, 8f)
             ellipseAt(p.base, 50f, 62f, 24f, 18f)
+            ellipseAt(SHINE, 42f, 68f, 6f, 8f, alpha = 0.55f)
             drawPath(Path().apply { moveTo(30f, 40f); quadraticTo(18f, 50f, 28f, 62f) }, p.dark, style = Stroke(4f, cap = StrokeCap.Round))
             drawPath(Path().apply { moveTo(70f, 40f); quadraticTo(82f, 50f, 72f, 62f) }, p.dark, style = Stroke(4f, cap = StrokeCap.Round))
             circleAt(p.base, 50f, 38f, 16f)
             drawPath(tri(50f, 20f, 46f, 4f, 54f, 4f), p.light)
-            circleAt(INK, 44f, 36f, 2.2f); circleAt(INK, 56f, 36f, 2.2f)
+            seaEye(p.light, 44f, 36f, 2.2f); seaEye(p.light, 56f, 36f, 2.2f)
+            drawPath(sparkleMark(74f, 24f, 3.6f), p.light, alpha = 0.85f)
         }
         "dragon" -> {
             drawPath(
                 Path().apply { moveTo(18f, 74f); cubicTo(28f, 42f, 50f, 62f, 46f, 40f); cubicTo(42f, 18f, 66f, 16f, 76f, 30f) },
-                p.base, style = Stroke(14f, cap = StrokeCap.Round),
+                p.base, style = Stroke(13f, cap = StrokeCap.Round),
             )
-            drawPath(tri(76f, 30f, 86f, 25f, 84f, 34f), p.dark)
-            circleAt(p.light, 14f, 76f, 3.6f)
-            circleAt(INK, 74f, 26f, 2.2f)
+            ellipseAt(SHINE, 28f, 58f, 3.6f, 5.4f, alpha = 0.55f)
+            ellipseAt(SHINE, 40f, 38f, 3.2f, 4.6f, alpha = 0.55f)
+            drawPath(tri(40f, 42f, 36f, 28f, 46f, 36f), p.dark)
+            drawPath(tri(58f, 24f, 56f, 10f, 66f, 20f), p.dark)
+            drawPath(tri(74f, 26f, 86f, 19f, 82f, 32f), p.dark)
+            drawPath(tri(72f, 22f, 80f, 11f, 78f, 24f), p.dark)
+            drawPath(tri(70f, 32f, 78f, 34f, 70f, 40f), SHINE)
+            seaEye(p.light, 74f, 27f, 2.4f)
+            drawPath(sparkleMark(58f, 46f, 3.6f), p.light, alpha = 0.85f)
+            drawPath(tri(10f, 80f, 18f, 72f, 20f, 84f), p.base)
         }
         "ninetail" -> {
             ellipseAt(p.base, 46f, 62f, 18f, 16f)
+            ellipseAt(SHINE, 40f, 68f, 5f, 7f, alpha = 0.5f)
             for (i in 0 until 5) {
                 val a = -50f + i * 25f
                 val color = if (i % 2 == 0) p.base else p.dark
@@ -353,84 +457,109 @@ private fun DrawScope.mythicArt(archetype: String, p: SpeciesPalette, rot: Float
             drawPath(tri(30f, 34f, 23f, 14f, 38f, 30f), p.dark)
             drawPath(tri(62f, 34f, 71f, 14f, 56f, 30f), p.dark)
             circleAt(p.base, 46f, 36f, 13f)
-            circleAt(INK, 40f, 34f, 2.2f); circleAt(INK, 52f, 34f, 2.2f)
+            seaEye(p.light, 40f, 34f, 2.2f); seaEye(p.light, 52f, 34f, 2.2f)
+            drawPath(sparkleMark(70f, 24f, 3.6f), p.light, alpha = 0.85f)
         }
         "crane" -> {
             val legStroke = Stroke(2.4f, cap = StrokeCap.Round)
             drawPath(Path().apply { moveTo(50f, 84f); lineTo(48f, 97f) }, p.dark, style = legStroke)
             drawPath(Path().apply { moveTo(62f, 84f); lineTo(64f, 97f) }, p.dark, style = legStroke)
             ellipseAt(p.base, 56f, 72f, 20f, 14f)
+            ellipseAt(SHINE, 50f, 76f, 6f, 8f, alpha = 0.5f)
             drawPath(Path().apply { moveTo(40f, 66f); quadraticTo(12f, 54f, 10f, 76f); quadraticTo(34f, 84f, 48f, 72f); close() }, p.base)
             drawPath(Path().apply { moveTo(56f, 70f); quadraticTo(38f, 50f, 54f, 28f) }, p.base, style = Stroke(9f, cap = StrokeCap.Round))
             circleAt(p.base, 54f, 25f, 7f)
-            circleAt(EMBER, 57f, 18f, 2.6f)
-            circleAt(INK, 52f, 20f, 2f)
+            seaEye(p.light, 57f, 18f, 2.6f)
+            circleAt(INK, 52f, 20f, 1.6f)
+            drawPath(sparkleMark(76f, 40f, 3.6f), p.light, alpha = 0.85f)
         }
     }
 }
 
-/** Vẽ vầng hào quang phía sau ảnh loài theo cấp bậc — B/A nhẹ, S 2 vòng, SS 3 vòng dày, SSR rực lửa nhiều lớp. */
+// 8 điểm sparkle dùng chung cho S/SS/SSR — cùng bộ toạ độ với bản trước, chỉ đổi màu/số lượng/độ
+// dày theo cấp bậc để "leo thang" rõ (T-124: đổi ngôn ngữ hình ảnh từ khói/sét/lửa sang lấp lánh).
+private val AURA_SPARK_PTS = listOf(26f to 22f, 74f to 26f, 70f to 74f, 22f to 70f, 50f to 14f, 50f to 86f, 12f to 46f, 88f to 54f)
+
+/** Vẽ vầng hào quang phía sau ảnh loài theo cấp bậc — B/A chỉ có vòng nhẹ, S/SS thêm sparkle xoay
+ * quanh (4 rồi 8 điểm), SSR thêm quầng sáng vàng-hồng + lõi trắng + 2 vòng nét đứt xoay ngược chiều. */
 private fun DrawScope.rarityAura(rarity: String?, breathe: Float, spin: Float, spinRev: Float, flicker: Float) {
     when (rarity) {
         "SSR" -> {
             val glowBrush = Brush.radialGradient(
-                colors = listOf(GOLD, FLAME.copy(alpha = 0.8f), EMBER.copy(alpha = 0f)),
-                center = Offset(50f, 50f), radius = 40f,
+                colors = listOf(GLOW_GOLD, GLOW_PINK.copy(alpha = 0.6f), GLOW_PINK.copy(alpha = 0f)),
+                center = Offset(50f, 50f), radius = 42f,
             )
-            drawCircle(brush = glowBrush, radius = 40f, center = Offset(50f, 50f), blendMode = androidx.compose.ui.graphics.BlendMode.Screen)
+            drawCircle(brush = glowBrush, radius = 42f, center = Offset(50f, 50f), blendMode = androidx.compose.ui.graphics.BlendMode.Screen)
             val coreBrush = Brush.radialGradient(
-                colors = listOf(hex("#FFF6DE"), GOLD.copy(alpha = 0f)),
-                center = Offset(50f, 50f), radius = 15f,
+                colors = listOf(hex("#FFFDF0"), GLOW_GOLD.copy(alpha = 0f)),
+                center = Offset(50f, 50f), radius = 16f,
             )
-            drawCircle(brush = coreBrush, radius = 15f, center = Offset(50f, 50f), blendMode = androidx.compose.ui.graphics.BlendMode.Screen)
+            drawCircle(brush = coreBrush, radius = 16f, center = Offset(50f, 50f), blendMode = androidx.compose.ui.graphics.BlendMode.Screen)
             val ringScale = 0.88f + breathe * (1.16f - 0.88f)
             scale(ringScale, pivot = Offset(50f, 50f)) {
-                drawCircle(GOLD, radius = 39f, center = Offset(50f, 50f), alpha = 0.7f + breathe * 0.25f, style = Stroke(3.6f))
+                drawCircle(GLOW_GOLD, radius = 39f, center = Offset(50f, 50f), alpha = 0.7f + breathe * 0.25f, style = Stroke(3.6f))
             }
             rotate(spin, pivot = Offset(50f, 50f)) {
                 drawCircle(
-                    FLAME, radius = 34f, center = Offset(50f, 50f), alpha = 0.85f,
+                    GLOW_GOLD, radius = 34f, center = Offset(50f, 50f), alpha = 0.85f,
                     style = Stroke(2.2f, cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(7f, 6f))),
                 )
             }
             rotate(spinRev, pivot = Offset(50f, 50f)) {
                 drawCircle(
-                    EMBER, radius = 25f, center = Offset(50f, 50f), alpha = 0.7f,
+                    GLOW_PINK, radius = 25f, center = Offset(50f, 50f), alpha = 0.7f,
                     style = Stroke(1.8f, cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 5f))),
                 )
             }
-            val sparkColors = listOf(GOLD, FLAME, EMBER, hex("#FFF3C4"))
-            val pts = listOf(26f to 22f, 74f to 26f, 70f to 74f, 22f to 70f, 50f to 14f, 50f to 86f, 12f to 46f, 88f to 54f)
+            val sparkColors = listOf(GLOW_GOLD, GLOW_PINK, GLOW_MINT, hex("#FFFDF0"))
             for (i in 0 until 7) {
-                val (x, y) = pts[i % pts.size]
+                val (x, y) = AURA_SPARK_PTS[i % AURA_SPARK_PTS.size]
                 val r = (3.4f + (i % 3) * 0.7f) * 1.3f
                 scale(0.75f + flicker * 0.6f, pivot = Offset(x, y)) {
-                    drawPath(tri(x, y - r, x + r * 0.4f, y, x - r * 0.4f, y), sparkColors[i % sparkColors.size], alpha = 0.55f + flicker * 0.45f)
+                    drawPath(sparkleMark(x, y, r), sparkColors[i % sparkColors.size], alpha = 0.55f + flicker * 0.45f)
+                }
+            }
+            circleAt(hex("#FFFDF0"), 50f, 50f, 15f + breathe * 2f, alpha = 0.55f + breathe * 0.3f)
+        }
+        "SS" -> {
+            val ringScale = 0.94f + breathe * (1.08f - 0.94f)
+            scale(ringScale, pivot = Offset(50f, 50f)) {
+                drawCircle(GLOW_PINK, radius = 39f, center = Offset(50f, 50f), alpha = 0.4f, style = Stroke(2f))
+            }
+            rotate(spinRev * 0.6f, pivot = Offset(50f, 50f)) {
+                for (i in 0 until 8) {
+                    val (x, y) = AURA_SPARK_PTS[i]
+                    val color = if (i % 2 == 0) GLOW_PINK else GLOW_GOLD
+                    drawPath(sparkleMark(x, y, 3.6f + flicker * 0.8f), color, alpha = 0.7f + flicker * 0.3f)
                 }
             }
         }
-        "SS" -> {
-            val c = RARITY_COLORS.getValue("SS")
-            val ringScale = 0.92f + breathe * (1.1f - 0.92f)
-            scale(ringScale, pivot = Offset(50f, 50f)) {
-                drawCircle(c, radius = 40f, center = Offset(50f, 50f), alpha = 0.55f, style = Stroke(2.6f))
-                drawCircle(c, radius = 33f, center = Offset(50f, 50f), alpha = 0.4f, style = Stroke(1.7f))
-                drawCircle(c, radius = 27f, center = Offset(50f, 50f), alpha = 0.26f, style = Stroke(1.1f))
-            }
-        }
         "S" -> {
-            val c = RARITY_COLORS.getValue("S")
             val ringScale = 0.96f + breathe * (1.05f - 0.96f)
             scale(ringScale, pivot = Offset(50f, 50f)) {
-                drawCircle(c, radius = 39f, center = Offset(50f, 50f), alpha = 0.26f, style = Stroke(1.5f))
-                drawCircle(c, radius = 32f, center = Offset(50f, 50f), alpha = 0.17f, style = Stroke(0.9f))
+                drawCircle(GLOW_GOLD, radius = 38f, center = Offset(50f, 50f), alpha = 0.28f, style = Stroke(1.5f))
+            }
+            rotate(spin * 0.5f, pivot = Offset(50f, 50f)) {
+                for (i in 0 until 4) {
+                    val (x, y) = AURA_SPARK_PTS[i * 2]
+                    drawPath(sparkleMark(x, y, 3.2f + flicker * 0.5f), GLOW_GOLD, alpha = 0.75f + flicker * 0.25f)
+                }
             }
         }
-        "A", "B" -> {
-            val c = RARITY_COLORS.getValue(rarity)
+        "A" -> {
             val ringScale = 0.96f + breathe * (1.05f - 0.96f)
             scale(ringScale, pivot = Offset(50f, 50f)) {
-                drawCircle(c, radius = 38f, center = Offset(50f, 50f), alpha = if (rarity == "A") 0.2f else 0.16f, style = Stroke(if (rarity == "A") 1.3f else 1.1f))
+                drawCircle(RARITY_COLORS.getValue("A"), radius = 30f, center = Offset(50f, 50f), alpha = 0.5f, style = Stroke(2f))
+                drawCircle(RARITY_COLORS.getValue("A"), radius = 24f, center = Offset(50f, 50f), alpha = 0.3f, style = Stroke(1f))
+            }
+        }
+        "B" -> {
+            val ringScale = 0.97f + breathe * (1.04f - 0.97f)
+            scale(ringScale, pivot = Offset(50f, 50f)) {
+                drawCircle(
+                    RARITY_COLORS.getValue("B"), radius = 34f, center = Offset(50f, 50f), alpha = 0.4f,
+                    style = Stroke(1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 4f))),
+                )
             }
         }
     }
