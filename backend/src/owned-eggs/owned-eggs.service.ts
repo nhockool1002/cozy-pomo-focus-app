@@ -3,6 +3,7 @@ import { OwnedEggStatus, Prisma, PrismaClient } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EggsService } from '../eggs/eggs.service';
 import { CollectionService } from '../collection/collection.service';
+import { InboxService } from '../inbox/inbox.service';
 
 type Tx = Prisma.TransactionClient | PrismaClient;
 
@@ -19,6 +20,7 @@ export class OwnedEggsService {
     private readonly prisma: PrismaService,
     private readonly eggsService: EggsService,
     private readonly collectionService: CollectionService,
+    private readonly inboxService: InboxService,
   ) {}
 
   findMine(userId: string, status?: OwnedEggStatus) {
@@ -84,6 +86,14 @@ export class OwnedEggsService {
       include: { eggType: true, resultSpecies: true },
     });
     await this.collectionService.recordHatch(egg.userId, resultSpecies.id, tx);
+    await this.inboxService.create(
+      egg.userId,
+      'EGG_HATCHED',
+      'Trứng của bạn đã nở!',
+      `${egg.eggType.name} vừa nở ra ${resultSpecies.name}!`,
+      { eggTypeId: egg.eggTypeId, speciesId: resultSpecies.id, rarity: resultSpecies.rarity },
+      tx,
+    );
     return { ownedEgg: updated, resultSpecies, hatched: true };
   }
 }

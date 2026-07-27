@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.cozypomo.app.ui.forceupdate.ForceUpdateScreen
 import com.cozypomo.app.ui.login.LoginScreen
 import com.cozypomo.app.ui.onboarding.OnboardingScreen
 import com.cozypomo.app.ui.splash.SplashDestination
@@ -14,6 +15,7 @@ private object RootRoute {
     const val ONBOARDING = "onboarding"
     const val LOGIN = "login"
     const val MAIN = "main"
+    const val FORCE_UPDATE = "force_update"
 }
 
 /**
@@ -32,6 +34,7 @@ fun RootNavHost() {
                         SplashDestination.Onboarding -> RootRoute.ONBOARDING
                         SplashDestination.Login -> RootRoute.LOGIN
                         SplashDestination.Main -> RootRoute.MAIN
+                        SplashDestination.ForceUpdate -> RootRoute.FORCE_UPDATE
                     }
                     navController.navigate(route) {
                         popUpTo(RootRoute.SPLASH) { inclusive = true }
@@ -56,6 +59,9 @@ fun RootNavHost() {
                     }
                 },
             )
+        }
+        composable(RootRoute.FORCE_UPDATE) {
+            ForceUpdateScreen()
         }
         composable(RootRoute.MAIN) {
             CozyPomoNavHost(

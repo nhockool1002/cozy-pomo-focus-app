@@ -24,15 +24,30 @@ const TAG_LABEL: Record<string, string> = {
   auth: 'Xác thực',
   species: 'Loài',
   eggs: 'Trứng',
+  'owned-eggs': 'Trứng sở hữu',
   sessions: 'Phiên tập trung',
   currency: 'Xu Lá',
   collection: 'Bộ sưu tập',
   shop: 'Cửa hàng',
+  market: 'Chợ',
+  'game-settings': 'Cấu hình kinh tế',
+  'app-version': 'Phiên bản app',
+  inbox: 'Hộp thư',
   settings: 'Cài đặt',
   sync: 'Đồng bộ',
   stats: 'Thống kê',
-  health: 'Health check',
+  debug: 'Debug (tester)',
+  khác: 'Khác (health check...)',
 };
+
+// Thứ tự nhóm hiển thị khi không lọc theo 1 tag cụ thể — theo luồng nghiệp vụ (đăng nhập → nội
+// dung game → phiên tập trung → tiền tệ → cửa hàng/chợ → còn lại), thay vì random theo bảng chữ
+// cái, để admin lướt từ trên xuống dễ hình dung app gọi API theo trình tự nào. Tag lạ (không nằm
+// trong danh sách) rơi vào cuối, sắp theo bảng chữ cái.
+const TAG_ORDER = [
+  'auth', 'species', 'eggs', 'owned-eggs', 'sessions', 'currency', 'collection',
+  'shop', 'market', 'game-settings', 'inbox', 'app-version', 'settings', 'sync', 'stats', 'debug', 'khác',
+];
 
 type Endpoint = {
   method: string;
@@ -109,6 +124,20 @@ const ApiExplorer: React.FC = () => {
     });
   }, [endpoints, tag, search]);
 
+  // Gôm theo nhóm (tag) để dễ nhìn hơn 1 danh sách phẳng dài — theo yêu cầu Dev1002 (2026-07-27).
+  // Giữ nguyên tag đang chọn (nếu có) làm 1 nhóm duy nhất; khi chọn "Tất cả" thì hiện đủ mọi nhóm
+  // theo thứ tự nghiệp vụ ở TAG_ORDER, tag lạ chưa khai báo rơi xuống cuối theo bảng chữ cái.
+  const groups = useMemo(() => {
+    const byTag = new Map<string, Endpoint[]>();
+    filtered.forEach((e) => {
+      if (!byTag.has(e.tag)) byTag.set(e.tag, []);
+      byTag.get(e.tag)!.push(e);
+    });
+    const known = TAG_ORDER.filter((t) => byTag.has(t));
+    const unknown = [...byTag.keys()].filter((t) => !TAG_ORDER.includes(t)).sort();
+    return [...known, ...unknown].map((t) => ({ tag: t, items: byTag.get(t)! }));
+  }, [filtered]);
+
   return (
     <div style={{ background: BRAND.bg, padding: '24px', fontFamily: 'inherit', minHeight: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
@@ -158,47 +187,60 @@ const ApiExplorer: React.FC = () => {
       ) : error ? (
         <p style={{ color: BRAND.warn }}>Không tải được OpenAPI spec từ /docs-json. Kiểm tra Swagger đã bật ở main.ts chưa.</p>
       ) : (
-        <div style={{ background: BRAND.surface, border: `1px solid ${BRAND.border}`, borderRadius: 14, overflow: 'hidden' }}>
-          {filtered.map((e, i) => {
-            const mc = METHOD_COLOR[e.method] ?? { bg: BRAND.border, fg: BRAND.ink };
-            return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {groups.map((group) => (
+            <div key={group.tag} style={{ background: BRAND.surface, border: `1px solid ${BRAND.border}`, borderRadius: 14, overflow: 'hidden' }}>
               <div
-                key={`${e.method}-${e.path}-${i}`}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px',
-                  borderTop: i === 0 ? 'none' : `1px solid ${BRAND.border}`,
+                  padding: '10px 16px', background: BRAND.primary, color: BRAND.primaryInk,
+                  fontSize: 13, fontWeight: 700, display: 'flex', justifyContent: 'space-between',
                 }}
               >
-                <span
-                  style={{
-                    fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 999,
-                    background: mc.bg, color: mc.fg, textTransform: 'uppercase', minWidth: 56, textAlign: 'center',
-                  }}
-                >
-                  {e.method}
-                </span>
-                <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13, color: BRAND.ink, minWidth: 260 }}>
-                  {e.path}
-                </span>
-                <span style={{ fontSize: 12.5, color: BRAND.inkSoft, flex: 1 }}>{e.summary}</span>
-                {e.secured ? (
-                  <span
-                    title="Yêu cầu đăng nhập (Bearer token)"
-                    style={{ fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 999, background: '#FBF0CE', color: '#8A6A10' }}
-                  >
-                    🔒 Cần đăng nhập
-                  </span>
-                ) : (
-                  <span
-                    style={{ fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 999, background: '#F1EADA', color: BRAND.inkSoft }}
-                  >
-                    Công khai
-                  </span>
-                )}
+                <span>{TAG_LABEL[group.tag] ?? group.tag}</span>
+                <span style={{ fontWeight: 600, opacity: 0.75 }}>{group.items.length} endpoint</span>
               </div>
-            );
-          })}
-          {filtered.length === 0 ? (
+              {group.items.map((e, i) => {
+                const mc = METHOD_COLOR[e.method] ?? { bg: BRAND.border, fg: BRAND.ink };
+                return (
+                  <div
+                    key={`${e.method}-${e.path}-${i}`}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px',
+                      borderTop: `1px solid ${BRAND.border}`,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 999,
+                        background: mc.bg, color: mc.fg, textTransform: 'uppercase', minWidth: 56, textAlign: 'center',
+                      }}
+                    >
+                      {e.method}
+                    </span>
+                    <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13, color: BRAND.ink, minWidth: 260 }}>
+                      {e.path}
+                    </span>
+                    <span style={{ fontSize: 12.5, color: BRAND.inkSoft, flex: 1 }}>{e.summary}</span>
+                    {e.secured ? (
+                      <span
+                        title="Yêu cầu đăng nhập (Bearer token)"
+                        style={{ fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 999, background: '#FBF0CE', color: '#8A6A10' }}
+                      >
+                        🔒 Cần đăng nhập
+                      </span>
+                    ) : (
+                      <span
+                        style={{ fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 999, background: '#F1EADA', color: BRAND.inkSoft }}
+                      >
+                        Công khai
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+          {groups.length === 0 ? (
             <p style={{ padding: 16, color: BRAND.inkSoft, margin: 0 }}>Không tìm thấy endpoint phù hợp.</p>
           ) : null}
         </div>

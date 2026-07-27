@@ -13,6 +13,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrencyService } from '../currency/currency.service';
 import { GameSettingsService } from '../game-settings/game-settings.service';
+import { InboxService } from '../inbox/inbox.service';
 import { CreateSpeciesListingDto } from './dto/create-species-listing.dto';
 import { CreateEggListingDto } from './dto/create-egg-listing.dto';
 
@@ -36,6 +37,7 @@ export class MarketService {
     private readonly prisma: PrismaService,
     private readonly currencyService: CurrencyService,
     private readonly gameSettingsService: GameSettingsService,
+    private readonly inboxService: InboxService,
   ) {}
 
   /** `mine=true` trả TOÀN BỘ trạng thái (kể cả PENDING_APPROVAL/REJECTED/SOLD/CANCELLED) để user
@@ -228,7 +230,19 @@ export class MarketService {
           update: { ownedCount: { increment: 1 } },
         });
       } else if (listing.itemType === MarketItemType.EGG && listing.ownedEggId) {
-        await tx.ownedEgg.update({ where: { id: listing.ownedEggId }, data: { userId } });
+        const ownedEgg = await tx.ownedEgg.update({
+          where: { id: listing.ownedEggId },
+          data: { userId },
+          include: { eggType: true },
+        });
+        await this.inboxService.create(
+          userId,
+          'EGG_RECEIVED',
+          'Bạn vừa nhận được trứng mới!',
+          `Bạn đã mua thành công ${ownedEgg.eggType.name} từ Chợ.`,
+          { eggTypeId: ownedEgg.eggTypeId, ownedEggId: ownedEgg.id },
+          tx,
+        );
       }
     });
 

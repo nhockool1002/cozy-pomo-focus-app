@@ -19,6 +19,8 @@ import { OwnedEggsModule } from './owned-eggs/owned-eggs.module';
 import { GameSettingsModule } from './game-settings/game-settings.module';
 import { DebugModule } from './debug/debug.module';
 import { MarketModule } from './market/market.module';
+import { AppVersionModule } from './app-version/app-version.module';
+import { InboxModule } from './inbox/inbox.module';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { MarketModule } from './market/market.module';
     AdminModule,
     DebugModule,
     MarketModule,
+    AppVersionModule,
+    InboxModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

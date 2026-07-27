@@ -143,4 +143,27 @@ interface ApiService {
     @Headers("Requires-Auth: true")
     @POST("market/listings/{id}/buy")
     suspend fun buyListing(@Path("id") id: String, @Body body: BuyListingRequest): MarketListingDto
+
+    // --- Force Update (T-121/T-122) ---
+
+    @GET("app-version")
+    suspend fun getAppVersion(): AppVersionDto
+
+    // --- Hộp thư (T-123/T-124) ---
+
+    @Headers("Requires-Auth: true")
+    @GET("inbox")
+    suspend fun getInbox(): List<InboxMessageDto>
+
+    @Headers("Requires-Auth: true")
+    @GET("inbox/unread-count")
+    suspend fun getInboxUnreadCount(): UnreadCountResponse
+
+    @Headers("Requires-Auth: true")
+    @PATCH("inbox/{id}/read")
+    suspend fun markInboxRead(@Path("id") id: String): ResponseBody
+
+    @Headers("Requires-Auth: true")
+    @PATCH("inbox/read-all")
+    suspend fun markAllInboxRead(): ResponseBody
 }

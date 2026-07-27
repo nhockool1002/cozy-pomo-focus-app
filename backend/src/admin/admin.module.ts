@@ -158,6 +158,19 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
             },
           },
           {
+            // T-121 — Force Update: singleton giống GameSettings, admin bump
+            // `minSupportedVersionCode` mỗi lần release app cần ép cập nhật.
+            resource: { model: getModelByName('AppVersionConfig'), client: prisma },
+            options: {
+              navigation: { name: 'Nội dung game' },
+              actions: {
+                new: { isAccessible: false },
+                delete: { isAccessible: false },
+                bulkDelete: { isAccessible: false },
+              },
+            },
+          },
+          {
             // Chợ (T-106) — Admin tạo tin đăng sellerType=ADMIN (vật phẩm siêu hiếm, giữ nguyên
             // action `new` để làm việc này) + duyệt tin PENDING_APPROVAL của user (SSR/MYTHIC) qua
             // đúng form edit chuẩn, chỉ cần đổi field `status` sang ACTIVE hoặc REJECTED.
@@ -206,107 +219,152 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
               },
             },
           },
+          {
+            // "Phát quà" (T-120) — trước đây là 1 Page rời dưới mục "Trang" (tách biệt khỏi các
+            // menu khác); Dev1002 phản hồi đây cũng là 1 chức năng chính, không nên bị hạ thấp vị
+            // trí. Chuyển thành resource thật `GiftLog` nằm chung nhóm "Người dùng" — action `new`
+            // override bằng UI multi-select cũ (GiftPage.tsx, chỉ đổi endpoint gọi), `list`/`show`
+            // mặc định giờ hiện được lịch sử phát quà thật (trước đây submit xong không lưu vết gì).
+            resource: { model: getModelByName('GiftLog'), client: prisma },
+            options: {
+              navigation: { name: 'Người dùng' },
+              actions: {
+                new: {
+                  component: GiftPage,
+                  handler: async (request: any) => {
+                    if (request.method !== 'post') {
+                      return { ok: true };
+                    }
+                    try {
+                      const payload = request.payload ?? {};
+                      const recipientsText: string = payload.recipientsText ?? '';
+                      let grants: Array<{ kind: 'SPECIES' | 'EGG'; id: string; quantity: number }> = [];
+                      try {
+                        grants = JSON.parse(payload.grants ?? '[]');
+                      } catch {
+                        return { ok: false, error: 'Dữ liệu vật phẩm không hợp lệ' };
+                      }
+
+                      // Gom token người nhận từ textarea + file CSV (nếu có) — 1 cột ID hoặc email,
+                      // chấp nhận cả 2 định dạng cùng lúc (dòng nào giống UUID thì tra theo id, còn
+                      // lại tra theo email), bỏ qua dòng tiêu đề CSV thường gặp (id/email/userId).
+                      const tokens = new Set<string>();
+                      recipientsText
+                        .split(/[\n,]/)
+                        .map((s: string) => s.trim())
+                        .filter(Boolean)
+                        .forEach((t: string) => tokens.add(t));
+
+                      const csvFile = payload.csvFile;
+                      if (csvFile && csvFile.path) {
+                        try {
+                          const content = fs.readFileSync(csvFile.path, 'utf-8');
+                          content
+                            .split(/\r?\n/)
+                            .map((line: string) => line.split(',')[0]?.trim())
+                            .filter((t: string) => t && !['id', 'email', 'userid'].includes(t.toLowerCase()))
+                            .forEach((t: string) => tokens.add(t));
+                        } catch {
+                          // Đọc file lỗi — vẫn tiếp tục với token đã có từ textarea, không chặn cả submit.
+                        }
+                      }
+
+                      if (tokens.size === 0) {
+                        return { ok: false, error: 'Chưa nhập người nhận nào' };
+                      }
+                      if (grants.length === 0) {
+                        return { ok: false, error: 'Chưa chọn vật phẩm nào' };
+                      }
+
+                      const tokenList = [...tokens];
+                      const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                      const idTokens = tokenList.filter((t) => uuidRe.test(t));
+                      const emailTokens = tokenList.filter((t) => !uuidRe.test(t));
+
+                      const users = await prisma.user.findMany({
+                        where: { OR: [{ id: { in: idTokens } }, { email: { in: emailTokens } }] },
+                        select: { id: true, email: true },
+                      });
+                      const foundTokens = new Set<string>();
+                      users.forEach((u) => {
+                        foundTokens.add(u.id);
+                        foundTokens.add(u.email);
+                      });
+                      const recipientsNotFound = tokenList.filter((t) => !foundTokens.has(t));
+
+                      // Tra tên vật phẩm thật (species/eggType) để lưu snapshot vào GiftLog +
+                      // dùng tạo InboxMessage (T-123) — 1 lượt hỏi DB dùng chung cho mọi user/grant.
+                      const speciesIds = grants.filter((g) => g.kind === 'SPECIES').map((g) => g.id);
+                      const eggTypeIds = grants.filter((g) => g.kind === 'EGG').map((g) => g.id);
+                      const [speciesRows, eggTypeRows] = await Promise.all([
+                        speciesIds.length ? prisma.species.findMany({ where: { id: { in: speciesIds } } }) : [],
+                        eggTypeIds.length ? prisma.eggType.findMany({ where: { id: { in: eggTypeIds } } }) : [],
+                      ]);
+                      const itemNameOf = (g: { kind: 'SPECIES' | 'EGG'; id: string }) =>
+                        (g.kind === 'SPECIES' ? speciesRows : eggTypeRows).find((r) => r.id === g.id)?.name ?? 'Vật phẩm';
+
+                      let grantsApplied = 0;
+                      const errors: string[] = [];
+                      for (const user of users) {
+                        for (const g of grants) {
+                          const itemName = itemNameOf(g);
+                          try {
+                            await prisma.$transaction(async (tx) => {
+                              if (g.kind === 'SPECIES') {
+                                await collectionService.grantMany(user.id, g.id, g.quantity, tx);
+                              } else {
+                                for (let i = 0; i < g.quantity; i++) {
+                                  await ownedEggsService.create(user.id, g.id, tx);
+                                }
+                              }
+                              await tx.giftLog.create({
+                                data: { recipientId: user.id, itemKind: g.kind, itemId: g.id, itemName, quantity: g.quantity },
+                              });
+                              await tx.inboxMessage.create({
+                                data: {
+                                  userId: user.id,
+                                  type: 'ADMIN_GIFT',
+                                  title: 'Bạn nhận được quà từ Admin!',
+                                  body: `Admin đã tặng bạn ${g.quantity} ${itemName}.`,
+                                  payload: { kind: g.kind, id: g.id, quantity: g.quantity },
+                                },
+                              });
+                            });
+                            grantsApplied += 1;
+                          } catch (err: any) {
+                            errors.push(`${user.email}: ${err.message}`);
+                          }
+                        }
+                      }
+
+                      return {
+                        ok: true,
+                        recipientsResolved: users.length,
+                        recipientsNotFound,
+                        grantsApplied,
+                        errors,
+                      };
+                    } catch (err: any) {
+                      return { ok: false, error: err?.message ?? 'Có lỗi xảy ra, thử lại sau' };
+                    }
+                  },
+                },
+                edit: { isAccessible: false },
+                delete: { isAccessible: false },
+                bulkDelete: { isAccessible: false },
+              },
+            },
+          },
+          {
+            // T-123 — Hộp thư: chỉ xem để hỗ trợ debug/support, không sửa/xoá qua admin (đi qua
+            // API để giữ đúng `isRead`/nghiệp vụ, giống các bảng dữ liệu user khác).
+            resource: { model: getModelByName('InboxMessage'), client: prisma },
+            options: { navigation: { name: 'Người dùng' }, ...readOnly },
+          },
         ],
         pages: {
           'api-explorer': {
             component: ApiExplorer,
-          },
-          'gift-items': {
-            label: 'Phát quà',
-            component: GiftPage,
-            handler: async (request: any) => {
-              if (request.method !== 'post') {
-                return { ok: true };
-              }
-              try {
-                const payload = request.payload ?? {};
-                const recipientsText: string = payload.recipientsText ?? '';
-                let grants: Array<{ kind: 'SPECIES' | 'EGG'; id: string; quantity: number }> = [];
-                try {
-                  grants = JSON.parse(payload.grants ?? '[]');
-                } catch {
-                  return { ok: false, error: 'Dữ liệu vật phẩm không hợp lệ' };
-                }
-
-                // Gom token người nhận từ textarea + file CSV (nếu có) — 1 cột ID hoặc email,
-                // chấp nhận cả 2 định dạng cùng lúc (dòng nào giống UUID thì tra theo id, còn
-                // lại tra theo email), bỏ qua dòng tiêu đề CSV thường gặp (id/email/userId).
-                const tokens = new Set<string>();
-                recipientsText
-                  .split(/[\n,]/)
-                  .map((s: string) => s.trim())
-                  .filter(Boolean)
-                  .forEach((t: string) => tokens.add(t));
-
-                const csvFile = payload.csvFile;
-                if (csvFile && csvFile.path) {
-                  try {
-                    const content = fs.readFileSync(csvFile.path, 'utf-8');
-                    content
-                      .split(/\r?\n/)
-                      .map((line: string) => line.split(',')[0]?.trim())
-                      .filter((t: string) => t && !['id', 'email', 'userid'].includes(t.toLowerCase()))
-                      .forEach((t: string) => tokens.add(t));
-                  } catch {
-                    // Đọc file lỗi — vẫn tiếp tục với token đã có từ textarea, không chặn cả submit.
-                  }
-                }
-
-                if (tokens.size === 0) {
-                  return { ok: false, error: 'Chưa nhập người nhận nào' };
-                }
-                if (grants.length === 0) {
-                  return { ok: false, error: 'Chưa chọn vật phẩm nào' };
-                }
-
-                const tokenList = [...tokens];
-                const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-                const idTokens = tokenList.filter((t) => uuidRe.test(t));
-                const emailTokens = tokenList.filter((t) => !uuidRe.test(t));
-
-                const users = await prisma.user.findMany({
-                  where: { OR: [{ id: { in: idTokens } }, { email: { in: emailTokens } }] },
-                  select: { id: true, email: true },
-                });
-                const foundTokens = new Set<string>();
-                users.forEach((u) => {
-                  foundTokens.add(u.id);
-                  foundTokens.add(u.email);
-                });
-                const recipientsNotFound = tokenList.filter((t) => !foundTokens.has(t));
-
-                let grantsApplied = 0;
-                const errors: string[] = [];
-                for (const user of users) {
-                  for (const g of grants) {
-                    try {
-                      await prisma.$transaction(async (tx) => {
-                        if (g.kind === 'SPECIES') {
-                          await collectionService.grantMany(user.id, g.id, g.quantity, tx);
-                        } else {
-                          for (let i = 0; i < g.quantity; i++) {
-                            await ownedEggsService.create(user.id, g.id, tx);
-                          }
-                        }
-                      });
-                      grantsApplied += 1;
-                    } catch (err: any) {
-                      errors.push(`${user.email}: ${err.message}`);
-                    }
-                  }
-                }
-
-                return {
-                  ok: true,
-                  recipientsResolved: users.length,
-                  recipientsNotFound,
-                  grantsApplied,
-                  errors,
-                };
-              } catch (err: any) {
-                return { ok: false, error: err?.message ?? 'Có lỗi xảy ra, thử lại sau' };
-              }
-            },
           },
         },
       },

@@ -81,6 +81,20 @@ enum MarketListingStatus {
   REJECTED
 }
 
+/// "Phát quà" (T-120) chỉ tặng được 1 trong 2 loại vật phẩm — giống `MarketItemType` nhưng tách
+/// enum riêng vì đây là khái niệm nghiệp vụ khác (audit log tặng quà, không phải Chợ).
+enum GiftItemKind {
+  SPECIES
+  EGG
+}
+
+/// Loại thư trong Hộp thư (T-123) — mỗi loại có `payload` JSON khác nhau (xem InboxService).
+enum InboxMessageType {
+  EGG_RECEIVED
+  EGG_HATCHED
+  ADMIN_GIFT
+}
+
 model User {
   id           String       @id @default(uuid())
   email        String       @unique
@@ -96,6 +110,8 @@ model User {
   collection CollectionEntry[]
   inventory  InventoryItem[]
   ownedEggs  OwnedEgg[]
+  giftLogsReceived GiftLog[]
+  inboxMessages    InboxMessage[]
 
   marketListingsSold   MarketListing[] @relation("MarketListingsSold")
   marketListingsBought MarketListing[] @relation("MarketListingsBought")
@@ -346,4 +362,56 @@ model MarketListing {
   @@index([status, itemType])
   @@index([sellerId, status])
   @@map("market_listings")
+}
+
+/// Nhật ký "Phát quà" (T-120) — trước đây submit xong không lưu vết gì; model này vừa thêm audit
+/// trail (ai tặng ai, tặng gì, bao nhiêu, lúc nào) vừa là resource AdminJS thật để "Phát quà" nằm
+/// chung nhóm điều hướng "Người dùng" với OwnedEgg/InventoryItem thay vì trang rời ở mục "Trang"
+/// (yêu cầu Dev1002 2026-07-27). `itemId` trỏ tới Species hoặc EggType tuỳ `itemKind` — không đặt
+/// quan hệ FK thật vì 1 cột không thể tham chiếu 2 bảng khác nhau, `itemName` là snapshot tên lúc
+/// tặng để admin đọc lịch sử không cần join.
+model GiftLog {
+  id          String       @id @default(uuid())
+  recipient   User         @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  recipientId String
+  itemKind    GiftItemKind
+  itemId      String
+  itemName    String
+  quantity    Int
+  createdAt   DateTime     @default(now())
+
+  @@index([recipientId])
+  @@map("gift_logs")
+}
+
+/// Cấu hình Force Update (T-121) — singleton (id cố định = 1), Admin chỉnh qua AdminJS mỗi lần
+/// release app cần ép người dùng cập nhật. `GET /app-version` không cần JWT (gọi được ngay ở
+/// Splash trước khi có token) — xem `app-version.service.ts`.
+model AppVersionConfig {
+  id                     Int    @id @default(1)
+  latestVersionCode      Int    @default(1)
+  minSupportedVersionCode Int   @default(1)
+  updateUrl              String @default("https://play.google.com/store/apps/details?id=com.cozypomo.app")
+  updateTitle            String @default("Cần cập nhật phiên bản mới")
+  updateMessage          String @default("Phiên bản bạn đang dùng đã quá cũ, vui lòng cập nhật để tiếp tục sử dụng CozyPomo.")
+
+  @@map("app_version_config")
+}
+
+/// Hộp thư (T-123) — thông báo trong app khi nhận trứng/trứng nở/admin tặng quà. `payload` lưu
+/// speciesId/eggTypeId/rarity/quantity tuỳ `type`, để app vẽ đúng icon mà không cần gọi thêm API.
+model InboxMessage {
+  id        String           @id @default(uuid())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  type      InboxMessageType
+  title     String
+  body      String
+  payload   Json?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("inbox_messages")
 }

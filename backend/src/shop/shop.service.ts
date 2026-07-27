@@ -3,6 +3,7 @@ import { CurrencyType, LedgerReason, ShopCategory } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrencyService } from '../currency/currency.service';
 import { OwnedEggsService } from '../owned-eggs/owned-eggs.service';
+import { InboxService } from '../inbox/inbox.service';
 
 @Injectable()
 export class ShopService {
@@ -10,6 +11,7 @@ export class ShopService {
     private readonly prisma: PrismaService,
     private readonly currencyService: CurrencyService,
     private readonly ownedEggsService: OwnedEggsService,
+    private readonly inboxService: InboxService,
   ) {}
 
   findAll(category?: ShopCategory) {
@@ -62,7 +64,16 @@ export class ShopService {
           clientEventId,
           tx,
         });
-        return this.ownedEggsService.create(userId, shopItem.eggType!.id, tx);
+        const ownedEgg = await this.ownedEggsService.create(userId, shopItem.eggType!.id, tx);
+        await this.inboxService.create(
+          userId,
+          'EGG_RECEIVED',
+          'Bạn vừa nhận được trứng mới!',
+          `Bạn đã mua thành công ${shopItem.eggType!.name} — bắt đầu ấp ngay trong phiên tập trung tiếp theo.`,
+          { eggTypeId: shopItem.eggType!.id, ownedEggId: ownedEgg.id },
+          tx,
+        );
+        return ownedEgg;
       });
     }
 

@@ -7,7 +7,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +45,8 @@ import com.cozypomo.app.ui.common.TesterCheatViewModel
 import com.cozypomo.app.ui.about.AboutScreen
 import com.cozypomo.app.ui.forest.ForestScreen
 import com.cozypomo.app.ui.home.HomeScreen
+import com.cozypomo.app.ui.inbox.InboxScreen
+import com.cozypomo.app.ui.inbox.InboxViewModel
 import com.cozypomo.app.ui.inventory.InventoryScreen
 import com.cozypomo.app.ui.market.MarketScreen
 import com.cozypomo.app.ui.settings.SettingsScreen
@@ -50,6 +55,7 @@ import com.cozypomo.app.ui.stats.StatsScreen
 
 private const val SettingsRoute = "settings"
 private const val AboutRoute = "about"
+private const val InboxRoute = "inbox"
 
 // T-111 — Cửa hàng/Chợ rời khỏi Bottom Nav, sống ở đây như route trần (giống Settings/About) —
 // mở qua ShopMarketToggleFab ở Trang chủ thay vì tab riêng.
@@ -67,6 +73,10 @@ fun CozyPomoNavHost(onLogout: () -> Unit) {
     // Messenger), không chỉ khi đang mở Cài đặt (nơi bật/tắt nó qua 5 lần chạm "Phiên bản").
     val cheatViewModel: TesterCheatViewModel = hiltViewModel()
     val cheatState by cheatViewModel.uiState.collectAsState()
+    // T-124 — cùng lý do với currencyViewModel: 1 instance duy nhất để badge số chưa đọc hiện
+    // đúng ở MỌI tab, không chỉ khi đang mở Hộp thư.
+    val inboxViewModel: InboxViewModel = hiltViewModel()
+    val inboxState by inboxViewModel.uiState.collectAsState()
     val density = LocalDensity.current
 
     // Refresh token cũng hết hạn (VD lâu ngày không mở app) → TokenAuthenticator tự xoá phiên
@@ -97,6 +107,18 @@ fun CozyPomoNavHost(onLogout: () -> Unit) {
                         modifier = Modifier.align(Alignment.CenterStart),
                     ) {
                         Icon(Icons.Filled.Settings, contentDescription = "Cài đặt")
+                    }
+                    IconButton(
+                        onClick = { navController.navigate(InboxRoute) { launchSingleTop = true } },
+                        modifier = Modifier.align(Alignment.CenterStart).padding(start = 48.dp),
+                    ) {
+                        BadgedBox(badge = {
+                            if (inboxState.unreadCount > 0) {
+                                Badge { Text(if (inboxState.unreadCount > 99) "99+" else "${inboxState.unreadCount}") }
+                            }
+                        }) {
+                            Icon(Icons.Filled.Notifications, contentDescription = "Hộp thư")
+                        }
                     }
                     CurrencyBubble(state = currencyState, modifier = Modifier.align(Alignment.CenterEnd))
                 }
@@ -171,6 +193,9 @@ fun CozyPomoNavHost(onLogout: () -> Unit) {
                 }
                 composable(AboutRoute) {
                     AboutScreen(onBack = { navController.popBackStack() })
+                }
+                composable(InboxRoute) {
+                    InboxScreen(onBack = { navController.popBackStack() }, viewModel = inboxViewModel)
                 }
             }
         }

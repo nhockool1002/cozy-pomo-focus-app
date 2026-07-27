@@ -125,7 +125,7 @@ const GiftPage: React.FC = () => {
       fd.append('recipientsText', recipientsText);
       fd.append('grants', JSON.stringify(selectedList.map(([, v]) => ({ kind: v.kind, id: v.id, quantity: v.quantity }))));
       if (csvFile) fd.append('csvFile', csvFile);
-      const res = await api.getPage({ pageName: 'gift-items', method: 'post', data: fd } as any);
+      const res = await api.resourceAction({ resourceId: 'GiftLog', actionName: 'new', data: fd } as any);
       setResult(res.data as SubmitResult);
       if ((res.data as SubmitResult).ok) {
         setSelected({});
