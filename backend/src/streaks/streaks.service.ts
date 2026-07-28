@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { CurrencyType, LedgerReason, Prisma, PrismaClient, StreakRewardItemKind } from '@prisma/client';
 import { CollectionService } from '../collection/collection.service';
 import { CurrencyService } from '../currency/currency.service';
 import { InboxService } from '../inbox/inbox.service';
 import { OwnedEggsService } from '../owned-eggs/owned-eggs.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { ShopService } from '../shop/shop.service';
 import { dayKey } from '../stats/stats.service';
 
@@ -29,12 +31,15 @@ export interface StreakRewardResult {
  */
 @Injectable()
 export class StreaksService {
+  private readonly logger = new Logger(StreaksService.name);
+
   constructor(
     private readonly collectionService: CollectionService,
     private readonly ownedEggsService: OwnedEggsService,
     private readonly shopService: ShopService,
     private readonly currencyService: CurrencyService,
     private readonly inboxService: InboxService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -112,5 +117,60 @@ export class StreaksService {
       cursor.setUTCDate(cursor.getUTCDate() - 1);
     }
     return streak;
+  }
+
+  /**
+   * T-128 — nhắc streak sắp mất, chạy 1 lần/ngày lúc 14:00 UTC (~21:00 giờ VN — trễ đủ để hầu hết
+   * người dùng đã có cơ hội tập trung trong ngày, còn dư vài giờ trước khi "ngày" theo `dayKey`
+   * (UTC) đổi lúc 7:00 sáng giờ VN hôm sau). Chỉ nhắc user có phiên COMPLETED **hôm qua** (UTC)
+   * nhưng CHƯA có phiên COMPLETED nào **hôm nay** — nghĩa là streak đang "treo", sẽ mất nếu không
+   * tập trung trước khi ngày đổi. Idempotent theo ngày: bỏ qua user đã có `STREAK_REMINDER` tạo
+   * hôm nay (phòng job chạy lại/nhiều instance), không dùng `StreakClaim` vì bảng đó chỉ ghi khi
+   * ĐANG có phiên hoàn thành, không có dữ liệu cho "chưa làm gì hôm nay".
+   */
+  @Cron('0 14 * * *')
+  async remindAtRiskStreaks(): Promise<void> {
+    const now = new Date();
+    const todayStart = new Date(`${dayKey(now)}T00:00:00.000Z`);
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setUTCDate(yesterdayStart.getUTCDate() - 1);
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
+
+    const activeYesterday = await this.prisma.session.findMany({
+      where: { status: 'COMPLETED', startedAt: { gte: yesterdayStart, lt: todayStart } },
+      distinct: ['userId'],
+      select: { userId: true },
+    });
+    if (activeYesterday.length === 0) return;
+    const candidateIds = activeYesterday.map((s) => s.userId);
+
+    const doneToday = await this.prisma.session.findMany({
+      where: { status: 'COMPLETED', startedAt: { gte: todayStart, lt: tomorrowStart }, userId: { in: candidateIds } },
+      distinct: ['userId'],
+      select: { userId: true },
+    });
+    const doneTodaySet = new Set(doneToday.map((s) => s.userId));
+    const atRiskIds = candidateIds.filter((id) => !doneTodaySet.has(id));
+    if (atRiskIds.length === 0) return;
+
+    const alreadyReminded = await this.prisma.inboxMessage.findMany({
+      where: { type: 'STREAK_REMINDER', userId: { in: atRiskIds }, createdAt: { gte: todayStart, lt: tomorrowStart } },
+      select: { userId: true },
+    });
+    const remindedSet = new Set(alreadyReminded.map((m) => m.userId));
+
+    let sent = 0;
+    for (const userId of atRiskIds) {
+      if (remindedSet.has(userId)) continue;
+      await this.inboxService.create(
+        userId,
+        'STREAK_REMINDER',
+        'Đừng để mất streak!',
+        'Bạn đã tập trung liên tục tới hôm qua — hoàn thành 1 phiên hôm nay để giữ streak nhé!',
+      );
+      sent += 1;
+    }
+    this.logger.log(`remindAtRiskStreaks: ${atRiskIds.length} at-risk, ${sent} reminder(s) sent`);
   }
 }

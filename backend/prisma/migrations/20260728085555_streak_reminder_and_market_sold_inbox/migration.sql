@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "InboxMessageType" ADD VALUE 'STREAK_REMINDER';
+ALTER TYPE "InboxMessageType" ADD VALUE 'MARKET_SOLD';

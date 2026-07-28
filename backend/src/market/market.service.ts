@@ -175,7 +175,10 @@ export class MarketService {
    * áp phí (không có gì để trừ).
    */
   async buy(userId: string, listingId: string, clientEventId?: string) {
-    const listing = await this.prisma.marketListing.findUnique({ where: { id: listingId } });
+    const listing = await this.prisma.marketListing.findUnique({
+      where: { id: listingId },
+      include: { species: { select: { name: true } }, ownedEgg: { select: { eggType: { select: { name: true } } } } },
+    });
     if (!listing || listing.status !== MarketListingStatus.ACTIVE) {
       throw new ForbiddenException('Tin đăng không còn nữa');
     }
@@ -215,6 +218,15 @@ export class MarketService {
           clientEventId: clientEventId ? `${clientEventId}:sell` : undefined,
           tx,
         });
+        const itemName = listing.species?.name ?? listing.ownedEgg?.eggType.name ?? 'vật phẩm';
+        await this.inboxService.create(
+          listing.sellerId,
+          'MARKET_SOLD',
+          'Tin đăng của bạn đã bán được!',
+          `${itemName} vừa được mua với giá ${listing.priceCoin} Xu — bạn nhận ${sellerEarns} Xu sau phí ${gameSettings.marketFeePercent}%.`,
+          { listingId: listing.id, priceCoin: listing.priceCoin, sellerEarns },
+          tx,
+        );
       }
 
       if (listing.itemType === MarketItemType.SPECIES && listing.speciesId) {

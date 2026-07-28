@@ -4,6 +4,7 @@ import type { RecordJSON } from 'adminjs';
 import SpeciesThumbnail from './SpeciesThumbnail.js';
 import { CARD_FX_CSS, RARITY_BADGE } from './species-art.js';
 import { renderEggArt, renderEggAura, eggTierForPrice, EGG_TIER_BADGE } from './egg-art.js';
+import { renderBoostArt, renderBoostAura, boostTierFor, BOOST_TIER_BADGE } from './item-art.js';
 
 const api = new ApiClient();
 
@@ -266,8 +267,14 @@ const GiftPage: React.FC = () => {
                 const name = String(record.params.name);
                 const purchasable = Boolean(record.params.purchasable);
                 const priceCoin = Number(record.params.priceCoin) || 0;
+                const boostType = record.params.boostType ? String(record.params.boostType) : null;
+                const boostAmount = record.params.boostAmount != null ? Number(record.params.boostAmount) : null;
+                const tier = boostTierFor(boostType, boostAmount, purchasable);
+                const badge = BOOST_TIER_BADGE[tier];
                 const key = `SHOP_ITEM:${id}`;
                 const isSelected = Boolean(selected[key]);
+                const icon = renderBoostArt({ boostType, tier, name });
+                const aura = renderBoostAura(boostType, tier);
                 return (
                   <div
                     key={key}
@@ -276,18 +283,18 @@ const GiftPage: React.FC = () => {
                       background: BRAND.surface,
                       border: `2px solid ${isSelected ? BRAND.primary : BRAND.border}`,
                       borderRadius: 14,
-                      padding: '14px 8px',
+                      padding: '14px 8px 10px',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      justifyContent: 'center',
                       gap: 6,
                       cursor: 'pointer',
-                      minHeight: 96,
+                      position: 'relative',
                       textAlign: 'center',
                     }}
                   >
-                    <span style={{ fontSize: 12.5, fontWeight: 700, color: BRAND.ink, lineHeight: 1.3 }}>{name}</span>
+                    <span className="sp-badge" style={{ background: badge.bg, color: badge.fg }}>{name}</span>
+                    <div className="sp-icon-wrap" style={{ width: 64, height: 64 }} dangerouslySetInnerHTML={{ __html: aura + icon }} />
                     <span style={{ fontSize: 11, fontWeight: 600, color: BRAND.inkSoft }}>
                       {purchasable ? `${priceCoin} Xu Lá` : 'Không bán — chỉ sự kiện'}
                     </span>

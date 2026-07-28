@@ -105,6 +105,10 @@ enum InboxMessageType {
   EGG_HATCHED
   ADMIN_GIFT
   STREAK_REWARD
+  /// T-128 — nhắc streak sắp mất (chưa tập trung hôm nay dù còn streak tới hôm qua).
+  STREAK_REMINDER
+  /// T-128 — vật phẩm/loài/trứng đăng bán ở Chợ vừa được người khác mua.
+  MARKET_SOLD
 }
 
 /// Loại quà trong cấu hình streak (StreakRewardDay.rewards) — id null khi kind=COIN (quantity =

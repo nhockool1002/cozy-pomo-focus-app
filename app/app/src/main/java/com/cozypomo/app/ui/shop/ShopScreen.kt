@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -28,7 +29,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.HourglassBottom
@@ -52,7 +52,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
@@ -72,6 +77,8 @@ import com.cozypomo.app.ui.common.jarTintFor
 import com.cozypomo.app.ui.common.parseEggColor
 import com.cozypomo.app.ui.home.RadianceRays
 import com.cozypomo.app.ui.home.SparkleOrbit
+import kotlin.math.cos
+import kotlin.math.sin
 
 /** Cấp bậc hiếm của trứng — suy từ tên/`purchasable` thay vì backend thêm cột riêng (đúng tinh
  * thần [com.cozypomo.app.ui.common.jarMaterialFor] đã làm với chất liệu bình). Quyết định độ
@@ -84,6 +91,19 @@ fun eggTierFor(item: ShopItemDto): EggTier = when {
     !item.purchasable -> EggTier.LEGENDARY
     item.eggType?.name?.contains("Bí Ẩn", ignoreCase = true) == true -> EggTier.MYSTERY
     else -> EggTier.COMMON
+}
+
+/** Cấp bậc vật phẩm bổ trợ (T-128, port 1:1 từ `item-art.ts#boostTierFor` — xem comment ở đó) —
+ * quyết định số tia sét quanh Túi Thời Gian + có hào quang/lấp lánh hay không. */
+enum class BoostTier { SMALL, MEDIUM, LARGE, GIANT, LEGENDARY }
+
+fun boostTierFor(item: ShopItemDto): BoostTier = when {
+    !item.purchasable -> BoostTier.LEGENDARY
+    item.boostType == "HATCH_MINUTES" -> BoostTier.MEDIUM
+    (item.boostAmount ?: 0) <= 10 -> BoostTier.SMALL
+    (item.boostAmount ?: 0) <= 20 -> BoostTier.MEDIUM
+    (item.boostAmount ?: 0) <= 50 -> BoostTier.LARGE
+    else -> BoostTier.GIANT
 }
 
 /** T-037 — S-05 Cửa hàng: Trứng mới / Bình thuỷ tinh / Nhạc nền, item có hiệu ứng bồng bềnh nhẹ.
@@ -188,15 +208,7 @@ private fun ShopItemIcon(item: ShopItemDto, size: Dp = 40.dp) {
     when (item.category) {
         "EGG" -> EggShopIcon(item = item, size = size)
         "JAR_SKIN" -> JarMark(size = size, eggColor = null, jarTint = jarTintFor(item.name), material = jarMaterialFor(item.name))
-        "BOOST" -> Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = Modifier.size(size)) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                Icon(
-                    if (item.boostType == "HATCH_MINUTES") Icons.Filled.HourglassBottom else Icons.Filled.Bolt,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.tertiary,
-                )
-            }
-        }
+        "BOOST" -> BoostShopIcon(item = item, size = size)
         else -> Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = Modifier.size(size)) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 Icon(Icons.Filled.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
@@ -247,6 +259,169 @@ private fun EggShopIcon(item: ShopItemDto, size: Dp) {
             SparkleOrbit(sizeDp = size * 0.68f, color = Color.White, rotationDeg = rotation * 1.2f)
         }
         EggIcon(color = color, size = size * 0.62f)
+    }
+}
+
+private val BOOST_AMBER = Color(0xFFF4B942)
+private val BOOST_AMBER_DARK = Color(0xFFB9761F)
+private val BOOST_AMBER_LIGHT = Color(0xFFFFE9B8)
+private val BOOST_MOON_BASE = Color(0xFF8FA8E8)
+private val BOOST_MOON_DARK = Color(0xFF4F5FA8)
+private val BOOST_DEW_BASE = Color(0xFF6FD8D0)
+private val BOOST_DEW_LIGHT = Color(0xFFE0FFFC)
+private val BOOST_GOLD = Color(0xFFF4D160)
+
+private val BOOST_BOLT_COUNT = mapOf(
+    BoostTier.SMALL to 1, BoostTier.MEDIUM to 2, BoostTier.LARGE to 3, BoostTier.GIANT to 4, BoostTier.LEGENDARY to 4,
+)
+
+/** Hoạ tiết sparkle (✦) 4 cánh — bản sao riêng của `SpeciesArt.kt#sparkleMark` (private ở đó,
+ * không export được) chỉ dùng cho [MoonBody]. */
+private fun sparkleMark(cx: Float, cy: Float, r: Float): Path {
+    val r2 = r * 0.35f
+    return Path().apply {
+        moveTo(cx, cy - r); lineTo(cx + r2, cy - r2); lineTo(cx + r, cy); lineTo(cx + r2, cy + r2)
+        lineTo(cx, cy + r); lineTo(cx - r2, cy + r2); lineTo(cx - r, cy); lineTo(cx - r2, cy - r2)
+        close()
+    }
+}
+
+/** Icon vật phẩm bổ trợ (T-128) — port 1:1 từ `item-art.ts` (xem comment ở đó cho ý nghĩa 2 chủ
+ * đề Túi Thời Gian/Giọt Sương-Ánh Trăng). Toạ độ hình vẽ giữ nguyên hệ 0..100 như bản SVG gốc để
+ * khớp chính xác bản đã duyệt qua mockup, chỉ đổi từ `<path>` tĩnh sang Canvas + animation
+ * (bồng bềnh có sẵn qua [FloatingIcon] ở nơi gọi, thêm mạch đập/tia sét/xoay riêng ở đây). */
+@Composable
+private fun BoostShopIcon(item: ShopItemDto, size: Dp) {
+    val tier = boostTierFor(item)
+    val infiniteTransition = rememberInfiniteTransition(label = "boostAura")
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 1.12f,
+        animationSpec = infiniteRepeatable(tween(850, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "boostPulse",
+    )
+    val flicker by infiniteTransition.animateFloat(
+        initialValue = 0.5f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(650, easing = LinearEasing), RepeatMode.Reverse),
+        label = "boostFlicker",
+    )
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(if (tier == BoostTier.LEGENDARY) 4000 else 7000, easing = LinearEasing)),
+        label = "boostRotation",
+    )
+    val isHatch = item.boostType == "HATCH_MINUTES"
+    val ringColor = when {
+        tier == BoostTier.LEGENDARY -> BOOST_GOLD
+        isHatch -> BOOST_DEW_BASE
+        else -> BOOST_AMBER
+    }
+
+    Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .size(size * 0.85f)
+                .graphicsLayer { scaleX = pulse; scaleY = pulse }
+                .background(ringColor.copy(alpha = 0.25f), CircleShape),
+        )
+        if (tier == BoostTier.GIANT || tier == BoostTier.LEGENDARY) {
+            RadianceRays(sizeDp = size, rayCount = 16, color = ringColor, rotationDeg = rotation)
+        }
+        if (tier == BoostTier.LEGENDARY) {
+            SparkleOrbit(sizeDp = size * 0.92f, color = BOOST_GOLD, rotationDeg = -rotation * 1.4f)
+        }
+        if (isHatch) {
+            if (tier == BoostTier.LEGENDARY) MoonBody(size = size * 0.66f) else DewBody(size = size * 0.62f)
+        } else {
+            PouchBody(size = size * 0.66f, boltCount = BOOST_BOLT_COUNT.getValue(tier), flicker = flicker)
+        }
+    }
+}
+
+/** Túi rút dây phát sáng vàng hổ phách + tia sét bên trong, tia sét quanh túi tăng theo tier. */
+@Composable
+private fun PouchBody(size: Dp, boltCount: Int, flicker: Float) {
+    Canvas(modifier = Modifier.size(size)) {
+        val u = this.size.width / 100f
+        val body = Path().apply {
+            moveTo(28 * u, 50 * u)
+            cubicTo(28 * u, 34 * u, 38 * u, 26 * u, 50 * u, 26 * u)
+            cubicTo(62 * u, 26 * u, 72 * u, 34 * u, 72 * u, 50 * u)
+            lineTo(70 * u, 82 * u)
+            cubicTo(70 * u, 90 * u, 61 * u, 94 * u, 50 * u, 94 * u)
+            cubicTo(39 * u, 94 * u, 30 * u, 90 * u, 30 * u, 82 * u)
+            close()
+        }
+        drawPath(body, BOOST_AMBER)
+        drawPath(
+            Path().apply { moveTo(32 * u, 46 * u); quadraticTo(50 * u, 30 * u, 68 * u, 46 * u) },
+            BOOST_AMBER_DARK,
+            style = Stroke(4 * u, cap = StrokeCap.Round),
+        )
+        drawCircle(BOOST_AMBER_DARK, radius = 3 * u, center = Offset(40 * u, 42 * u))
+        drawCircle(BOOST_AMBER_DARK, radius = 3 * u, center = Offset(60 * u, 42 * u))
+        drawOval(BOOST_AMBER_LIGHT, topLeft = Offset(32 * u, 46 * u), size = Size(18 * u, 26 * u), alpha = 0.65f)
+        drawPath(
+            Path().apply {
+                moveTo(50 * u, 48 * u); lineTo(44 * u, 62 * u); lineTo(49 * u, 62 * u)
+                lineTo(45 * u, 76 * u); lineTo(58 * u, 58 * u); lineTo(51 * u, 58 * u); close()
+            },
+            BOOST_AMBER_DARK,
+        )
+        for (i in 0 until boltCount) {
+            val angle = (360f / boltCount) * i + 20f
+            val rad = Math.toRadians(angle.toDouble())
+            val bx = 50 * u + 42 * u * cos(rad).toFloat()
+            val by = 55 * u + 42 * u * sin(rad).toFloat()
+            drawPath(
+                Path().apply {
+                    moveTo(bx, by - 6 * u); lineTo(bx - 3 * u, by + 1 * u); lineTo(bx, by + 1 * u)
+                    lineTo(bx - 3 * u, by + 8 * u); lineTo(bx + 4 * u, by - 2 * u); lineTo(bx + 0.5f * u, by - 2 * u); close()
+                },
+                BOOST_AMBER_DARK,
+                alpha = flicker,
+            )
+        }
+    }
+}
+
+/** Giọt sương đơn giản, tông xanh ngọc dịu. */
+@Composable
+private fun DewBody(size: Dp) {
+    Canvas(modifier = Modifier.size(size)) {
+        val u = this.size.width / 100f
+        val path = Path().apply {
+            moveTo(50 * u, 18 * u)
+            cubicTo(64 * u, 40 * u, 74 * u, 56 * u, 74 * u, 68 * u)
+            cubicTo(74 * u, 84 * u, 63 * u, 94 * u, 50 * u, 94 * u)
+            cubicTo(37 * u, 94 * u, 26 * u, 84 * u, 26 * u, 68 * u)
+            cubicTo(26 * u, 56 * u, 36 * u, 40 * u, 50 * u, 18 * u)
+            close()
+        }
+        drawPath(path, BOOST_DEW_BASE)
+        drawOval(BOOST_DEW_LIGHT, topLeft = Offset(33 * u, 50 * u), size = Size(16 * u, 24 * u), alpha = 0.7f)
+    }
+}
+
+/** Ánh Trăng Ấp Trứng — trăng lưỡi liềm vàng kim + sao nhỏ, tông "huyền thoại" khác hẳn Giọt
+ * Sương để phân biệt rõ ngay từ hình dạng, không chỉ qua hào quang. */
+@Composable
+private fun MoonBody(size: Dp) {
+    Canvas(modifier = Modifier.size(size)) {
+        val u = this.size.width / 100f
+        val crescent = Path().apply {
+            moveTo(62 * u, 24 * u)
+            cubicTo(46 * u, 24 * u, 33 * u, 38 * u, 33 * u, 55 * u)
+            cubicTo(33 * u, 72 * u, 46 * u, 86 * u, 62 * u, 86 * u)
+            cubicTo(68 * u, 86 * u, 74 * u, 84 * u, 78 * u, 81 * u)
+            cubicTo(68 * u, 80 * u, 58 * u, 68 * u, 58 * u, 55 * u)
+            cubicTo(58 * u, 42 * u, 68 * u, 30 * u, 78 * u, 29 * u)
+            cubicTo(74 * u, 26 * u, 68 * u, 24 * u, 62 * u, 24 * u)
+            close()
+        }
+        drawPath(crescent, BOOST_MOON_BASE)
+        drawPath(crescent, BOOST_MOON_DARK, alpha = 0.28f)
+        drawPath(sparkleMark(28 * u, 42 * u, 4.5f * u), BOOST_GOLD)
+        drawPath(sparkleMark(74 * u, 65 * u, 3.5f * u), BOOST_GOLD)
     }
 }
 
