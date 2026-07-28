@@ -470,6 +470,8 @@ Trên nền T-125 (vừa commit): nút giá trứng (`EggCurrencyButtons`/`MiniC
 
 **Đưa nội dung mới của T-125 (lore 175 loài, 6 vật phẩm BOOST, 7 dòng streak_reward_days) lên production mà không đụng user thật:** `backend/prisma/seed.ts` xoá sạch toàn bộ dữ liệu (kể cả `nhininh410@gmail.com`) nên **không được chạy trên production** kể từ khi có tài khoản thật — job `reseed-production` trong `backend-deploy.yml` đã tự cảnh báo điều này. Viết thêm `backend/prisma/patch-boost-and-lore.ts` (chỉ INSERT vật phẩm BOOST còn thiếu theo tên + UPDATE `Species.lore` cho loài đang null + `createMany({skipDuplicates:true})` cho `streak_reward_days` — không `deleteMany` bất kỳ bảng nào) và job `patch-content` mới trong `backend-deploy.yml` (input `patch_content`, không cần gõ xác nhận vì không có rủi ro mất dữ liệu, `needs: deploy` để đảm bảo migration đã chạy trước). Đây là lựa chọn an toàn hơn hẳn "backup user rồi reseed toàn bộ rồi restore" — vì `Species`/`ShopItem`/`EggType` dùng `id` tự sinh UUID lúc tạo, reseed toàn bộ sẽ sinh ID mới, làm gãy toàn bộ FK (`CollectionEntry.speciesId`, `LedgerEntry.refShopItemId`, `OwnedEgg.eggTypeId`...) của **mọi** user hiện có, không riêng gì tài khoản cần giữ.
 
+**✅ Đã release (2026-07-28):** merge `main` (`01bdd7f`) → `backend-v1.20260728.001` (build+push+deploy thành công, migration tự chạy qua `prisma migrate deploy` trong Dockerfile CMD) + `app-v1.20260728.001` (AAB/APK build/ký/upload thành công) → chạy tay `patch-content` qua `workflow_dispatch` (`deploy=true` để thoả `needs: deploy`, `patch_content=true`) — log xác nhận: cập nhật lore 175 loài, tạo 6 `ShopItem` BOOST, tạo 7 `StreakRewardDay`, không đụng bảng nào khác. Đã curl kiểm tra `cozyapi.nhutnm.id.vn` sống bình thường sau deploy.
+
 ---
 
 ## ⬜ Chưa làm
