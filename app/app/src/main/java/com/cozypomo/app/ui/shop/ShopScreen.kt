@@ -279,26 +279,31 @@ private fun ShopItemRow(
                         Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
                 } else if (item.purchasable) {
+                    // Giá không còn hiện ở đây — dời sang nút pill Xu Lá bên phải, đồng nhất với
+                    // Trứng mới thay vì dòng giá chữ + nút "Mua ngay" to bản trước đây (T-126).
                     item.description?.let {
                         Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    Text("${item.priceCoin} Xu", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
                 }
             }
-            Spacer(modifier = Modifier.width(8.dp))
             when {
                 !item.purchasable -> {} // để trống — không hiện nút, không mua được (không phải "Không bán")
-                owned -> OutlinedButton(onClick = {}, enabled = false) { Text("Đã sở hữu") }
-                item.category == "EGG" -> EggCurrencyButtons(
-                    item = item,
-                    coinBalance = coinBalance,
-                    focusMinutesBalance = focusMinutesBalance,
-                    onBuyWith = onBuyEggWith,
-                )
-                coinBalance == null || coinBalance < item.priceCoin ->
-                    Button(onClick = {}, enabled = false) { Text("Cần thêm Xu") }
-                else -> Button(onClick = onBuy, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
-                    Text("Mua ngay")
+                owned -> {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedButton(onClick = {}, enabled = false) { Text("Đã sở hữu") }
+                }
+                item.category == "EGG" -> {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    EggCurrencyButtons(
+                        item = item,
+                        coinBalance = coinBalance,
+                        focusMinutesBalance = focusMinutesBalance,
+                        onBuyWith = onBuyEggWith,
+                    )
+                }
+                else -> {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    CoinOnlyButton(item = item, coinBalance = coinBalance, onClick = onBuy)
                 }
             }
         }
@@ -306,34 +311,54 @@ private fun ShopItemRow(
 }
 
 /** 2 nút mua trứng nhỏ gọn theo icon tiền tệ (Xu Lá/Giờ tích luỹ) — thay cho 1 nút "Mua ngay" +
- * dòng giá chữ vàng trước đây (T-125). Chạm nút nào mua ngay bằng loại tiền đó, không qua dialog. */
+ * dòng giá chữ vàng trước đây (T-125). Chạm nút nào mua ngay bằng loại tiền đó, không qua dialog.
+ * Màu khớp bubble số dư dùng chung ([com.cozypomo.app.ui.common.BalancePill]): Xu Lá = `secondary`
+ * (vàng), Giờ tích luỹ = `primary` (xanh nhạt) — trước đây cả 2 nút cùng màu `primary` nên khó
+ * phân biệt (T-126, phản hồi người dùng). */
 @Composable
 private fun EggCurrencyButtons(item: ShopItemDto, coinBalance: Int?, focusMinutesBalance: Int?, onBuyWith: (String) -> Unit) {
     val priceHours = item.eggType?.priceHours ?: 0
-    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         MiniCurrencyButton(
             icon = Icons.Filled.Eco,
             label = "${item.priceCoin}",
+            color = MaterialTheme.colorScheme.secondary,
             enabled = coinBalance == null || coinBalance >= item.priceCoin,
             onClick = { onBuyWith("COIN") },
         )
         MiniCurrencyButton(
             icon = Icons.Filled.HourglassBottom,
             label = "${priceHours}p",
+            color = MaterialTheme.colorScheme.primary,
             enabled = focusMinutesBalance == null || focusMinutesBalance >= priceHours,
             onClick = { onBuyWith("FOCUS_MINUTE") },
         )
     }
 }
 
+/** Vật phẩm không phải EGG chỉ có 1 loại tiền (Xu Lá) — cùng kiểu pill nhỏ gọn để đồng nhất với
+ * trứng thay vì dòng giá chữ + nút "Mua ngay" to bản trước đây (T-126). */
 @Composable
-private fun MiniCurrencyButton(icon: ImageVector, label: String, enabled: Boolean, onClick: () -> Unit) {
+private fun CoinOnlyButton(item: ShopItemDto, coinBalance: Int?, onClick: () -> Unit) {
+    MiniCurrencyButton(
+        icon = Icons.Filled.Eco,
+        label = "${item.priceCoin}",
+        color = MaterialTheme.colorScheme.secondary,
+        enabled = coinBalance == null || coinBalance >= item.priceCoin,
+        onClick = onClick,
+    )
+}
+
+@Composable
+private fun MiniCurrencyButton(icon: ImageVector, label: String, color: Color, enabled: Boolean, onClick: () -> Unit) {
+    val bg = if (enabled) color.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surfaceContainerHighest
+    val fg = if (enabled) color else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
     Surface(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(50),
-        color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
-        contentColor = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        color = bg,
+        contentColor = fg,
     ) {
         Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -344,12 +369,12 @@ private fun MiniCurrencyButton(icon: ImageVector, label: String, enabled: Boolea
 }
 
 @Composable
-private fun LargeCurrencyButton(modifier: Modifier = Modifier, icon: ImageVector, label: String, enabled: Boolean, onClick: () -> Unit) {
+private fun LargeCurrencyButton(modifier: Modifier = Modifier, icon: ImageVector, label: String, color: Color, enabled: Boolean, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier,
-        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+        colors = ButtonDefaults.buttonColors(containerColor = color),
     ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(6.dp))
@@ -434,6 +459,7 @@ private fun ShopItemDetailDialog(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Filled.Eco,
                                 label = "${item.priceCoin} Xu",
+                                color = MaterialTheme.colorScheme.secondary,
                                 enabled = coinBalance == null || coinBalance >= item.priceCoin,
                                 onClick = { onBuyEggWith("COIN") },
                             )
@@ -441,6 +467,7 @@ private fun ShopItemDetailDialog(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Filled.HourglassBottom,
                                 label = "$priceHours phút",
+                                color = MaterialTheme.colorScheme.primary,
                                 enabled = focusMinutesBalance == null || focusMinutesBalance >= priceHours,
                                 onClick = { onBuyEggWith("FOCUS_MINUTE") },
                             )
@@ -457,7 +484,7 @@ private fun ShopItemDetailDialog(
                             onClick = onBuy,
                             enabled = coinBalance == null || coinBalance >= item.priceCoin,
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                         ) { Text("Mua ngay") }
                     }
                 }

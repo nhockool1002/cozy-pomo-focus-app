@@ -28,6 +28,10 @@ on:
         description: "Gõ đúng chữ RESEED_TESTERS để xác nhận (chỉ cần khi reseed_testers=true)"
         type: string
         default: ""
+      patch_content:
+        description: "An toàn nhất: chỉ THÊM (không xoá/sửa gì hiện có) — lore 175 loài đang null, 6 vật phẩm BOOST, 7 dòng streak_reward_days rỗng. Không cần gõ xác nhận (chỉ INSERT/UPDATE-nếu-null, không đụng User/Session/Ledger)."
+        type: boolean
+        default: false
 
 env:
   IMAGE: ghcr.io/${{ github.repository }}/backend
@@ -135,3 +139,26 @@ jobs:
             CID=$(docker compose -f docker-compose.prod.yml ps -q api)
             docker exec "$CID" npm install --no-save ts-node typescript
             docker exec "$CID" npx ts-node --compiler-options '{"module":"commonjs"}' prisma/reseed-testers.ts
+
+  patch-content:
+    # An toàn tuyệt đối: KHÔNG có lệnh xoá/deleteMany nào trong patch-boost-and-lore.ts, chỉ INSERT
+    # vật phẩm BOOST/streak_reward_days còn thiếu + UPDATE lore cho loài đang null — không cần cổng
+    # xác nhận gõ chữ như 2 job reseed ở trên vì không có rủi ro mất dữ liệu (chạy lại nhiều lần vẫn
+    # an toàn, tự bỏ qua phần đã có). Chạy job này SAU khi deploy image mới (đã có bảng
+    # streak_reward_days + cột boostType/boostAmount từ migration) — thứ tự: build-and-push → deploy
+    # → patch-content.
+    needs: deploy
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.patch_content == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Patch content via SSH (cài tạm ts-node/typescript trong container rồi chạy patch-boost-and-lore.ts)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            CID=$(docker compose -f docker-compose.prod.yml ps -q api)
+            docker exec "$CID" npm install --no-save ts-node typescript
+            docker exec "$CID" npx ts-node --compiler-options '{"module":"commonjs"}' prisma/patch-boost-and-lore.ts
