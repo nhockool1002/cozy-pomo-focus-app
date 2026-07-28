@@ -54,6 +54,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -91,6 +93,15 @@ fun eggTierFor(item: ShopItemDto): EggTier = when {
     !item.purchasable -> EggTier.LEGENDARY
     item.eggType?.name?.contains("Bí Ẩn", ignoreCase = true) == true -> EggTier.MYSTERY
     else -> EggTier.COMMON
+}
+
+private val LEGENDARY_GOLD = Color(0xFFF4D160)
+
+/** Pha sáng 1 màu (amt trong 0..1) — port 1:1 công thức `shade()` bên `egg-art.ts` (Admin), giữ
+ * đúng cùng phép tính để 2 nền tảng ra cùng 1 sắc "glow" từ cùng 1 `colorHex`. */
+private fun lightenColor(color: Color, amt: Float): Color {
+    fun mix(v: Float) = v + (1f - v) * amt
+    return Color(mix(color.red), mix(color.green), mix(color.blue), color.alpha)
 }
 
 /** Cấp bậc vật phẩm bổ trợ (T-128, port 1:1 từ `item-art.ts#boostTierFor` — xem comment ở đó) —
@@ -240,23 +251,41 @@ private fun EggShopIcon(item: ShopItemDto, size: Dp) {
             // Giữ nguyên như cũ — vòng tia đơn theo màu trứng, không lấp lánh.
             RadianceRays(sizeDp = size, rayCount = 9, color = color, rotationDeg = rotation)
         } else {
+            // LEGENDARY (T-128, Dev1002 yêu cầu tối hơn/cổ hơn/mãn nhãn hơn) — hào quang lấy màu
+            // TỪ CHÍNH `colorHex` của trứng (pha sáng ra `glow`), không dùng `colorScheme.secondary`
+            // cố định như trước (mọi Trứng Truyền Thuyết phát sáng cùng 1 màu vàng nhạt — không
+            // "cổ", không phân biệt được loại nào với loại nào). Port 1:1 với
+            // `egg-art.ts#legendaryEggAura` (quầng glow mix-blend + lõi sáng + 2 lớp tia xoay ngược
+            // chiều + sparkle), chỉ khác công cụ vẽ do khác nền tảng (SVG dash-ring ↔ RadianceRays).
+            val glow = lightenColor(color, 0.45f)
             val pulse by infiniteTransition.animateFloat(
                 initialValue = 1f,
                 targetValue = 1.16f,
                 animationSpec = infiniteRepeatable(tween(750, easing = FastOutSlowInEasing), RepeatMode.Reverse),
                 label = "eggAuraPulse",
             )
-            val auraColor = MaterialTheme.colorScheme.secondary
+            Canvas(modifier = Modifier.size(size * 0.95f)) {
+                drawCircle(
+                    brush = Brush.radialGradient(listOf(glow.copy(alpha = 0.85f), glow.copy(alpha = 0f)), radius = this.size.width * 0.46f),
+                    radius = this.size.width * 0.46f,
+                    blendMode = BlendMode.Screen,
+                )
+                drawCircle(
+                    brush = Brush.radialGradient(listOf(Color(0xFFFFFDF0), glow.copy(alpha = 0f)), radius = this.size.width * 0.17f),
+                    radius = this.size.width * 0.17f,
+                    blendMode = BlendMode.Screen,
+                )
+            }
             Box(
                 modifier = Modifier
                     .size(size * 0.85f)
                     .graphicsLayer { scaleX = pulse; scaleY = pulse }
-                    .background(auraColor.copy(alpha = 0.28f), CircleShape),
+                    .background(glow.copy(alpha = 0.22f), CircleShape),
             )
-            RadianceRays(sizeDp = size, rayCount = 22, color = auraColor, rotationDeg = rotation)
-            RadianceRays(sizeDp = size * 0.78f, rayCount = 14, color = auraColor.copy(alpha = 0.65f), rotationDeg = -rotation * 0.6f)
-            SparkleOrbit(sizeDp = size * 0.9f, color = auraColor, rotationDeg = -rotation * 1.6f)
-            SparkleOrbit(sizeDp = size * 0.68f, color = Color.White, rotationDeg = rotation * 1.2f)
+            RadianceRays(sizeDp = size, rayCount = 22, color = glow, rotationDeg = rotation)
+            RadianceRays(sizeDp = size * 0.78f, rayCount = 14, color = LEGENDARY_GOLD.copy(alpha = 0.75f), rotationDeg = -rotation * 0.6f)
+            SparkleOrbit(sizeDp = size * 0.9f, color = LEGENDARY_GOLD, rotationDeg = -rotation * 1.6f)
+            SparkleOrbit(sizeDp = size * 0.68f, color = glow, rotationDeg = rotation * 1.2f)
         }
         EggIcon(color = color, size = size * 0.62f)
     }

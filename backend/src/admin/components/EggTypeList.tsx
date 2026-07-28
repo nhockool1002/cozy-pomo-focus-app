@@ -118,7 +118,7 @@ const EggTypeList: React.FC<ActionProps> = ({ resource }) => {
             const badge = EGG_TIER_BADGE[cardTier];
             const isLegendary = cardTier === 'legendary';
             const icon = renderEggArt({ colorHex, name });
-            const aura = renderEggAura(colorHex, priceCoin);
+            const aura = renderEggAura(colorHex, priceCoin, name);
             return (
               <a
                 key={record.id}

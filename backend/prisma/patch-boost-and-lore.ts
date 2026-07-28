@@ -12,6 +12,9 @@
  *      "Trứng Kapi" (30 phút ấp, `priceCoin`/`priceHours` = 0) + 1 `EggDropEntry`/`EggRarityWeight`
  *      riêng (weight 100% — trứng này CHỈ nở ra đúng loài này) + `ShopItem` `purchasable: false` —
  *      bỏ qua toàn bộ nếu Species "Kapi Ngái Ngủ" đã tồn tại (idempotent, chạy lại không tạo trùng).
+ *   5. (T-129) Ẩn `ShopItem` "Trứng Kapi" khỏi Cửa hàng Android (`isActive: false`) nếu dòng đó đã
+ *      được tạo từ trước (bởi lần chạy T-127 ban đầu, trước khi có yêu cầu ẩn hẳn khỏi Cửa hàng) —
+ *      `updateMany` chỉ khớp đúng tên + đang `isActive: true`, không đụng gì khác của dòng đó.
  *
  * KHÔNG đụng tới: User, Session, LedgerEntry, CollectionEntry, InventoryItem, OwnedEgg,
  * UserSettings, EggType/ShopItem/Species đã có sẵn — an toàn tuyệt đối cho MỌI user, kể cả tài
@@ -92,11 +95,19 @@ async function main() {
         category: ShopCategory.EGG,
         priceCoin: 0,
         purchasable: false,
+        isActive: false, // T-128 — ẩn hoàn toàn khỏi Cửa hàng Android, xem comment ở seed.ts
         eggTypeId: eggKapi.id,
       },
     });
     console.log(`   ✓ Đã tạo loài Kapi Ngái Ngủ (id ${kapiSpecies.id}) + Trứng Kapi (id ${eggKapi.id}).`);
   }
+
+  console.log('5) Ẩn Trứng Kapi khỏi Cửa hàng Android nếu ShopItem đã tồn tại từ trước (T-128)...');
+  const kapiVisibilityFix = await prisma.shopItem.updateMany({
+    where: { name: 'Trứng Kapi', isActive: true },
+    data: { isActive: false },
+  });
+  console.log(`   ✓ Đã ẩn ${kapiVisibilityFix.count} dòng (0 nghĩa là đã ẩn từ trước hoặc chưa tồn tại).`);
 
   console.log('Xong — không xoá/đụng tới bất kỳ User/Session/Ledger/Collection/Inventory nào.');
 }

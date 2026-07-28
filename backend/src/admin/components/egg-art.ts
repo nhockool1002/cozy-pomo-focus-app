@@ -82,15 +82,62 @@ function sparkles(colorHex: string): string {
     .join('');
 }
 
+function hashStr(s: string): number {
+  let h = 1779033703;
+  for (let i = 0; i < s.length; i++) {
+    h = Math.imul(h ^ s.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Hào quang Huyền thoại (T-128, Dev1002 yêu cầu tối hơn/cổ hơn/mãn nhãn hơn) — port 1:1 cùng cấu
+ * trúc với hào quang SSR loài (`species-art.ts#renderAura`, xem comment ở đó: quầng glow mix-blend
+ * screen + lõi sáng + vòng nét đứt xoay 2 chiều + sparkle) nhưng KHÔNG dùng vàng-hồng chung cho mọi
+ * loài — quầng sáng lấy từ chính `colorHex` (đã tối/cổ) của từng quả trứng pha sáng lên (`glow`),
+ * mỗi Trứng Truyền Thuyết phát ra 1 màu hào quang riêng theo "chất liệu" của nó (Rừng xanh rêu,
+ * Biển xanh lam, Hoa hồng cổ) — chỉ giữ lại `GOLD` làm 1 vòng nhấn nhỏ chung, gợi "cổ vật dát vàng"
+ * thay vì mọi Trứng Truyền Thuyết phát sáng cùng 1 màu vàng-hồng như SSR loài (mờ nhạt bản sắc).
+ */
+function legendaryEggAura(base: string, seed: string): string {
+  const glow = shade(base, 0.45);
+  const gid = `eggBlaze${Math.abs(hashStr(seed)).toString(36)}`;
+  const gid2 = `eggCore${Math.abs(hashStr(seed + 'core')).toString(36)}`;
+  const defs = `<defs>
+      <radialGradient id="${gid}" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="${glow}" stop-opacity="0.9"/>
+        <stop offset="100%" stop-color="${glow}" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="${gid2}" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#FFFDF0" stop-opacity="0.9"/>
+        <stop offset="100%" stop-color="${glow}" stop-opacity="0"/>
+      </radialGradient>
+    </defs>`;
+  const glowLayer = `<circle class="sp-blaze" cx="50" cy="55" r="42" fill="url(#${gid})" style="mix-blend-mode:screen"/>
+    <circle class="sp-core" cx="50" cy="55" r="15" fill="url(#${gid2})" style="mix-blend-mode:screen"/>`;
+  const rings = `<circle class="sp-ring-hot" cx="50" cy="55" r="39" fill="none" stroke="${glow}" stroke-width="3.2" opacity="0.9"/>
+    <g class="sp-aura-ring gold">
+      <circle cx="50" cy="55" r="34" fill="none" stroke="${GOLD}" stroke-width="2" opacity="0.8" stroke-dasharray="7 6" stroke-linecap="round"/>
+    </g>
+    <g class="sp-aura-ring gold-rev">
+      <circle cx="50" cy="55" r="25" fill="none" stroke="${glow}" stroke-width="1.6" opacity="0.65" stroke-dasharray="5 5" stroke-linecap="round"/>
+    </g>`;
+  const spark = sparkles(GOLD);
+  return `${defs}${glowLayer}${rings}${spark}`;
+}
+
 /** Vầng hào quang phía sau trứng, màu theo `colorHex` riêng và độ rực theo mốc giá (thường/hiếm/huyền thoại). */
-export function renderEggAura(colorHex: string, priceCoin: number): string {
+export function renderEggAura(colorHex: string, priceCoin: number, seed = 'egg'): string {
   const base = HEX_RE.test(colorHex) ? colorHex : DEFAULT_COLOR;
   const tier = eggTierForPrice(priceCoin);
+  if (tier === 'legendary') {
+    return `<svg class="sp-aura ssr" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${legendaryEggAura(base, seed)}</svg>`;
+  }
   const circles = TIER_RINGS[tier]
     .map(([rad, w, op]) => `<circle class="sp-pulse" cx="50" cy="55" r="${rad}" fill="none" stroke="${base}" stroke-width="${w}" opacity="${op}"/>`)
     .join('');
-  const flair = tier === 'legendary' ? sparkles(GOLD) : '';
-  return `<svg class="sp-aura" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${circles}${flair}</svg>`;
+  return `<svg class="sp-aura" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${circles}</svg>`;
 }
 
 export const EGG_TIER_LABEL: Record<EggTier, string> = {

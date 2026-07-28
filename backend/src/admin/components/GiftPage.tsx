@@ -238,7 +238,7 @@ const GiftPage: React.FC = () => {
                 const key = `EGG:${id}`;
                 const isSelected = Boolean(selected[key]);
                 const icon = renderEggArt({ colorHex, name });
-                const aura = renderEggAura(colorHex, priceCoin);
+                const aura = renderEggAura(colorHex, priceCoin, name);
                 return (
                   <div
                     key={key}

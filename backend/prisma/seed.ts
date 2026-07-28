@@ -342,6 +342,12 @@ async function main() {
       category: ShopCategory.EGG,
       priceCoin: 0,
       purchasable: false,
+      // T-128 — khác 3 trứng Truyền Thuyết (isActive mặc định true, hiện trong Cửa hàng nhưng
+      // khoá nút mua) — Trứng Kapi phải ẨN HOÀN TOÀN khỏi Cửa hàng Android (không hiện dù khoá),
+      // chỉ còn thấy trong AdminJS. `isActive: false` đã được `ShopService.findAll()` lọc sẵn cho
+      // đúng mục đích này — không đụng gì tới việc tặng qua Admin/hiện ở Kho đồ/ấp trứng (những
+      // luồng đó đọc thẳng `OwnedEgg`, không qua bảng `shop_items` này).
+      isActive: false,
       eggTypeId: eggKapi.id,
     },
   });
