@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ShopService } from './shop.service';
 import { PurchaseDto } from './dto/purchase.dto';
+import { UseItemDto } from './dto/use-item.dto';
 
 @ApiTags('shop')
 @Controller()
@@ -39,5 +40,16 @@ export class ShopController {
   @Patch('inventory/:id/equip')
   toggleEquip(@CurrentUser() user: { userId: string }, @Param('id') id: string) {
     return this.shopService.toggleEquip(user.userId, id);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch('inventory/:id/use')
+  useItem(
+    @CurrentUser() user: { userId: string },
+    @Param('id') id: string,
+    @Body() dto: UseItemDto,
+  ) {
+    return this.shopService.useItem(user.userId, id, dto.ownedEggId);
   }
 }

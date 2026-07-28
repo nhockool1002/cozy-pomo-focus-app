@@ -9,6 +9,7 @@ data class SettingsDto(
     val breakMinutes: Int,
     val strictModeEnabled: Boolean,
     val soundTheme: String,
+    val soundMuted: Boolean = false,
 )
 
 /** Mọi field optional — PATCH /settings chỉ ghi đè field nào được gửi lên (xem UpdateSettingsDto ở backend). */
@@ -18,4 +19,5 @@ data class UpdateSettingsRequest(
     val breakMinutes: Int? = null,
     val strictModeEnabled: Boolean? = null,
     val soundTheme: String? = null,
+    val soundMuted: Boolean? = null,
 )

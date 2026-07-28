@@ -4,9 +4,10 @@ import { SessionsService } from './sessions.service';
 import { CurrencyModule } from '../currency/currency.module';
 import { GameSettingsModule } from '../game-settings/game-settings.module';
 import { OwnedEggsModule } from '../owned-eggs/owned-eggs.module';
+import { StreaksModule } from '../streaks/streaks.module';
 
 @Module({
-  imports: [CurrencyModule, GameSettingsModule, OwnedEggsModule],
+  imports: [CurrencyModule, GameSettingsModule, OwnedEggsModule, StreaksModule],
   controllers: [SessionsController],
   providers: [SessionsService],
   exports: [SessionsService],

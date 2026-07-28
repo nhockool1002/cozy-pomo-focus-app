@@ -7,6 +7,7 @@
  */
 import {
   AuthProvider,
+  BoostType,
   CurrencyType,
   LedgerReason,
   OwnedEggStatus,
@@ -17,6 +18,7 @@ import {
   SpeciesCategory,
 } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { SPECIES_LORE } from './species-lore';
 
 const prisma = new PrismaClient();
 
@@ -124,16 +126,22 @@ async function main() {
   await prisma.eggType.deleteMany();
   await prisma.species.deleteMany();
   await prisma.gameSettings.deleteMany();
+  await prisma.streakRewardDay.deleteMany();
 
   console.log('Nạp cấu hình kinh tế (game_settings)...');
   await prisma.gameSettings.create({ data: { id: 1, coinsPerFocusMinute: 10 } });
+
+  console.log('Nạp cấu hình quà streak (streak_reward_days, rỗng — admin điền qua AdminJS)...');
+  await prisma.streakRewardDay.createMany({
+    data: Array.from({ length: 7 }, (_, i) => ({ day: i + 1, rewards: [] })),
+  });
 
   console.log('Nạp 175 loài...');
   const insertSpecies = async (list: SpeciesSeed[], category: SpeciesCategory, rarity?: Rarity) => {
     const created = [];
     for (const [name, archetype, paletteIdx] of list) {
       const s = await prisma.species.create({
-        data: { name, category, archetype, paletteIdx, rarity: rarity ?? rarityFor(name) },
+        data: { name, category, archetype, paletteIdx, rarity: rarity ?? rarityFor(name), lore: SPECIES_LORE[name] },
       });
       created.push(s);
     }
@@ -183,14 +191,17 @@ async function main() {
   });
   // 3 trứng Truyền Thuyết: priceCoin/priceHours = 0 — không bán ở Cửa hàng (ShopItem.purchasable
   // = false bên dưới), Admin phát trực tiếp bằng cách tạo `OwnedEgg` qua AdminJS (resource có sẵn).
+  // Màu KHÔNG lấy từ PALETTE_HEX (toàn tông pastel sáng) — Dev1002 yêu cầu (2026-07-28) trứng
+  // Truyền Thuyết phải tối hơn, trầm cổ và huyền bí hơn hẳn 3 trứng thường cùng chủ đề để phân
+  // biệt rõ ràng ngay từ màu sắc, không chỉ qua hào quang/badge.
   const eggLegendForest = await prisma.eggType.create({
-    data: { name: 'Trứng Truyền Thuyết Rừng', colorHex: PALETTE_HEX[2], priceCoin: 0, priceHours: 0, hatchDurationMin: 360 },
+    data: { name: 'Trứng Truyền Thuyết Rừng', colorHex: '#2E4F3C', priceCoin: 0, priceHours: 0, hatchDurationMin: 360 },
   });
   const eggLegendSea = await prisma.eggType.create({
-    data: { name: 'Trứng Truyền Thuyết Biển', colorHex: PALETTE_HEX[9], priceCoin: 0, priceHours: 0, hatchDurationMin: 360 },
+    data: { name: 'Trứng Truyền Thuyết Biển', colorHex: '#1B3A4B', priceCoin: 0, priceHours: 0, hatchDurationMin: 360 },
   });
   const eggLegendPlant = await prisma.eggType.create({
-    data: { name: 'Trứng Truyền Thuyết Hoa', colorHex: PALETTE_HEX[4], priceCoin: 0, priceHours: 0, hatchDurationMin: 360 },
+    data: { name: 'Trứng Truyền Thuyết Hoa', colorHex: '#5C2438', priceCoin: 0, priceHours: 0, hatchDurationMin: 360 },
   });
 
   await prisma.eggDropEntry.createMany({
@@ -238,25 +249,70 @@ async function main() {
 
   console.log('Nạp vật phẩm cửa hàng...');
   await prisma.shopItem.create({
-    data: { name: eggForest.name, description: 'Trứng thường gặp trong khu rừng ấm áp', category: ShopCategory.EGG, priceCoin: eggForest.priceCoin, eggTypeId: eggForest.id },
+    data: {
+      name: eggForest.name,
+      description: 'Tìm thấy dưới gốc cây cổ thụ, lấm tấm bùn đất và mùi lá mục ẩm ướt. Người thợ săn nào nhặt được đều nói có thể nghe văng vẳng tiếng thì thầm của muông thú bên trong.',
+      category: ShopCategory.EGG,
+      priceCoin: eggForest.priceCoin,
+      eggTypeId: eggForest.id,
+    },
   });
   await prisma.shopItem.create({
-    data: { name: eggSea.name, description: 'Trứng dạt vào từ những vùng biển xa', category: ShopCategory.EGG, priceCoin: eggSea.priceCoin, eggTypeId: eggSea.id },
+    data: {
+      name: eggSea.name,
+      description: 'Một đêm bão, con sóng lớn đánh nó dạt vào bờ cát, vỏ trứng vẫn còn vương vị muối biển. Không ai biết nó trôi dạt từ vùng biển nào, chỉ biết bên trong có nhịp đập rất khẽ.',
+      category: ShopCategory.EGG,
+      priceCoin: eggSea.priceCoin,
+      eggTypeId: eggSea.id,
+    },
   });
   await prisma.shopItem.create({
-    data: { name: eggPlant.name, description: 'Trứng nở ra từ những khóm hoa rực rỡ', category: ShopCategory.EGG, priceCoin: eggPlant.priceCoin, eggTypeId: eggPlant.id },
+    data: {
+      name: eggPlant.name,
+      description: 'Nằm gọn giữa một khóm hoa nở rộ qua một đêm mưa xuân, cánh hoa quanh nó vẫn còn đọng sương. Người làm vườn tin rằng chỉ khu vườn đang thật sự hạnh phúc mới nuôi dưỡng được loại trứng này.',
+      category: ShopCategory.EGG,
+      priceCoin: eggPlant.priceCoin,
+      eggTypeId: eggPlant.id,
+    },
   });
   await prisma.shopItem.create({
-    data: { name: eggMystery.name, description: 'Có tỉ lệ nhỏ nở ra Thần Thú huyền thoại', category: ShopCategory.EGG, priceCoin: eggMystery.priceCoin, eggTypeId: eggMystery.id },
+    data: {
+      name: eggMystery.name,
+      description: 'Không ai biết chính xác nguồn gốc của nó — chỉ biết một sáng nọ nó xuất hiện, hoa văn trên vỏ đổi màu tuỳ theo ánh sáng. Đồn rằng thi thoảng bên trong ẩn chứa một Thần Thú thật sự.',
+      category: ShopCategory.EGG,
+      priceCoin: eggMystery.priceCoin,
+      eggTypeId: eggMystery.id,
+    },
   });
   await prisma.shopItem.create({
-    data: { name: eggLegendForest.name, description: 'Phần thưởng đặc biệt từ Admin — tỉ lệ cao gặp Thần Thú Rừng', category: ShopCategory.EGG, priceCoin: 0, purchasable: false, eggTypeId: eggLegendForest.id },
+    data: {
+      name: eggLegendForest.name,
+      description: 'Vỏ trứng phủ một lớp ánh xanh thẫm như rêu phong ngàn năm, chỉ xuất hiện trong những dịp đặc biệt nhất. Người xưa tin nó được các vị thần rừng cổ đích thân gửi gắm.',
+      category: ShopCategory.EGG,
+      priceCoin: 0,
+      purchasable: false,
+      eggTypeId: eggLegendForest.id,
+    },
   });
   await prisma.shopItem.create({
-    data: { name: eggLegendSea.name, description: 'Phần thưởng đặc biệt từ Admin — tỉ lệ cao gặp Thần Thú Biển', category: ShopCategory.EGG, priceCoin: 0, purchasable: false, eggTypeId: eggLegendSea.id },
+    data: {
+      name: eggLegendSea.name,
+      description: 'Chìm sâu dưới đáy đại dương suốt nhiều thế kỷ trước khi trồi lên mặt nước vào một đêm trăng tròn hiếm hoi. Ánh sáng xanh thẫm toả ra từ vỏ trứng khiến cả vùng biển như đang ngủ say.',
+      category: ShopCategory.EGG,
+      priceCoin: 0,
+      purchasable: false,
+      eggTypeId: eggLegendSea.id,
+    },
   });
   await prisma.shopItem.create({
-    data: { name: eggLegendPlant.name, description: 'Phần thưởng đặc biệt từ Admin — tỉ lệ cao gặp Thần Thú Hoa', category: ShopCategory.EGG, priceCoin: 0, purchasable: false, eggTypeId: eggLegendPlant.id },
+    data: {
+      name: eggLegendPlant.name,
+      description: 'Nở ra từ một đoá hoa chỉ bung nở một lần trong đời, cánh hoa tàn đi để lại vỏ trứng đỏ thẫm huyền bí. Chỉ những tâm hồn kiên trì nhất mới có cơ duyên nhận được nó.',
+      category: ShopCategory.EGG,
+      priceCoin: 0,
+      purchasable: false,
+      eggTypeId: eggLegendPlant.id,
+    },
   });
   await prisma.shopItem.createMany({
     data: [
@@ -266,6 +322,16 @@ async function main() {
       { name: 'Lofi Buổi Sáng', description: 'Nhạc nền', category: ShopCategory.MUSIC, priceCoin: 60 },
       { name: 'Tiếng Dế Đêm Hè', description: 'Nhạc nền', category: ShopCategory.MUSIC, priceCoin: 60 },
       { name: 'Tiếng Mưa Rơi Hiên Nhà', description: 'Nhạc nền', category: ShopCategory.MUSIC, priceCoin: 100 },
+      // Vật phẩm bổ trợ — giá khởi tạo chỉ để tham khảo (Dev1002 tự chỉnh lại qua AdminJS).
+      // Quy đổi cố định 1 phút Giờ tích luỹ = 10 Xu Lá — tính premium 20% (12 Xu/phút) vì đây
+      // là tiện ích bỏ qua thời gian tập trung thật. Phút ấp trứng tính theo giá trị trung bình
+      // mỗi phút ấp của 4 loại trứng bán được (~2.67 Xu/phút), premium ~1.5x → 4 Xu/phút.
+      { name: 'Túi Thời Gian Nhỏ', description: '+10 phút Giờ tích luỹ', category: ShopCategory.BOOST, priceCoin: 120, boostType: BoostType.FOCUS_MINUTES, boostAmount: 10 },
+      { name: 'Túi Thời Gian Vừa', description: '+20 phút Giờ tích luỹ', category: ShopCategory.BOOST, priceCoin: 240, boostType: BoostType.FOCUS_MINUTES, boostAmount: 20 },
+      { name: 'Túi Thời Gian Lớn', description: '+50 phút Giờ tích luỹ', category: ShopCategory.BOOST, priceCoin: 600, boostType: BoostType.FOCUS_MINUTES, boostAmount: 50 },
+      { name: 'Túi Thời Gian Khổng Lồ', description: '+100 phút Giờ tích luỹ', category: ShopCategory.BOOST, priceCoin: 1200, boostType: BoostType.FOCUS_MINUTES, boostAmount: 100 },
+      { name: 'Giọt Sương Ấp Trứng', description: '+60 phút ấp cho 1 trứng đang ấp', category: ShopCategory.BOOST, priceCoin: 240, boostType: BoostType.HATCH_MINUTES, boostAmount: 60 },
+      { name: 'Ánh Trăng Ấp Trứng', description: '+300 phút ấp cho 1 trứng đang ấp — phần thưởng sự kiện, không bán', category: ShopCategory.BOOST, priceCoin: 0, purchasable: false, boostType: BoostType.HATCH_MINUTES, boostAmount: 300 },
     ],
   });
   const jarSkins = await prisma.shopItem.findMany({ where: { category: ShopCategory.JAR_SKIN } });

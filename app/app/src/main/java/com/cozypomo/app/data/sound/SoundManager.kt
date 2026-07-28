@@ -25,6 +25,9 @@ class SoundManager @Inject constructor(
 ) {
     private var ambientPlayer: ExoPlayer? = null
     private var currentTrackId: String? = null
+    /** Đồng bộ từ Cài đặt (`soundMuted`) — xem [setMuted]. Mặc định false cho tới khi Cài đặt hoặc
+     * TimerRepository nạp giá trị thật lần đầu. */
+    private var muted: Boolean = false
 
     private val soundPool = SoundPool.Builder()
         .setMaxStreams(2)
@@ -43,6 +46,7 @@ class SoundManager @Inject constructor(
      * với cùng trackId đang phát thì bỏ qua, tránh giật nhạc nếu bị gọi lặp (VD service restart).
      */
     fun playAmbientTrack(trackId: String) {
+        if (muted) return
         if (trackId == currentTrackId) return
         stopAmbientTrack()
         val resId = trackIdToRawRes(trackId) ?: return
@@ -74,7 +78,16 @@ class SoundManager @Inject constructor(
 
     /** Tiếng "ting" khi hết giờ — phát ngay, không chờ/chặn ambient dừng hẳn. */
     fun playCompletionChime() {
+        if (muted) return
         soundPool.play(completionChimeSoundId, 0.8f, 0.8f, 1, 0, 1f)
+    }
+
+    /** Bật/tắt hoàn toàn âm thanh (Cài đặt) — tắt thì dừng ngay nhạc nền đang phát (nếu có), không
+     * chỉ chặn lần phát tiếp theo. Gọi từ SettingsViewModel (ngay khi người dùng chạm nút) và
+     * TimerRepository (đồng bộ lại mỗi lần đọc Cài đặt trước khi bắt đầu phiên). */
+    fun setMuted(value: Boolean) {
+        muted = value
+        if (muted) stopAmbientTrack()
     }
 
     private fun trackIdToRawRes(trackId: String): Int? = when (trackId) {

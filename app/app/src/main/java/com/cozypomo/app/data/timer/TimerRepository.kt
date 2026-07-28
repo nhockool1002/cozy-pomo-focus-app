@@ -14,6 +14,7 @@ import com.cozypomo.app.data.local.sync.SyncOutboxEntity
 import com.cozypomo.app.data.network.ApiService
 import com.cozypomo.app.data.network.CompleteSessionRequest
 import com.cozypomo.app.data.network.CreateSessionRequest
+import com.cozypomo.app.data.network.StreakRewardDto
 import com.cozypomo.app.data.notification.SessionNotifier
 import com.cozypomo.app.data.sound.SoundManager
 import com.cozypomo.app.data.sync.SyncOutboxScheduler
@@ -32,7 +33,8 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Kết quả 1 phiên hoàn thành — 3 trường hợp tuỳ có ấp trứng hay không, và có vừa nở hay không. */
+/** Kết quả 1 phiên hoàn thành — 3 trường hợp tuỳ có ấp trứng hay không, và có vừa nở hay không.
+ * `streakReward` null khi mất mạng (không có response) hoặc hôm nay chưa/không đạt mốc streak nào. */
 sealed interface SessionCompletionResult {
     data class Hatched(
         val speciesName: String?,
@@ -42,6 +44,7 @@ sealed interface SessionCompletionResult {
         val speciesPaletteIdx: Int?,
         val coinsEarned: Int,
         val minutesAccumulated: Int,
+        val streakReward: StreakRewardDto? = null,
     ) : SessionCompletionResult
 
     data class Incubating(
@@ -50,10 +53,23 @@ sealed interface SessionCompletionResult {
         val hatchDurationMin: Int,
         val coinsEarned: Int,
         val minutesAccumulated: Int,
+        val streakReward: StreakRewardDto? = null,
     ) : SessionCompletionResult
 
-    data class NoEgg(val coinsEarned: Int, val minutesAccumulated: Int) : SessionCompletionResult
+    data class NoEgg(
+        val coinsEarned: Int,
+        val minutesAccumulated: Int,
+        val streakReward: StreakRewardDto? = null,
+    ) : SessionCompletionResult
 }
+
+/** Tiện dùng ở HomeViewModel — đọc `streakReward` mà không cần `when` theo từng nhánh. */
+val SessionCompletionResult.streakReward: StreakRewardDto?
+    get() = when (this) {
+        is SessionCompletionResult.Hatched -> streakReward
+        is SessionCompletionResult.Incubating -> streakReward
+        is SessionCompletionResult.NoEgg -> streakReward
+    }
 
 sealed interface SessionUiState {
     data object Idle : SessionUiState
@@ -185,8 +201,9 @@ class TimerRepository @Inject constructor(
     /** Đọc `soundTheme` hiện tại từ Cài đặt (T-095 chỉ lưu lựa chọn, chưa từng phát) rồi phát nhạc
      * nền tương ứng — lỗi mạng thì coi như "default" (không phát gì), không chặn việc bắt đầu phiên. */
     private suspend fun playAmbientForCurrentSoundTheme() {
-        val theme = runCatching { apiService.getSettings().soundTheme }.getOrDefault("default")
-        soundManager.playAmbientTrack(theme)
+        val settings = runCatching { apiService.getSettings() }.getOrNull()
+        soundManager.setMuted(settings?.soundMuted ?: false)
+        soundManager.playAmbientTrack(settings?.soundTheme ?: "default")
     }
 
     suspend fun giveUpSession(sessionId: String) {
@@ -269,6 +286,7 @@ class TimerRepository @Inject constructor(
                 speciesPaletteIdx = response.resultSpecies?.paletteIdx,
                 coinsEarned = coinsEarned,
                 minutesAccumulated = minutesAccumulated,
+                streakReward = response.streakReward,
             )
             response?.ownedEgg != null -> SessionCompletionResult.Incubating(
                 eggTypeName = response.ownedEgg.eggType.name,
@@ -276,8 +294,9 @@ class TimerRepository @Inject constructor(
                 hatchDurationMin = response.ownedEgg.eggType.hatchDurationMin,
                 coinsEarned = coinsEarned,
                 minutesAccumulated = minutesAccumulated,
+                streakReward = response.streakReward,
             )
-            else -> SessionCompletionResult.NoEgg(coinsEarned, minutesAccumulated)
+            else -> SessionCompletionResult.NoEgg(coinsEarned, minutesAccumulated, response?.streakReward)
         }
         _completionEvents.emit(result)
         // Báo cho Khu rừng/Kho Trứng (nếu đang mở ở tab khác) tự tải lại — nếu không, tiến

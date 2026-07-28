@@ -52,6 +52,7 @@ import com.cozypomo.app.data.timer.SessionUiState
 import com.cozypomo.app.ui.common.CurrencyViewModel
 import com.cozypomo.app.ui.common.JarMark
 import com.cozypomo.app.ui.common.ShopMarketToggleFab
+import com.cozypomo.app.ui.common.jarMaterialFor
 import com.cozypomo.app.ui.common.jarTintFor
 import com.cozypomo.app.ui.common.parseEggColor
 
@@ -116,6 +117,7 @@ fun HomeScreen(
                     progress = jarProgress,
                     animate = isRunning,
                     jarTint = uiState.equippedJarSkinName?.let { jarTintFor(it) },
+                    material = jarMaterialFor(uiState.equippedJarSkinName),
                 )
                 Surface(
                     onClick = { if (!isRunning) viewModel.openEggPicker() },
@@ -282,6 +284,10 @@ fun HomeScreen(
 
     uiState.sessionResult?.let { result ->
         SessionResultDialog(result = result, onDismiss = viewModel::dismissSessionResult)
+    }
+
+    uiState.streakReward?.let { reward ->
+        StreakRewardDialog(reward = reward, onDismiss = viewModel::dismissStreakReward)
     }
 }
 

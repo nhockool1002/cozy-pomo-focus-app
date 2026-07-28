@@ -7,6 +7,7 @@ import com.cozypomo.app.data.network.ApiService
 import com.cozypomo.app.data.network.CreateEggListingRequest
 import com.cozypomo.app.data.network.InventoryItemDto
 import com.cozypomo.app.data.network.OwnedEggDto
+import com.cozypomo.app.data.network.UseItemRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,12 +23,14 @@ enum class InventoryTab(val label: String) {
     JAR("Bình"),
     EGG("Trứng"),
     MUSIC("Âm thanh"),
+    BOOST("Hỗ trợ"),
 }
 
 data class InventoryUiState(
     val tab: InventoryTab = InventoryTab.JAR,
     val jarSkins: List<InventoryItemDto> = emptyList(),
     val musicTracks: List<InventoryItemDto> = emptyList(),
+    val boostItems: List<InventoryItemDto> = emptyList(),
     val ownedEggs: List<OwnedEggDto> = emptyList(),
     val loading: Boolean = true,
     /** id món đang chờ PATCH /equip trả về — chặn chạm thêm (cùng món hay món khác) trong lúc
@@ -36,6 +39,10 @@ data class InventoryUiState(
     /** T-110 — trứng đang mở dialog "Đăng bán" (đặt giá) — null = không mở. */
     val sellDialogFor: OwnedEggDto? = null,
     val sellMessage: String? = null,
+    /** Vật phẩm bổ trợ HATCH_MINUTES đang mở modal chọn trứng để áp dụng — null = không mở. */
+    val useItemPickerFor: InventoryItemDto? = null,
+    val usingItem: Boolean = false,
+    val useMessage: String? = null,
 )
 
 /** T-099 — Kho đồ (5th tab): gom bình/trứng/nhạc sở hữu vào 1 màn riêng, trước đây rải rác ở
@@ -70,6 +77,7 @@ class InventoryViewModel @Inject constructor(
                 it.copy(
                     jarSkins = inventory?.filter { item -> item.shopItem.category == "JAR_SKIN" } ?: it.jarSkins,
                     musicTracks = inventory?.filter { item -> item.shopItem.category == "MUSIC" } ?: it.musicTracks,
+                    boostItems = inventory?.filter { item -> item.shopItem.category == "BOOST" } ?: it.boostItems,
                     ownedEggs = ownedEggsResult.getOrDefault(it.ownedEggs),
                     loading = false,
                 )
@@ -124,4 +132,41 @@ class InventoryViewModel @Inject constructor(
     }
 
     fun dismissSellMessage() = _uiState.update { it.copy(sellMessage = null) }
+
+    /** Chạm "Dùng" 1 vật phẩm bổ trợ — FOCUS_MINUTES áp dụng ngay (không cần chọn trứng),
+     * HATCH_MINUTES mở modal chọn 1 trứng đang ấp trước ([EggPickerDialog], xem [confirmUseItem]). */
+    fun requestUseItem(item: InventoryItemDto) {
+        if (_uiState.value.usingItem) return
+        if (item.shopItem.boostType == "HATCH_MINUTES") {
+            _uiState.update { it.copy(useItemPickerFor = item) }
+        } else {
+            confirmUseItem(item, ownedEggId = null)
+        }
+    }
+
+    fun dismissUseItemPicker() = _uiState.update { it.copy(useItemPickerFor = null) }
+
+    fun confirmUseItem(item: InventoryItemDto, ownedEggId: String?) {
+        _uiState.update { it.copy(useItemPickerFor = null, usingItem = true) }
+        viewModelScope.launch {
+            val result = runCatching { apiService.useInventoryItem(item.id, UseItemRequest(ownedEggId)) }
+            val message = result.fold(
+                onSuccess = { res ->
+                    when {
+                        res.hatched -> "${item.shopItem.name}: trứng vừa nở ra ${res.resultSpecies?.name}!"
+                        res.kind == "FOCUS_MINUTES" -> "+${res.amount} phút Giờ tích luỹ!"
+                        else -> "Đã ấp thêm ${res.amount} phút cho trứng."
+                    }
+                },
+                onFailure = { "Không dùng được vật phẩm này — thử lại sau." },
+            )
+            _uiState.update { it.copy(usingItem = false, useMessage = message) }
+            if (result.isSuccess) {
+                collectionEventBus.notifyChanged()
+                load()
+            }
+        }
+    }
+
+    fun dismissUseMessage() = _uiState.update { it.copy(useMessage = null) }
 }

@@ -19,6 +19,7 @@ enum class ShopCategoryTab(val label: String, val backendValue: String) {
     EGG("Trứng mới", "EGG"),
     JAR_SKIN("Bình thuỷ tinh", "JAR_SKIN"),
     MUSIC("Nhạc nền", "MUSIC"),
+    BOOST("Vật phẩm hỗ trợ", "BOOST"),
 }
 
 data class ShopUiState(
@@ -26,9 +27,10 @@ data class ShopUiState(
     val items: List<ShopItemDto> = emptyList(),
     val ownedShopItemIds: Set<String> = emptySet(),
     val loading: Boolean = true,
-    val payWithChoiceFor: ShopItemDto? = null,
     val purchasing: Boolean = false,
     val lastMessage: String? = null,
+    /** Vật phẩm đang mở modal xem chi tiết (chạm vào hàng) — null = không mở. */
+    val detailFor: ShopItemDto? = null,
 )
 
 /** T-037 — S-05 Cửa hàng: mua trứng (Xu Lá hoặc Giờ tích luỹ), bình/nhạc (chỉ Xu Lá, 1 lần).
@@ -57,26 +59,25 @@ class ShopViewModel @Inject constructor(
     private fun loadInventory() {
         viewModelScope.launch {
             runCatching { apiService.getInventory() }.onSuccess { inventory ->
-                _uiState.update { it.copy(ownedShopItemIds = inventory.map(InventoryItemDto::shopItemId).toSet()) }
+                // BOOST loại trừ khỏi "đã sở hữu" — vật phẩm bổ trợ mua được nhiều lần/cộng dồn
+                // quantity, không phải mua 1 lần như JAR_SKIN/MUSIC (nếu không, nút "Mua ngay" sẽ
+                // bị khoá vĩnh viễn thành "Đã sở hữu" sau lần mua đầu tiên).
+                val ownedIds = inventory
+                    .filter { it.shopItem.category != "BOOST" }
+                    .map(InventoryItemDto::shopItemId)
+                    .toSet()
+                _uiState.update { it.copy(ownedShopItemIds = ownedIds) }
             }
         }
     }
 
-    /** Vật phẩm EGG cho chọn trả bằng Xu Lá hay Giờ tích luỹ trước khi mua — mở dialog xác nhận. */
-    fun requestPurchase(item: ShopItemDto) {
-        if (item.category == "EGG") {
-            _uiState.update { it.copy(payWithChoiceFor = item) }
-        } else {
-            purchase(item, payWith = null)
-        }
-    }
+    /** Vật phẩm không phải EGG chỉ trả bằng Xu Lá, 1 nút "Mua ngay" duy nhất — xem [buyEggWith]
+     * cho vật phẩm EGG (2 nút riêng theo loại tiền, không qua dialog trung gian nữa). */
+    fun requestPurchase(item: ShopItemDto) = purchase(item, payWith = null)
 
-    fun dismissPayWithChoice() = _uiState.update { it.copy(payWithChoiceFor = null) }
-
-    fun confirmEggPurchase(item: ShopItemDto, payWith: String) {
-        _uiState.update { it.copy(payWithChoiceFor = null) }
-        purchase(item, payWith)
-    }
+    /** Nút mua trứng theo đúng 1 loại tiền cụ thể (icon Xu Lá hoặc Giờ tích luỹ) — mua ngay, không
+     * còn dialog "Trả bằng gì?" ở giữa (T-125, gộp thẳng lựa chọn tiền vào hàng/modal chi tiết). */
+    fun buyEggWith(item: ShopItemDto, payWith: String) = purchase(item, payWith)
 
     private fun purchase(item: ShopItemDto, payWith: String?) {
         viewModelScope.launch {
@@ -98,4 +99,19 @@ class ShopViewModel @Inject constructor(
     }
 
     fun dismissMessage() = _uiState.update { it.copy(lastMessage = null) }
+
+    fun showDetail(item: ShopItemDto) = _uiState.update { it.copy(detailFor = item) }
+    fun dismissDetail() = _uiState.update { it.copy(detailFor = null) }
+
+    /** Gọi từ nút "Mua ngay" trong modal chi tiết (danh mục khác EGG) — đóng modal rồi mua thẳng. */
+    fun requestPurchaseFromDetail(item: ShopItemDto) {
+        _uiState.update { it.copy(detailFor = null) }
+        requestPurchase(item)
+    }
+
+    /** Gọi từ 2 nút chọn tiền trong modal chi tiết của vật phẩm EGG — đóng modal rồi mua thẳng. */
+    fun buyEggWithFromDetail(item: ShopItemDto, payWith: String) {
+        _uiState.update { it.copy(detailFor = null) }
+        buyEggWith(item, payWith)
+    }
 }

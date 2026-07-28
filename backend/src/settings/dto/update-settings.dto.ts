@@ -25,4 +25,9 @@ export class UpdateSettingsDto {
   @IsOptional()
   @IsString()
   soundTheme?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  soundMuted?: boolean;
 }

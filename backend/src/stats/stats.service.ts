@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { SessionStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
-function dayKey(d: Date): string {
+/** Cũng dùng bởi StreaksService (claimedOn) — cùng khái niệm "ngày" (UTC) cho toàn bộ streak. */
+export function dayKey(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 

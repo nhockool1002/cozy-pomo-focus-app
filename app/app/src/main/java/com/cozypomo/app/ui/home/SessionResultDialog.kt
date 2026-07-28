@@ -223,8 +223,9 @@ private fun HatchedContent(hatch: SessionCompletionResult.Hatched, appeared: Boo
 /** Tia hào quang xoay quanh vòng loài — độ "long trọng" của hiệu ứng nở (T-117), chỉ dùng cho kết
  * quả SS/SSR. Vẽ trong `Box` kích thước cố định [sizeDp], không bao giờ tràn ra ngoài bounds của
  * chính nó nên không lặp lại lỗi Dialog cao vượt màn hình đã sửa ở `EggPickerDialog`. */
+/** Không `private` — tái dùng ở [com.cozypomo.app.ui.home.StreakRewardDialog] cho hiệu ứng ăn mừng streak. */
 @Composable
-private fun RadianceRays(sizeDp: androidx.compose.ui.unit.Dp, rayCount: Int, color: Color, rotationDeg: Float) {
+fun RadianceRays(sizeDp: androidx.compose.ui.unit.Dp, rayCount: Int, color: Color, rotationDeg: Float) {
     Canvas(modifier = Modifier.size(sizeDp).graphicsLayer { rotationZ = rotationDeg }) {
         val cx = size.width / 2f
         val cy = size.height / 2f
@@ -247,8 +248,9 @@ private fun RadianceRays(sizeDp: androidx.compose.ui.unit.Dp, rayCount: Int, col
 }
 
 /** Chấm lấp lánh xoay quanh viền — chỉ hiện cho kết quả huyền thoại (SSR/Thần Thú, T-117). */
+/** Không `private` — tái dùng ở [com.cozypomo.app.ui.home.StreakRewardDialog] cho hiệu ứng ăn mừng streak. */
 @Composable
-private fun SparkleOrbit(sizeDp: androidx.compose.ui.unit.Dp, color: Color, rotationDeg: Float) {
+fun SparkleOrbit(sizeDp: androidx.compose.ui.unit.Dp, color: Color, rotationDeg: Float) {
     Canvas(modifier = Modifier.size(sizeDp).graphicsLayer { rotationZ = rotationDeg }) {
         val cx = size.width / 2f
         val cy = size.height / 2f

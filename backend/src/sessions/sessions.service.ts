@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CurrencyService } from '../currency/currency.service';
 import { GameSettingsService } from '../game-settings/game-settings.service';
 import { OwnedEggsService } from '../owned-eggs/owned-eggs.service';
+import { StreaksService } from '../streaks/streaks.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 
 @Injectable()
@@ -13,6 +14,7 @@ export class SessionsService {
     private readonly currencyService: CurrencyService,
     private readonly gameSettingsService: GameSettingsService,
     private readonly ownedEggsService: OwnedEggsService,
+    private readonly streaksService: StreaksService,
   ) {}
 
   async create(userId: string, dto: CreateSessionDto) {
@@ -86,6 +88,7 @@ export class SessionsService {
         ownedEgg,
         resultSpecies: null,
         hatched: false,
+        streakReward: null,
       };
     }
     if (session.status !== SessionStatus.RUNNING) {
@@ -142,7 +145,9 @@ export class SessionsService {
         hatched = incubateResult.hatched;
       }
 
-      return { session: updatedSession, ownedEgg, resultSpecies, hatched };
+      const streakReward = await this.streaksService.checkAndGrant(userId, tx);
+
+      return { session: updatedSession, ownedEgg, resultSpecies, hatched, streakReward };
     });
 
     return { ...result, coinsEarned, minutesAccumulated };

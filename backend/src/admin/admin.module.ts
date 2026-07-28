@@ -8,6 +8,8 @@ import { CollectionModule } from '../collection/collection.module';
 import { CollectionService } from '../collection/collection.service';
 import { OwnedEggsModule } from '../owned-eggs/owned-eggs.module';
 import { OwnedEggsService } from '../owned-eggs/owned-eggs.service';
+import { ShopModule } from '../shop/shop.module';
+import { ShopService } from '../shop/shop.service';
 import { ADMIN_VI_TRANSLATIONS } from './admin-i18n';
 
 // Bảng màu CozyPomo chính thức — xem docs/technical-spec.md / Brand Field Guide.
@@ -44,6 +46,7 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
   const EggTypeList = componentLoader.add('EggTypeList', path.join(COMPONENTS_DIR, 'EggTypeList'));
   const ApiExplorer = componentLoader.add('ApiExplorer', path.join(COMPONENTS_DIR, 'ApiExplorer'));
   const GiftPage = componentLoader.add('GiftPage', path.join(COMPONENTS_DIR, 'GiftPage'));
+  const StreakRewardEditPage = componentLoader.add('StreakRewardEditPage', path.join(COMPONENTS_DIR, 'StreakRewardEditPage'));
 
   // Các bảng dữ liệu người dùng chỉ xem, không sửa/xoá qua admin — tránh làm hỏng
   // tính toàn vẹn ledger/collection (sửa trực tiếp nên đi qua API để giữ đúng nghiệp vụ).
@@ -57,13 +60,14 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
   };
 
   return AdminJSNestModule.createAdminAsync({
-    imports: [ConfigModule, PrismaModule, CollectionModule, OwnedEggsModule],
-    inject: [ConfigService, PrismaService, CollectionService, OwnedEggsService],
+    imports: [ConfigModule, PrismaModule, CollectionModule, OwnedEggsModule, ShopModule],
+    inject: [ConfigService, PrismaService, CollectionService, OwnedEggsService, ShopService],
     useFactory: (
       config: ConfigService,
       prisma: PrismaService,
       collectionService: CollectionService,
       ownedEggsService: OwnedEggsService,
+      shopService: ShopService,
     ) => ({
       adminJsOptions: {
         rootPath: '/admin',
@@ -238,7 +242,7 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
                     try {
                       const payload = request.payload ?? {};
                       const recipientsText: string = payload.recipientsText ?? '';
-                      let grants: Array<{ kind: 'SPECIES' | 'EGG'; id: string; quantity: number }> = [];
+                      let grants: Array<{ kind: 'SPECIES' | 'EGG' | 'SHOP_ITEM'; id: string; quantity: number }> = [];
                       try {
                         grants = JSON.parse(payload.grants ?? '[]');
                       } catch {
@@ -296,12 +300,16 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
                       // dùng tạo InboxMessage (T-123) — 1 lượt hỏi DB dùng chung cho mọi user/grant.
                       const speciesIds = grants.filter((g) => g.kind === 'SPECIES').map((g) => g.id);
                       const eggTypeIds = grants.filter((g) => g.kind === 'EGG').map((g) => g.id);
-                      const [speciesRows, eggTypeRows] = await Promise.all([
+                      const shopItemIds = grants.filter((g) => g.kind === 'SHOP_ITEM').map((g) => g.id);
+                      const [speciesRows, eggTypeRows, shopItemRows] = await Promise.all([
                         speciesIds.length ? prisma.species.findMany({ where: { id: { in: speciesIds } } }) : [],
                         eggTypeIds.length ? prisma.eggType.findMany({ where: { id: { in: eggTypeIds } } }) : [],
+                        shopItemIds.length ? prisma.shopItem.findMany({ where: { id: { in: shopItemIds } } }) : [],
                       ]);
-                      const itemNameOf = (g: { kind: 'SPECIES' | 'EGG'; id: string }) =>
-                        (g.kind === 'SPECIES' ? speciesRows : eggTypeRows).find((r) => r.id === g.id)?.name ?? 'Vật phẩm';
+                      const itemNameOf = (g: { kind: 'SPECIES' | 'EGG' | 'SHOP_ITEM'; id: string }) => {
+                        const rows = g.kind === 'SPECIES' ? speciesRows : g.kind === 'EGG' ? eggTypeRows : shopItemRows;
+                        return rows.find((r) => r.id === g.id)?.name ?? 'Vật phẩm';
+                      };
 
                       let grantsApplied = 0;
                       const errors: string[] = [];
@@ -312,10 +320,12 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
                             await prisma.$transaction(async (tx) => {
                               if (g.kind === 'SPECIES') {
                                 await collectionService.grantMany(user.id, g.id, g.quantity, tx);
-                              } else {
+                              } else if (g.kind === 'EGG') {
                                 for (let i = 0; i < g.quantity; i++) {
                                   await ownedEggsService.create(user.id, g.id, tx);
                                 }
+                              } else {
+                                await shopService.grantItem(user.id, g.id, g.quantity, tx);
                               }
                               await tx.giftLog.create({
                                 data: { recipientId: user.id, itemKind: g.kind, itemId: g.id, itemName, quantity: g.quantity },
@@ -360,6 +370,64 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
             // API để giữ đúng `isRead`/nghiệp vụ, giống các bảng dữ liệu user khác).
             resource: { model: getModelByName('InboxMessage'), client: prisma },
             options: { navigation: { name: 'Người dùng' }, ...readOnly },
+          },
+          {
+            // Quà thưởng streak ngày liên tục — 7 dòng cố định (day 1..7, seed sẵn trong seed.ts),
+            // không cho tạo/xoá thêm. `edit` override bằng UI chọn vật phẩm riêng (giống GiftPage
+            // nhưng scope theo 1 ngày) — xem StreakRewardEditPage.tsx.
+            resource: { model: getModelByName('StreakRewardDay'), client: prisma },
+            options: {
+              navigation: { name: 'Người dùng' },
+              actions: {
+                new: { isAccessible: false },
+                delete: { isAccessible: false },
+                bulkDelete: { isAccessible: false },
+                edit: {
+                  component: StreakRewardEditPage,
+                  handler: async (request: any, response: any, context: any) => {
+                    // ApiController.recordAction bắt buộc mọi nhánh trả về (kể cả lỗi) phải có
+                    // `record` hợp lệ (RecordJSON, nhận diện qua field `recordActions`) — khác
+                    // `resourceAction` (dùng bởi GiftPage cho action `new`, không có record sẵn
+                    // nên không bị ràng buộc này). Vi phạm ném ConfigurationError 500 ngay ở tầng
+                    // framework, xem docs.adminjs.co/Action#handler.
+                    //
+                    // @adminjs/prisma tự làm PHẲNG cột Json không rỗng thành `rewards.0.kind`,
+                    // `rewards.0.name`,... trong `record.params` khi gọi `.toJSON()` (property
+                    // type "mixed") — StreakRewardEditPage.tsx cần mảng thật để parse lại UI đã
+                    // chọn, nên luôn tự lấy `rewards` thẳng từ Prisma rồi GHI ĐÈ lên `params.rewards`
+                    // của RecordJSON thay vì tin giá trị `.toJSON()` trả về.
+                    const { resource, currentAdmin } = context;
+                    const day = Number(request.params?.recordId ?? context.record?.id());
+                    const respondWith = async (rewardsValue: unknown, extra: Record<string, unknown>) => {
+                      const record = await resource.findOne(String(day), context);
+                      const json = record!.toJSON(currentAdmin);
+                      json.params.rewards = rewardsValue;
+                      return { record: json, ...extra };
+                    };
+                    if (request.method !== 'post') {
+                      const row = await prisma.streakRewardDay.findUnique({ where: { day } });
+                      return respondWith(row?.rewards ?? [], {});
+                    }
+                    try {
+                      const payload = request.payload ?? {};
+                      let rewards: Array<{ kind: 'SPECIES' | 'EGG_TYPE' | 'SHOP_ITEM' | 'COIN'; id?: string; name: string; quantity: number }> = [];
+                      try {
+                        rewards = JSON.parse(payload.rewards ?? '[]');
+                      } catch {
+                        const row = await prisma.streakRewardDay.findUnique({ where: { day } });
+                        return respondWith(row?.rewards ?? [], { ok: false, error: 'Dữ liệu quà không hợp lệ' });
+                      }
+                      rewards = rewards.filter((r) => r.quantity > 0 && (r.kind === 'COIN' || r.id));
+                      await prisma.streakRewardDay.update({ where: { day }, data: { rewards: rewards as any } });
+                      return respondWith(rewards, { ok: true, day, rewards });
+                    } catch (err: any) {
+                      const row = await prisma.streakRewardDay.findUnique({ where: { day } });
+                      return respondWith(row?.rewards ?? [], { ok: false, error: err?.message ?? 'Có lỗi xảy ra, thử lại sau' });
+                    }
+                  },
+                },
+              },
+            },
           },
         ],
         pages: {

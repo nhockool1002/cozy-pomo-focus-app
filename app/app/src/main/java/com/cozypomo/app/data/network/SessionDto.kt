@@ -48,6 +48,19 @@ data class SpeciesDto(
 )
 
 @Serializable
+data class StreakRewardItemDto(
+    val kind: String, // SPECIES | EGG_TYPE | SHOP_ITEM | COIN
+    val name: String,
+    val quantity: Int,
+)
+
+@Serializable
+data class StreakRewardDto(
+    val day: Int,
+    val items: List<StreakRewardItemDto>,
+)
+
+@Serializable
 data class CompleteSessionResponse(
     val session: SessionDto,
     val coinsEarned: Int,
@@ -55,4 +68,5 @@ data class CompleteSessionResponse(
     val ownedEgg: OwnedEggDto? = null,
     val resultSpecies: SpeciesDto? = null,
     val hatched: Boolean = false,
+    val streakReward: StreakRewardDto? = null,
 )

@@ -94,6 +94,12 @@ interface ApiService {
     @PATCH("inventory/{id}/equip")
     suspend fun toggleEquip(@Path("id") id: String): InventoryItemDto
 
+    /** Dùng vật phẩm bổ trợ (ShopCategory.BOOST) — FOCUS_MINUTES cộng thẳng Giờ tích luỹ (không cần
+     * [UseItemRequest.ownedEggId]), HATCH_MINUTES cộng phút ấp cho trứng chọn (bắt buộc truyền id). */
+    @Headers("Requires-Auth: true")
+    @PATCH("inventory/{id}/use")
+    suspend fun useInventoryItem(@Path("id") id: String, @Body body: UseItemRequest): UseItemResponse
+
     /**
      * Trả về [ResponseBody] thô thay vì kiểu cụ thể — response thật ra khác nhau tuỳ danh mục
      * (OwnedEgg cho EGG, InventoryItem cho JAR_SKIN/MUSIC) nên không có 1 kiểu chung để parse an

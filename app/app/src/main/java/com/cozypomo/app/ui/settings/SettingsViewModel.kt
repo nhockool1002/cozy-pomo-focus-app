@@ -6,6 +6,7 @@ import com.cozypomo.app.BuildConfig
 import com.cozypomo.app.data.auth.AuthRepository
 import com.cozypomo.app.data.network.ApiService
 import com.cozypomo.app.data.network.UpdateSettingsRequest
+import com.cozypomo.app.data.sound.SoundManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -32,6 +33,7 @@ data class SettingsUiState(
     val breakMinutes: Int = 5,
     val strictModeEnabled: Boolean = true,
     val soundTheme: String = "default",
+    val soundMuted: Boolean = false,
 )
 
 /** S-07 — gom các chức năng cài đặt (kể cả đăng xuất) vào 1 màn riêng, tách khỏi Trang chủ.
@@ -45,6 +47,7 @@ data class SettingsUiState(
 class SettingsViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val apiService: ApiService,
+    private val soundManager: SoundManager,
 ) : ViewModel() {
 
     private val _localState = MutableStateFlow(SettingsUiState())
@@ -63,6 +66,7 @@ class SettingsViewModel @Inject constructor(
     private fun loadSettings() {
         viewModelScope.launch {
             runCatching { apiService.getSettings() }.onSuccess { dto ->
+                soundManager.setMuted(dto.soundMuted)
                 _localState.update {
                     it.copy(
                         settingsLoaded = true,
@@ -70,6 +74,7 @@ class SettingsViewModel @Inject constructor(
                         breakMinutes = dto.breakMinutes,
                         strictModeEnabled = dto.strictModeEnabled,
                         soundTheme = dto.soundTheme,
+                        soundMuted = dto.soundMuted,
                     )
                 }
             }
@@ -81,6 +86,12 @@ class SettingsViewModel @Inject constructor(
     fun onBreakMinutesChangeFinished(minutes: Int) = saveSettings(UpdateSettingsRequest(breakMinutes = minutes))
     fun onStrictModeToggle(enabled: Boolean) = saveSettings(UpdateSettingsRequest(strictModeEnabled = enabled))
     fun onSoundThemeSelected(theme: String) = saveSettings(UpdateSettingsRequest(soundTheme = theme))
+
+    /** Đổi ngay lập tức (dừng nhạc nền nếu đang phát) — không đợi PATCH trả về, vẫn lưu server song song. */
+    fun onSoundMutedToggle(muted: Boolean) {
+        soundManager.setMuted(muted)
+        saveSettings(UpdateSettingsRequest(soundMuted = muted))
+    }
 
     /** Kéo Slider hiển thị ngay giá trị mới (không đợi PATCH) — mượt hơn khi đang thao tác. */
     fun onFocusMinutesDrag(minutes: Int) = _localState.update { it.copy(focusMinutes = minutes) }
@@ -95,6 +106,7 @@ class SettingsViewModel @Inject constructor(
                         breakMinutes = dto.breakMinutes,
                         strictModeEnabled = dto.strictModeEnabled,
                         soundTheme = dto.soundTheme,
+                        soundMuted = dto.soundMuted,
                     )
                 }
             }

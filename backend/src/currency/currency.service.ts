@@ -45,6 +45,7 @@ export class CurrencyService {
     opts: {
       currency?: CurrencyType;
       refSessionId?: string;
+      refShopItemId?: string;
       refMarketListingId?: string;
       clientEventId?: string;
       tx?: Tx;
@@ -59,6 +60,7 @@ export class CurrencyService {
         currency: opts.currency ?? CurrencyType.COIN,
         reason,
         refSessionId: opts.refSessionId,
+        refShopItemId: opts.refShopItemId,
         refMarketListingId: opts.refMarketListingId,
         clientEventId: opts.clientEventId,
       },

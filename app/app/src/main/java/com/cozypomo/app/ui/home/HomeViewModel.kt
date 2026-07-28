@@ -6,9 +6,11 @@ import com.cozypomo.app.data.auth.AuthRepository
 import com.cozypomo.app.data.events.CollectionEventBus
 import com.cozypomo.app.data.network.ApiService
 import com.cozypomo.app.data.network.OwnedEggDto
+import com.cozypomo.app.data.network.StreakRewardDto
 import com.cozypomo.app.data.timer.SessionCompletionResult
 import com.cozypomo.app.data.timer.SessionUiState
 import com.cozypomo.app.data.timer.TimerRepository
+import com.cozypomo.app.data.timer.streakReward
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,6 +41,9 @@ data class HomeUiState(
     val showEggPicker: Boolean = false,
     val showGiveUpConfirm: Boolean = false,
     val sessionResult: SessionResultUi? = null,
+    /** Modal ăn mừng streak — chỉ hiện SAU KHI [sessionResult] đã đóng (xem dismissSessionResult),
+     * tránh 2 modal chồng nhau. */
+    val streakReward: StreakRewardDto? = null,
     /** Tên vật phẩm JAR_SKIN đang trang bị (Kho đồ, T-099) — null = bình mặc định. Chỉ cần tên để
      * suy màu qua [com.cozypomo.app.ui.common.jarTintFor], không cần thêm DTO riêng. */
     val equippedJarSkinName: String? = null,
@@ -60,6 +65,10 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    /** Không phải state — xếp hàng quà streak (nếu có) trong lúc modal kết quả phiên đang hiện,
+     * chỉ đưa vào [HomeUiState.streakReward] sau khi người dùng đóng modal đó, xem [dismissSessionResult]. */
+    private var pendingStreakReward: StreakRewardDto? = null
+
     init {
         viewModelScope.launch { timerRepository.ensureServiceRunningIfActive() }
         loadOwnedEggs()
@@ -73,6 +82,7 @@ class HomeViewModel @Inject constructor(
                 // đợi mạng) — trước đây chỉ gọi loadOwnedEggs() (bất đồng bộ) nên có khoảng
                 // trễ hiển thị lại incubatedMin CŨ (từ trước khi phiên hoàn thành) ngay khi
                 // sessionState chuyển Running→Idle, trước khi network kịp trả về dữ liệu mới.
+                pendingStreakReward = result.streakReward
                 _uiState.update {
                     it.copy(
                         sessionResult = SessionResultUi.Completed(result),
@@ -160,7 +170,13 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun dismissSessionResult() = _uiState.update { it.copy(sessionResult = null) }
+    fun dismissSessionResult() {
+        val streak = pendingStreakReward
+        pendingStreakReward = null
+        _uiState.update { it.copy(sessionResult = null, streakReward = streak) }
+    }
+
+    fun dismissStreakReward() = _uiState.update { it.copy(streakReward = null) }
 
     fun logout(onDone: () -> Unit) {
         viewModelScope.launch {

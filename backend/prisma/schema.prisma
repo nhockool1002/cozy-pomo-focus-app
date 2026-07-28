@@ -31,6 +31,14 @@ enum ShopCategory {
   EGG
   JAR_SKIN
   MUSIC
+  BOOST
+}
+
+/// Vật phẩm bổ trợ (ShopCategory.BOOST) — FOCUS_MINUTES cộng thẳng Giờ tích luỹ, HATCH_MINUTES
+/// cộng thẳng phút ấp cho 1 trứng do người chơi chọn khi "Dùng" (xem ShopService.useItem).
+enum BoostType {
+  FOCUS_MINUTES
+  HATCH_MINUTES
 }
 
 enum SessionStatus {
@@ -46,6 +54,8 @@ enum LedgerReason {
   ADMIN_ADJUST
   MARKET_BUY
   MARKET_SELL
+  ITEM_USE
+  STREAK_REWARD
 }
 
 /// Xu Lá (COIN) và Giờ tích luỹ (FOCUS_MINUTE, lưu bằng phút) — 2 loại tiền tệ độc lập,
@@ -86,6 +96,7 @@ enum MarketListingStatus {
 enum GiftItemKind {
   SPECIES
   EGG
+  SHOP_ITEM
 }
 
 /// Loại thư trong Hộp thư (T-123) — mỗi loại có `payload` JSON khác nhau (xem InboxService).
@@ -93,6 +104,16 @@ enum InboxMessageType {
   EGG_RECEIVED
   EGG_HATCHED
   ADMIN_GIFT
+  STREAK_REWARD
+}
+
+/// Loại quà trong cấu hình streak (StreakRewardDay.rewards) — id null khi kind=COIN (quantity =
+/// số Xu Lá tặng thẳng thay vì số lượng vật phẩm). Xem StreaksService.checkAndGrant.
+enum StreakRewardItemKind {
+  SPECIES
+  EGG_TYPE
+  SHOP_ITEM
+  COIN
 }
 
 model User {
@@ -112,6 +133,7 @@ model User {
   ownedEggs  OwnedEgg[]
   giftLogsReceived GiftLog[]
   inboxMessages    InboxMessage[]
+  streakClaims     StreakClaim[]
 
   marketListingsSold   MarketListing[] @relation("MarketListingsSold")
   marketListingsBought MarketListing[] @relation("MarketListingsBought")
@@ -132,6 +154,9 @@ model UserSettings {
   breakMinutes      Int     @default(5)
   strictModeEnabled Boolean @default(true)
   soundTheme        String  @default("default")
+  /// Tắt hoàn toàn âm thanh (nhạc nền + tiếng "ting" hoàn thành) — độc lập với soundTheme, không
+  /// xoá lựa chọn chủ đề khi bật lại.
+  soundMuted        Boolean @default(false)
 
   @@map("user_settings")
 }
@@ -254,6 +279,10 @@ model ShopItem {
   purchasable Boolean      @default(true)
   eggType     EggType?     @relation(fields: [eggTypeId], references: [id])
   eggTypeId   String?
+  /// Chỉ có ý nghĩa khi category = BOOST — loại hiệu ứng khi "Dùng" (xem ShopService.useItem).
+  boostType   BoostType?
+  /// Số phút cộng thêm khi dùng (Giờ tích luỹ nếu FOCUS_MINUTES, phút ấp nếu HATCH_MINUTES).
+  boostAmount Int?
 
   inventory InventoryItem[]
 
@@ -414,4 +443,32 @@ model InboxMessage {
   @@index([userId, isRead])
   @@index([userId, createdAt])
   @@map("inbox_messages")
+}
+
+/// Cấu hình quà thưởng streak ngày liên tục — 7 dòng cố định (day 1..7), seed sẵn rewards rỗng,
+/// admin điền qua AdminJS (StreakRewardEditPage.tsx). `rewards` là snapshot JSON dạng
+/// `[{ kind: StreakRewardItemKind, id?: string, name: string, quantity: number }]` — không đặt
+/// quan hệ FK thật vì 1 phần tử có thể trỏ Species/EggType/ShopItem tuỳ `kind` (giống GiftLog).
+model StreakRewardDay {
+  day       Int      @id
+  rewards   Json?
+  updatedAt DateTime @updatedAt
+
+  @@map("streak_reward_days")
+}
+
+/// 1 dòng/user/ngày — đánh dấu đã tính streak cho ngày đó, chặn StreaksService.checkAndGrant
+/// phát quà trùng nếu user hoàn thành nhiều phiên cùng 1 ngày (idempotent theo `claimedOn`).
+model StreakClaim {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  /// yyyy-mm-dd (UTC) — ngày tính streak.
+  claimedOn String
+  /// Độ dài streak tại thời điểm tính (đã cap tối đa 7) — chỉ để audit/debug.
+  streakDay Int
+  createdAt DateTime @default(now())
+
+  @@unique([userId, claimedOn])
+  @@map("streak_claims")
 }

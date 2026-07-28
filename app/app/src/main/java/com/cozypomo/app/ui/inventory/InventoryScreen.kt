@@ -18,7 +18,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.HourglassBottom
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -46,8 +48,10 @@ import com.cozypomo.app.ui.common.EggIcon
 import com.cozypomo.app.ui.common.JarMark
 import com.cozypomo.app.ui.common.MessageDialog
 import com.cozypomo.app.ui.common.SetPriceDialog
+import com.cozypomo.app.ui.common.jarMaterialFor
 import com.cozypomo.app.ui.common.jarTintFor
 import com.cozypomo.app.ui.common.parseEggColor
+import com.cozypomo.app.ui.home.EggPickerDialog
 
 /** T-099 — S-07b Kho đồ (5th tab): xem + trang bị bình/nhạc, xem tiến trình trứng đang ấp —
  * bố trí dạng lưới thẻ theo từng tab danh mục, thay cho danh sách hàng rời rạc trước đây ở
@@ -104,6 +108,13 @@ fun InventoryScreen(viewModel: InventoryViewModel = hiltViewModel()) {
                 }
 
                 InventoryTab.EGG -> EggCardGrid(eggs = uiState.ownedEggs, onSell = viewModel::openSellDialog)
+
+                InventoryTab.BOOST -> ItemCardGrid(
+                    items = uiState.boostItems,
+                    emptyMessage = "Chưa có vật phẩm hỗ trợ nào — ghé Cửa hàng để mua nhé",
+                ) { item ->
+                    BoostItemCard(item = item, using = uiState.usingItem, onUse = { viewModel.requestUseItem(item) })
+                }
             }
         }
     }
@@ -119,6 +130,22 @@ fun InventoryScreen(viewModel: InventoryViewModel = hiltViewModel()) {
 
     uiState.sellMessage?.let { message ->
         MessageDialog(message = message, onDismiss = viewModel::dismissSellMessage)
+    }
+
+    uiState.useItemPickerFor?.let { item ->
+        EggPickerDialog(
+            ownedEggs = uiState.ownedEggs,
+            selectedOwnedEgg = null,
+            onSelect = { egg -> if (egg != null) viewModel.confirmUseItem(item, egg.id) },
+            onDismiss = viewModel::dismissUseItemPicker,
+            title = "Dùng ${item.shopItem.name} cho trứng nào?",
+            subtitle = "Cộng thêm ${item.shopItem.boostAmount ?: 0} phút ấp cho trứng bạn chọn",
+            allowNone = false,
+        )
+    }
+
+    uiState.useMessage?.let { message ->
+        MessageDialog(message = message, onDismiss = viewModel::dismissUseMessage)
     }
 }
 
@@ -196,7 +223,7 @@ private fun EquippableCard(name: String, equipped: Boolean, pending: Boolean, on
 @Composable
 private fun JarSkinCard(item: InventoryItemDto, pending: Boolean, onClick: () -> Unit) {
     EquippableCard(name = item.shopItem.name, equipped = item.equipped, pending = pending, onClick = onClick) {
-        JarMark(size = 64.dp, eggColor = null, jarTint = jarTintFor(item.shopItem.name))
+        JarMark(size = 64.dp, eggColor = null, jarTint = jarTintFor(item.shopItem.name), material = jarMaterialFor(item.shopItem.name))
     }
 }
 
@@ -206,6 +233,52 @@ private fun MusicCard(item: InventoryItemDto, pending: Boolean, onClick: () -> U
         Surface(shape = CircleShape, color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f), modifier = Modifier.size(56.dp)) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 Icon(Icons.Filled.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(28.dp))
+            }
+        }
+    }
+}
+
+/** Thẻ vật phẩm bổ trợ (ShopCategory.BOOST) — khác Bình/Nhạc: không có khái niệm "trang bị", chỉ
+ * có nút "Dùng" tiêu hao 1 quantity mỗi lần bấm (xem InventoryViewModel.requestUseItem). */
+@Composable
+private fun BoostItemCard(item: InventoryItemDto, using: Boolean, onUse: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth().aspectRatio(0.9f),
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f), modifier = Modifier.size(56.dp)) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Icon(
+                            if (item.shopItem.boostType == "HATCH_MINUTES") Icons.Filled.HourglassBottom else Icons.Filled.Bolt,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(28.dp),
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    item.shopItem.name,
+                    style = MaterialTheme.typography.labelLarge,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    "x${item.quantity}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = onUse, enabled = !using, modifier = Modifier.fillMaxWidth()) { Text("Dùng") }
             }
         }
     }

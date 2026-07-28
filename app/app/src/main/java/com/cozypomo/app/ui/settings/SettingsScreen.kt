@@ -43,6 +43,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -143,7 +144,27 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             SettingsSection(title = "Âm thanh") {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Tắt hoàn toàn âm thanh", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Im lặng nhạc nền và tiếng hoàn thành phiên",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(checked = uiState.soundMuted, onCheckedChange = viewModel::onSoundMutedToggle)
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                Column(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .alpha(if (uiState.soundMuted) 0.4f else 1f),
+                ) {
                     Text(
                         "Chủ đề âm thanh",
                         style = MaterialTheme.typography.bodyLarge,
@@ -155,6 +176,7 @@ fun SettingsScreen(
                                 selected = uiState.soundTheme == id,
                                 onClick = { viewModel.onSoundThemeSelected(id) },
                                 label = { Text(label) },
+                                enabled = !uiState.soundMuted,
                             )
                         }
                     }

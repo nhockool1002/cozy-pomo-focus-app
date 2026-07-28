@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ApiClient } from 'adminjs';
-import type { RecordJSON } from 'adminjs';
+import type { ActionProps, RecordJSON } from 'adminjs';
 import SpeciesThumbnail from './SpeciesThumbnail.js';
 import { CARD_FX_CSS, RARITY_BADGE } from './species-art.js';
 import { renderEggArt, renderEggAura, eggTierForPrice, EGG_TIER_BADGE } from './egg-art.js';
@@ -30,16 +30,10 @@ const TABS: Array<{ value: Tab; label: string }> = [
   { value: 'BOOST', label: 'Vật phẩm hỗ trợ' },
 ];
 
-type SelectedItem = { kind: 'SPECIES' | 'EGG' | 'SHOP_ITEM'; id: string; name: string; quantity: number };
+type RewardKind = 'SPECIES' | 'EGG_TYPE' | 'SHOP_ITEM' | 'COIN';
+type SelectedReward = { kind: RewardKind; id?: string; name: string; quantity: number };
 
-type SubmitResult = {
-  ok: boolean;
-  error?: string;
-  recipientsResolved?: number;
-  recipientsNotFound?: string[];
-  grantsApplied?: number;
-  errors?: string[];
-};
+type SubmitResult = { ok: boolean; error?: string };
 
 const pillStyle = (active: boolean): React.CSSProperties => ({
   fontSize: 12.5,
@@ -53,16 +47,27 @@ const pillStyle = (active: boolean): React.CSSProperties => ({
   whiteSpace: 'nowrap',
 });
 
-const GiftPage: React.FC = () => {
+function parseExistingRewards(raw: unknown): SelectedReward[] {
+  if (!raw) return [];
+  const value = typeof raw === 'string' ? JSON.parse(raw || '[]') : raw;
+  if (!Array.isArray(value)) return [];
+  return value.map((r: any) => ({ kind: r.kind, id: r.id, name: r.name, quantity: r.quantity }));
+}
+
+/** Cấu hình quà streak cho 1 ngày (record = StreakRewardDay, id = số ngày 1-7) — clone bố cục
+ * GiftPage.tsx (chọn vật phẩm theo tab) nhưng scope theo 1 record, không có phần "người nhận",
+ * thêm ô "Tặng kèm Xu Lá" (kind COIN không có id thật). */
+const StreakRewardEditPage: React.FC<ActionProps> = ({ record }) => {
+  const day = record ? Number(record.params.day ?? record.id) : 0;
+
   const [speciesRecords, setSpeciesRecords] = useState<RecordJSON[]>([]);
   const [eggRecords, setEggRecords] = useState<RecordJSON[]>([]);
   const [shopItemRecords, setShopItemRecords] = useState<RecordJSON[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('FOREST');
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<Record<string, SelectedItem>>({});
-  const [recipientsText, setRecipientsText] = useState('');
-  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [selected, setSelected] = useState<Record<string, SelectedReward>>({});
+  const [coinAmount, setCoinAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<SubmitResult | null>(null);
 
@@ -79,6 +84,22 @@ const GiftPage: React.FC = () => {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!record) return;
+    const existing = parseExistingRewards(record.params.rewards);
+    const next: Record<string, SelectedReward> = {};
+    let coin = 0;
+    existing.forEach((r) => {
+      if (r.kind === 'COIN') {
+        coin += r.quantity;
+      } else {
+        next[`${r.kind}:${r.id}`] = r;
+      }
+    });
+    setSelected(next);
+    setCoinAmount(coin > 0 ? String(coin) : '');
+  }, [record]);
 
   const filteredSpecies = useMemo(() => {
     if (tab === 'EGG' || tab === 'BOOST') return [];
@@ -103,7 +124,7 @@ const GiftPage: React.FC = () => {
     });
   }, [shopItemRecords, tab, search]);
 
-  const toggleSelect = (kind: 'SPECIES' | 'EGG' | 'SHOP_ITEM', id: string, name: string) => {
+  const toggleSelect = (kind: RewardKind, id: string, name: string) => {
     setResult(null);
     setSelected((prev) => {
       const key = `${kind}:${id}`;
@@ -129,22 +150,24 @@ const GiftPage: React.FC = () => {
   };
 
   const selectedList = Object.entries(selected);
+  const coinQuantity = Number(coinAmount) || 0;
 
   const handleSubmit = async () => {
     setSubmitting(true);
     setResult(null);
     try {
-      const fd = new FormData();
-      fd.append('recipientsText', recipientsText);
-      fd.append('grants', JSON.stringify(selectedList.map(([, v]) => ({ kind: v.kind, id: v.id, quantity: v.quantity }))));
-      if (csvFile) fd.append('csvFile', csvFile);
-      const res = await api.resourceAction({ resourceId: 'GiftLog', actionName: 'new', data: fd } as any);
-      setResult(res.data as SubmitResult);
-      if ((res.data as SubmitResult).ok) {
-        setSelected({});
-        setRecipientsText('');
-        setCsvFile(null);
+      const rewards: SelectedReward[] = selectedList.map(([, v]) => v);
+      if (coinQuantity > 0) {
+        rewards.push({ kind: 'COIN', name: 'Xu Lá', quantity: coinQuantity });
       }
+      const res = await api.recordAction({
+        resourceId: 'StreakRewardDay',
+        recordId: String(record?.id ?? day),
+        actionName: 'edit',
+        data: { rewards: JSON.stringify(rewards) },
+      } as any);
+      const data = res.data as any;
+      setResult({ ok: data?.ok !== false, error: data?.error });
     } catch (err: any) {
       setResult({ ok: false, error: err?.message ?? 'Có lỗi xảy ra, thử lại sau' });
     } finally {
@@ -152,16 +175,14 @@ const GiftPage: React.FC = () => {
     }
   };
 
-  const canSubmit = selectedList.length > 0 && (recipientsText.trim().length > 0 || csvFile) && !submitting;
-
   return (
     <div style={{ background: BRAND.bg, padding: '24px', fontFamily: 'inherit' }}>
       <style>{CARD_FX_CSS}</style>
-      <h1 style={{ fontSize: 22, fontWeight: 700, color: BRAND.ink, margin: '0 0 6px' }}>Phát quà</h1>
+      <h1 style={{ fontSize: 22, fontWeight: 700, color: BRAND.ink, margin: '0 0 6px' }}>Quà streak — Ngày {day}</h1>
       <p style={{ fontSize: 13, color: BRAND.inkSoft, margin: '0 0 20px', maxWidth: 640 }}>
-        Chọn 1 hoặc nhiều vật phẩm (thú/sinh vật biển/thực vật/thần thú/trứng) bên dưới, nhập người
-        nhận (ID hoặc email, danh sách hoặc file CSV), rồi bấm Phát quà. Mỗi vật phẩm được cấp cho
-        TẤT CẢ người nhận đã nhập.
+        Chọn 1 hoặc nhiều vật phẩm (và/hoặc Xu Lá) làm quà cho người chơi đạt streak {day} ngày liên
+        tiếp. Streak chỉ phát thưởng 1 lần cho tới hết ngày 7 — từ ngày 8 trở đi không phát thêm cho
+        tới khi streak đứt và chạy lại từ ngày 1.
       </p>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, alignItems: 'start' }}>
@@ -188,10 +209,10 @@ const GiftPage: React.FC = () => {
             <p style={{ color: BRAND.inkSoft }}>Đang tải...</p>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
-              {tab !== 'EGG' && filteredSpecies.map((record) => {
-                const id = String(record.id);
-                const name = String(record.params.name);
-                const rarity = String(record.params.rarity);
+              {tab !== 'EGG' && tab !== 'BOOST' && filteredSpecies.map((r) => {
+                const id = String(r.id);
+                const name = String(r.params.name);
+                const rarity = String(r.params.rarity);
                 const key = `SPECIES:${id}`;
                 const isSelected = Boolean(selected[key]);
                 const badge = RARITY_BADGE[rarity];
@@ -216,9 +237,9 @@ const GiftPage: React.FC = () => {
                       <span className="sp-badge" style={{ background: badge.bg, color: badge.fg }}>{rarity}</span>
                     ) : null}
                     <SpeciesThumbnail
-                      category={String(record.params.category)}
-                      archetype={String(record.params.archetype)}
-                      paletteIdx={Number(record.params.paletteIdx)}
+                      category={String(r.params.category)}
+                      archetype={String(r.params.archetype)}
+                      paletteIdx={Number(r.params.paletteIdx)}
                       name={name}
                       rarity={rarity}
                       size={64}
@@ -227,21 +248,21 @@ const GiftPage: React.FC = () => {
                   </div>
                 );
               })}
-              {tab === 'EGG' && filteredEggs.map((record) => {
-                const id = String(record.id);
-                const name = String(record.params.name);
-                const colorHex = String(record.params.colorHex);
-                const priceCoin = Number(record.params.priceCoin) || 0;
+              {tab === 'EGG' && filteredEggs.map((r) => {
+                const id = String(r.id);
+                const name = String(r.params.name);
+                const colorHex = String(r.params.colorHex);
+                const priceCoin = Number(r.params.priceCoin) || 0;
                 const eggTier = eggTierForPrice(priceCoin);
                 const badge = EGG_TIER_BADGE[eggTier];
-                const key = `EGG:${id}`;
+                const key = `EGG_TYPE:${id}`;
                 const isSelected = Boolean(selected[key]);
                 const icon = renderEggArt({ colorHex, name });
                 const aura = renderEggAura(colorHex, priceCoin);
                 return (
                   <div
                     key={key}
-                    onClick={() => toggleSelect('EGG', id, name)}
+                    onClick={() => toggleSelect('EGG_TYPE', id, name)}
                     style={{
                       background: BRAND.surface,
                       border: `2px solid ${isSelected ? BRAND.primary : BRAND.border}`,
@@ -261,11 +282,11 @@ const GiftPage: React.FC = () => {
                   </div>
                 );
               })}
-              {tab === 'BOOST' && filteredBoostItems.map((record) => {
-                const id = String(record.id);
-                const name = String(record.params.name);
-                const purchasable = Boolean(record.params.purchasable);
-                const priceCoin = Number(record.params.priceCoin) || 0;
+              {tab === 'BOOST' && filteredBoostItems.map((r) => {
+                const id = String(r.id);
+                const name = String(r.params.name);
+                const purchasable = Boolean(r.params.purchasable);
+                const priceCoin = Number(r.params.priceCoin) || 0;
                 const key = `SHOP_ITEM:${id}`;
                 const isSelected = Boolean(selected[key]);
                 return (
@@ -299,8 +320,18 @@ const GiftPage: React.FC = () => {
         </div>
 
         <div style={{ background: BRAND.surface, border: `1px solid ${BRAND.border}`, borderRadius: 14, padding: 16, position: 'sticky', top: 16 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: BRAND.ink, margin: '0 0 10px' }}>Tặng kèm Xu Lá</h3>
+          <input
+            type="number"
+            min={0}
+            placeholder="0"
+            value={coinAmount}
+            onChange={(e) => setCoinAmount(e.target.value)}
+            style={{ width: '100%', padding: '8px 10px', borderRadius: 10, border: `1px solid ${BRAND.border}`, fontSize: 13, marginBottom: 16 }}
+          />
+
           <h3 style={{ fontSize: 14, fontWeight: 700, color: BRAND.ink, margin: '0 0 10px' }}>
-            Đã chọn ({selectedList.length})
+            Vật phẩm đã chọn ({selectedList.length})
           </h3>
           {selectedList.length === 0 ? (
             <p style={{ fontSize: 12.5, color: BRAND.inkSoft, margin: '0 0 14px' }}>Chưa chọn vật phẩm nào.</p>
@@ -323,37 +354,17 @@ const GiftPage: React.FC = () => {
             </div>
           )}
 
-          <h3 style={{ fontSize: 14, fontWeight: 700, color: BRAND.ink, margin: '0 0 8px' }}>Người nhận</h3>
-          <textarea
-            placeholder={'Dán ID hoặc email — mỗi dòng 1 người, hoặc phân cách bằng dấu phẩy'}
-            value={recipientsText}
-            onChange={(e) => setRecipientsText(e.target.value)}
-            rows={4}
-            style={{ width: '100%', padding: '8px 10px', borderRadius: 10, border: `1px solid ${BRAND.border}`, fontSize: 12.5, marginBottom: 8, resize: 'vertical' }}
-          />
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ fontSize: 12, color: BRAND.inkSoft }}>
-              Hoặc tải file CSV (1 cột ID/email, mỗi dòng 1 người):
-              <input
-                type="file"
-                accept=".csv,text/csv"
-                onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)}
-                style={{ display: 'block', marginTop: 6, fontSize: 12 }}
-              />
-            </label>
-          </div>
-
           <button
             onClick={handleSubmit}
-            disabled={!canSubmit}
+            disabled={submitting}
             style={{
               width: '100%', padding: '10px 16px', borderRadius: 999, border: 'none',
-              background: canSubmit ? BRAND.primary : BRAND.border,
-              color: canSubmit ? BRAND.primaryInk : BRAND.inkSoft,
-              fontWeight: 700, fontSize: 13.5, cursor: canSubmit ? 'pointer' : 'not-allowed',
+              background: BRAND.primary,
+              color: BRAND.primaryInk,
+              fontWeight: 700, fontSize: 13.5, cursor: submitting ? 'not-allowed' : 'pointer',
             }}
           >
-            {submitting ? 'Đang phát...' : 'Phát quà'}
+            {submitting ? 'Đang lưu...' : 'Lưu quà streak'}
           </button>
 
           {result ? (
@@ -364,19 +375,7 @@ const GiftPage: React.FC = () => {
                 color: result.ok ? BRAND.primaryInk : BRAND.warnInk,
               }}
             >
-              {result.ok ? (
-                <>
-                  <div>Đã phát cho {result.recipientsResolved} người nhận, {result.grantsApplied} lượt cấp thành công.</div>
-                  {result.recipientsNotFound && result.recipientsNotFound.length > 0 ? (
-                    <div style={{ marginTop: 6 }}>Không tìm thấy: {result.recipientsNotFound.join(', ')}</div>
-                  ) : null}
-                  {result.errors && result.errors.length > 0 ? (
-                    <div style={{ marginTop: 6 }}>Lỗi: {result.errors.join('; ')}</div>
-                  ) : null}
-                </>
-              ) : (
-                <div>{result.error || 'Có lỗi xảy ra'}</div>
-              )}
+              {result.ok ? 'Đã lưu quà streak cho ngày này.' : (result.error || 'Có lỗi xảy ra')}
             </div>
           ) : null}
         </div>
@@ -385,4 +384,4 @@ const GiftPage: React.FC = () => {
   );
 };
 
-export default GiftPage;
+export default StreakRewardEditPage;

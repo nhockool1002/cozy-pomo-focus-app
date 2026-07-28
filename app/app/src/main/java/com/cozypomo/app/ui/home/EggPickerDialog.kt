@@ -51,6 +51,11 @@ fun EggPickerDialog(
     selectedOwnedEgg: OwnedEggDto?,
     onSelect: (OwnedEggDto?) -> Unit,
     onDismiss: () -> Unit,
+    title: String = "Chọn trứng đang ấp",
+    subtitle: String = "Mua thêm trứng ở Cửa hàng để có nhiều lựa chọn hơn",
+    /** false = ẩn hàng "Không ấp trứng nào" — dùng khi bắt buộc phải chọn 1 trứng cụ thể (vd dùng
+     * vật phẩm bổ trợ ấp trứng, xem InventoryScreen). */
+    allowNone: Boolean = true,
 ) {
     Dialog(onDismissRequest = onDismiss) {
         var appeared by remember { mutableStateOf(false) }
@@ -80,9 +85,9 @@ fun EggPickerDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column {
-                        Text("Chọn trứng đang ấp", style = MaterialTheme.typography.titleLarge)
+                        Text(title, style = MaterialTheme.typography.titleLarge)
                         Text(
-                            "Mua thêm trứng ở Cửa hàng để có nhiều lựa chọn hơn",
+                            subtitle,
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -94,7 +99,9 @@ fun EggPickerDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                NoEggRow(selected = selectedOwnedEgg == null, onClick = { onSelect(null) })
+                if (allowNone) {
+                    NoEggRow(selected = selectedOwnedEgg == null, onClick = { onSelect(null) })
+                }
 
                 if (ownedEggs.isEmpty()) {
                     Text(
