@@ -1,20 +1,24 @@
 /**
- * Patch AN TOÀN cho production (2026-07-28, T-125/T-126): nạp nội dung MỚI mà `seed.ts` thường sẽ
- * tạo (nếu chạy từ đầu) nhưng KHÔNG xoá bất kỳ dữ liệu nào đang có — khác hẳn `seed.ts` (xoá sạch
- * toàn bộ) và khác cả `reseed-testers.ts` (vẫn xoá/tạo lại 10 tester). Script này CHỈ:
+ * Patch AN TOÀN cho production (2026-07-28, T-125/T-126/T-127): nạp nội dung MỚI mà `seed.ts`
+ * thường sẽ tạo (nếu chạy từ đầu) nhưng KHÔNG xoá bất kỳ dữ liệu nào đang có — khác hẳn `seed.ts`
+ * (xoá sạch toàn bộ) và khác cả `reseed-testers.ts` (vẫn xoá/tạo lại 10 tester). Script này CHỈ:
  *   1. Cập nhật `Species.lore` cho các loài đang `lore = null` (khớp theo tên với SPECIES_LORE) —
  *      UPDATE tại chỗ, không đụng id/rarity/archetype hay bất kỳ cột nào khác.
  *   2. Thêm 6 `ShopItem` category BOOST (Túi Thời Gian x4, Giọt Sương/Ánh Trăng Ấp Trứng) — bỏ qua
  *      item nào đã tồn tại theo tên (idempotent, chạy lại nhiều lần không tạo trùng).
  *   3. Thêm 7 dòng `StreakRewardDay` (ngày 1-7, rewards rỗng — Admin tự điền qua AdminJS) —
  *      `createMany({ skipDuplicates: true })` nên không đè lên cấu hình đã có nếu chạy lại.
+ *   4. (T-127) Thêm loài thứ 176 "Kapi Ngái Ngủ" (MYTHIC/SSR, archetype `sleepyGiant`) + `EggType`
+ *      "Trứng Kapi" (30 phút ấp, `priceCoin`/`priceHours` = 0) + 1 `EggDropEntry`/`EggRarityWeight`
+ *      riêng (weight 100% — trứng này CHỈ nở ra đúng loài này) + `ShopItem` `purchasable: false` —
+ *      bỏ qua toàn bộ nếu Species "Kapi Ngái Ngủ" đã tồn tại (idempotent, chạy lại không tạo trùng).
  *
  * KHÔNG đụng tới: User, Session, LedgerEntry, CollectionEntry, InventoryItem, OwnedEgg,
- * UserSettings, EggType, EggDropEntry, EggRarityWeight, GameSettings, ShopItem đã có sẵn (EGG/
- * JAR_SKIN/MUSIC) — an toàn tuyệt đối cho MỌI user, kể cả tài khoản thật nhininh410@gmail.com,
- * vì script không có bất kỳ lệnh deleteMany/update nào chạm tới các bảng đó.
+ * UserSettings, EggType/ShopItem/Species đã có sẵn — an toàn tuyệt đối cho MỌI user, kể cả tài
+ * khoản thật nhininh410@gmail.com, vì script không có bất kỳ lệnh deleteMany/update nào chạm tới
+ * các bảng đó (bước 4 chỉ INSERT species/egg/shopitem hoàn toàn mới, không đụng species/egg hiện có).
  */
-import { BoostType, PrismaClient, ShopCategory } from '@prisma/client';
+import { BoostType, PrismaClient, Rarity, ShopCategory, SpeciesCategory } from '@prisma/client';
 import { SPECIES_LORE } from './species-lore';
 
 const prisma = new PrismaClient();
@@ -60,6 +64,39 @@ async function main() {
     skipDuplicates: true,
   });
   console.log(`   ✓ Đã tạo ${result.count} dòng mới (bỏ qua ngày đã có cấu hình).`);
+
+  console.log('4) Thêm Trứng Kapi + loài Kapi Ngái Ngủ (loài thứ 176) nếu chưa có...');
+  const existingKapi = await prisma.species.findFirst({ where: { name: 'Kapi Ngái Ngủ' } });
+  if (existingKapi) {
+    console.log(`   ⏭ Kapi Ngái Ngủ đã tồn tại (id ${existingKapi.id}) — bỏ qua.`);
+  } else {
+    const kapiSpecies = await prisma.species.create({
+      data: {
+        name: 'Kapi Ngái Ngủ',
+        category: SpeciesCategory.MYTHIC,
+        archetype: 'sleepyGiant',
+        paletteIdx: 3,
+        rarity: Rarity.SSR,
+        lore: SPECIES_LORE['Kapi Ngái Ngủ'],
+      },
+    });
+    const eggKapi = await prisma.eggType.create({
+      data: { name: 'Trứng Kapi', colorHex: '#4A5A82', priceCoin: 0, priceHours: 0, hatchDurationMin: 30 },
+    });
+    await prisma.eggDropEntry.create({ data: { eggTypeId: eggKapi.id, speciesId: kapiSpecies.id, weight: 1 } });
+    await prisma.eggRarityWeight.create({ data: { eggTypeId: eggKapi.id, rarity: Rarity.SSR, weight: 100 } });
+    await prisma.shopItem.create({
+      data: {
+        name: eggKapi.name,
+        description: 'Nặng trịch và ấm áp lạ thường, quả trứng to gấp đôi bình thường này chỉ khẽ nhúc nhích mỗi khi bên trong trở mình ngủ tiếp.',
+        category: ShopCategory.EGG,
+        priceCoin: 0,
+        purchasable: false,
+        eggTypeId: eggKapi.id,
+      },
+    });
+    console.log(`   ✓ Đã tạo loài Kapi Ngái Ngủ (id ${kapiSpecies.id}) + Trứng Kapi (id ${eggKapi.id}).`);
+  }
 
   console.log('Xong — không xoá/đụng tới bất kỳ User/Session/Ledger/Collection/Inventory nào.');
 }

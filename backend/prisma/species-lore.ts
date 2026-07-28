@@ -221,4 +221,7 @@ export const SPECIES_LORE: Record<string, string> = {
   'Hạc Đỏ Bình Minh': 'Đôi cánh đỏ rực của nó luôn tung bay đúng lúc bình minh ló rạng, như đang chào đón một ngày mới bắt đầu.',
   'Hạc Ngọc Sương Mai': 'Lông vũ của nó điểm những giọt sương mai kết tinh thành ngọc, lấp lánh mỗi khi nó vươn cánh bay lên.',
   'Hạc Thần Gió Nam': 'Mỗi lần vỗ cánh, nó gọi về một cơn gió nam ấm áp, xua tan cái lạnh cuối đông cho cả vùng đất phía dưới.',
+  // T-127 — loài thứ 176, riêng biệt ngoài 25 Thần Thú theo họ ở trên (không thuộc nhóm nào trong
+  // 5 nhóm mythicByFamily) — chỉ nở ra từ Trứng Kapi do Admin phát, không rơi ngẫu nhiên ở trứng nào khác.
+  'Kapi Ngái Ngủ': 'To lớn hơn hẳn muôn thú trong rừng, nó chỉ tỉnh giấc đúng 2 lần mỗi ngày — một lần để ăn, một lần để tìm chỗ êm hơn rồi ngủ tiếp. Không ai từng thấy nó thức trọn một buổi chiều.',
 };

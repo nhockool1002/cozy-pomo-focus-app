@@ -400,6 +400,22 @@ function mythicSvg(archetype: string, paletteIdx: number, seed: string): string 
     const wing = `<path d="M40 66 Q12 54 10 76 Q34 84 48 72 Z" fill="${p.base}"/>`;
     const neck = `<path d="M56 70 Q38 50 54 28" stroke="${p.base}" stroke-width="9" fill="none" stroke-linecap="round"/>`;
     body = `${legs}${body2}${wing}${neck}<circle cx="54" cy="25" r="7" fill="${p.base}"/><path d="${eyeMark(57, 18, 2.6)}" fill="${p.light}"/><circle cx="52" cy="20" r="1.6" fill="${INK}"/><path d="${sparkleMark(76, 40, 3.6)}" fill="${p.light}" opacity="0.85"/>`;
+  } else if (archetype === 'sleepyGiant') {
+    // T-127 — Kapi Ngái Ngủ: thân to gấp rưỡi các archetype khác (rx/ry lớn hơn hẳn qilin/phoenix)
+    // + mảng bụng SHINE lớn để gợi cảm giác "to mập", tai nhỏ xíu so với thân càng tôn thêm vóc
+    // dáng khổng lồ. Mắt nhắm (2 nét cong thay vì eyeMark/chấm tròn mở) + chuỗi 3 bong bóng mơ màng
+    // bay lên góc phải là điểm nhận diện riêng cho việc "lúc nào cũng ngủ say" — không dùng chữ Zzz
+    // thật vì SVG (`<text>`) và Compose Canvas (không có sẵn glyph) khó giữ port 1:1.
+    body = `<ellipse cx="50" cy="64" rx="30" ry="24" fill="${p.base}"/>`
+      + `<ellipse cx="46" cy="72" rx="15" ry="15" fill="${SHINE}" opacity="0.9"/>`
+      + `<circle cx="33" cy="28" r="6" fill="${p.dark}"/><circle cx="67" cy="28" r="6" fill="${p.dark}"/>`
+      + `<circle cx="50" cy="36" r="17" fill="${p.base}"/>`
+      + `<ellipse cx="50" cy="42" rx="8" ry="6" fill="${SHINE}" opacity="0.9"/>`
+      + `<path d="M40 33 Q44 29 48 33" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`
+      + `<path d="M52 33 Q56 29 60 33" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`
+      + `<path d="M46 46 Q50 49 54 46" stroke="${INK}" stroke-width="1.8" fill="none" stroke-linecap="round"/>`
+      + `<circle cx="64" cy="20" r="2.2" fill="${p.light}" opacity="0.8"/><circle cx="72" cy="13" r="3" fill="${p.light}" opacity="0.65"/><circle cx="80" cy="7" r="3.8" fill="${p.light}" opacity="0.5"/>`
+      + `<path d="${sparkleMark(18, 60, 3.6)}" fill="${p.light}" opacity="0.85"/>`;
   }
   return `<g transform="rotate(${rot} 50 55)">${body}</g>`;
 }

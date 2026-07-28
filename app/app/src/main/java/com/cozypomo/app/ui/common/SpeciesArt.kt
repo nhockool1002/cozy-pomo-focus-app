@@ -473,6 +473,23 @@ private fun DrawScope.mythicArt(archetype: String, p: SpeciesPalette, rot: Float
             circleAt(INK, 52f, 20f, 1.6f)
             drawPath(sparkleMark(76f, 40f, 3.6f), p.light, alpha = 0.85f)
         }
+        "sleepyGiant" -> {
+            // T-127 — Kapi Ngái Ngủ: port 1:1 từ species-art.ts (xem comment ở đó) — thân to gấp
+            // rưỡi các archetype khác, tai nhỏ xíu, mắt nhắm (2 nét cong) + chuỗi 3 bong bóng mơ
+            // màng bay lên góc phải thay cho chữ "Zzz" thật (Canvas không có glyph sẵn để giữ port 1:1).
+            ellipseAt(p.base, 50f, 64f, 30f, 24f)
+            ellipseAt(SHINE, 46f, 72f, 15f, 15f, alpha = 0.9f)
+            circleAt(p.dark, 33f, 28f, 6f); circleAt(p.dark, 67f, 28f, 6f)
+            circleAt(p.base, 50f, 36f, 17f)
+            ellipseAt(SHINE, 50f, 42f, 8f, 6f, alpha = 0.9f)
+            drawPath(Path().apply { moveTo(40f, 33f); quadraticTo(44f, 29f, 48f, 33f) }, INK, style = Stroke(2.4f, cap = StrokeCap.Round))
+            drawPath(Path().apply { moveTo(52f, 33f); quadraticTo(56f, 29f, 60f, 33f) }, INK, style = Stroke(2.4f, cap = StrokeCap.Round))
+            drawPath(Path().apply { moveTo(46f, 46f); quadraticTo(50f, 49f, 54f, 46f) }, INK, style = Stroke(1.8f, cap = StrokeCap.Round))
+            circleAt(p.light, 64f, 20f, 2.2f, alpha = 0.8f)
+            circleAt(p.light, 72f, 13f, 3f, alpha = 0.65f)
+            circleAt(p.light, 80f, 7f, 3.8f, alpha = 0.5f)
+            drawPath(sparkleMark(18f, 60f, 3.6f), p.light, alpha = 0.85f)
+        }
     }
 }
 

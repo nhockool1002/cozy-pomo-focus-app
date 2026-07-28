@@ -247,6 +247,27 @@ async function main() {
   addWeights(eggLegendPlant.id, LEGEND_WEIGHTS);
   await prisma.eggRarityWeight.createMany({ data: eggRarityWeightRows });
 
+  // T-127 — Trứng Kapi + loài Kapi Ngái Ngủ (loài thứ 176): KHÔNG thêm vào mảng `mythicNames`/
+  // `allSpecies` ở trên — cố ý tách biệt hoàn toàn để loài này KHÔNG rơi ngẫu nhiên ở Trứng Bí Ẩn
+  // (vốn dùng `allSpecies`) hay bất kỳ trứng nào khác. Chỉ nở ra từ đúng 1 trứng riêng, Admin phát
+  // trực tiếp qua `OwnedEgg` (giống 3 Trứng Truyền Thuyết) — không bán ở Cửa hàng.
+  console.log('Nạp Trứng Kapi + loài Kapi Ngái Ngủ (loài thứ 176, riêng biệt)...');
+  const kapiSpecies = await prisma.species.create({
+    data: {
+      name: 'Kapi Ngái Ngủ',
+      category: SpeciesCategory.MYTHIC,
+      archetype: 'sleepyGiant',
+      paletteIdx: 3,
+      rarity: Rarity.SSR,
+      lore: SPECIES_LORE['Kapi Ngái Ngủ'],
+    },
+  });
+  const eggKapi = await prisma.eggType.create({
+    data: { name: 'Trứng Kapi', colorHex: '#4A5A82', priceCoin: 0, priceHours: 0, hatchDurationMin: 30 },
+  });
+  await prisma.eggDropEntry.create({ data: { eggTypeId: eggKapi.id, speciesId: kapiSpecies.id, weight: 1 } });
+  await prisma.eggRarityWeight.create({ data: { eggTypeId: eggKapi.id, rarity: Rarity.SSR, weight: 100 } });
+
   console.log('Nạp vật phẩm cửa hàng...');
   await prisma.shopItem.create({
     data: {
@@ -312,6 +333,16 @@ async function main() {
       priceCoin: 0,
       purchasable: false,
       eggTypeId: eggLegendPlant.id,
+    },
+  });
+  await prisma.shopItem.create({
+    data: {
+      name: eggKapi.name,
+      description: 'Nặng trịch và ấm áp lạ thường, quả trứng to gấp đôi bình thường này chỉ khẽ nhúc nhích mỗi khi bên trong trở mình ngủ tiếp.',
+      category: ShopCategory.EGG,
+      priceCoin: 0,
+      purchasable: false,
+      eggTypeId: eggKapi.id,
     },
   });
   await prisma.shopItem.createMany({

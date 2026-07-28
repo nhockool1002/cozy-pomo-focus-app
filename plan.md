@@ -472,6 +472,16 @@ Trên nền T-125 (vừa commit): nút giá trứng (`EggCurrencyButtons`/`MiniC
 
 **✅ Đã release (2026-07-28):** merge `main` (`01bdd7f`) → `backend-v1.20260728.001` (build+push+deploy thành công, migration tự chạy qua `prisma migrate deploy` trong Dockerfile CMD) + `app-v1.20260728.001` (AAB/APK build/ký/upload thành công) → chạy tay `patch-content` qua `workflow_dispatch` (`deploy=true` để thoả `needs: deploy`, `patch_content=true`) — log xác nhận: cập nhật lore 175 loài, tạo 6 `ShopItem` BOOST, tạo 7 `StreakRewardDay`, không đụng bảng nào khác. Đã curl kiểm tra `cozyapi.nhutnm.id.vn` sống bình thường sau deploy.
 
+### T-127 — Trứng Kapi + loài thứ 176 "Kapi Ngái Ngủ" (SSR, admin-only) (2026-07-28)
+
+Dev1002 yêu cầu 1 trứng đặc biệt lấy cảm hứng từ 1 nhân vật game nổi tiếng (to mập, màu xanh dương, luôn ngủ) — **từ chối vẽ lại/sao chép thiết kế gốc vì đó là IP có bản quyền** (đã giải thích trực tiếp trong hội thoại), thay vào đó đề xuất 1 sinh vật **hoàn toàn nguyên bản** cùng tông màu/vóc dáng, dùng đúng hệ thống procedural sinh sẵn của game (archetype + palette, không phải asset ảnh rời) — Dev1002 duyệt hướng này qua bản xem trước (SVG mockup) trước khi code.
+
+- Archetype mới **`sleepyGiant`** thêm vào `mythicSvg()` ([species-art.ts](backend/src/admin/components/species-art.ts)) và `mythicArt()` ([SpeciesArt.kt](app/app/src/main/java/com/cozypomo/app/ui/common/SpeciesArt.kt)) — port 1:1 như quy ước sẵn có của file. Thân to gấp rưỡi các archetype khác + mảng bụng `SHINE` lớn + tai nhỏ xíu (tôn vóc dáng khổng lồ), mắt nhắm (2 nét cong thay vì `eyeMark`/`seaEye` mở), chuỗi 3 vòng tròn mờ dần bay lên góc phải thay cho chữ "Zzz" thật (SVG `<text>` so với Compose Canvas không có glyph sẵn — khó giữ port 1:1 nếu dùng chữ thật). Dùng `paletteIdx: 3` (xanh dương `#6C9EFF`/`#3D5AC2` có sẵn trong bảng màu, không cần thêm màu thương hiệu mới).
+- Loài **"Kapi Ngái Ngủ"** — `category: MYTHIC`, `rarity: SSR`, cố tình tạo **tách biệt** khỏi mảng `mythicNames`/`allSpecies` trong `seed.ts` (không thuộc 5 "họ" Thần Thú hiện có) để **không** rơi ngẫu nhiên ở Trứng Bí Ẩn hay bất kỳ trứng nào khác — chỉ nở từ đúng 1 trứng riêng.
+- **Trứng Kapi** — `EggType` mới, màu `#4A5A82` (xanh xám trầm, cùng tông "huyền bí" như 3 Trứng Truyền Thuyết), `hatchDurationMin: 30`, `priceCoin`/`priceHours: 0`. 1 `EggDropEntry` + 1 `EggRarityWeight` (SSR, weight 100) — pool chỉ có đúng 1 loài nên luôn nở ra Kapi Ngái Ngủ 100%. `ShopItem` tương ứng `purchasable: false` — hiện trong AdminJS (Admin phát qua `OwnedEgg`, đúng pattern 3 trứng Truyền Thuyết), **không** hiện ở Cửa hàng.
+- Tổng số loài: **175 → 176** (đã cập nhật đếm ở màn Khu rừng qua field tính toán sẵn, không cần sửa code — chỉ cần dòng dữ liệu mới).
+- **Đưa lên production an toàn:** thêm bước 4 vào `patch-boost-and-lore.ts` (script additive-only đã dùng cho T-125) — chỉ `create` nếu Species "Kapi Ngái Ngủ" chưa tồn tại, hoàn toàn không đụng species/egg/user hiện có. Đã verify: build sạch (`compileDebugKotlin`, `nest build`), test trên local dev DB (seed đầy đủ + render thật qua Khu rừng, ảnh khớp mockup), test lại chính patch script đó ở chế độ "đã tồn tại" → đúng bỏ qua, không tạo trùng.
+
 ---
 
 ## ⬜ Chưa làm
