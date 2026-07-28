@@ -39,6 +39,8 @@ import com.cozypomo.app.ui.common.CheatBubbleSize
 import com.cozypomo.app.ui.common.CurrencyBubble
 import com.cozypomo.app.ui.common.CurrencyViewModel
 import com.cozypomo.app.ui.common.MessageDialog
+import com.cozypomo.app.ui.common.NetworkStatusDot
+import com.cozypomo.app.ui.common.NetworkStatusViewModel
 import com.cozypomo.app.ui.common.SessionViewModel
 import com.cozypomo.app.ui.common.TesterCheatMenu
 import com.cozypomo.app.ui.common.TesterCheatViewModel
@@ -77,6 +79,9 @@ fun CozyPomoNavHost(onLogout: () -> Unit) {
     // đúng ở MỌI tab, không chỉ khi đang mở Hộp thư.
     val inboxViewModel: InboxViewModel = hiltViewModel()
     val inboxState by inboxViewModel.uiState.collectAsState()
+    // Chấm trạng thái mạng/API (xanh/đỏ) — cũng 1 instance duy nhất, hiện ở MỌI tab.
+    val networkStatusViewModel: NetworkStatusViewModel = hiltViewModel()
+    val isOnline by networkStatusViewModel.isOnline.collectAsState()
     val density = LocalDensity.current
 
     // Refresh token cũng hết hạn (VD lâu ngày không mở app) → TokenAuthenticator tự xoá phiên
@@ -121,6 +126,12 @@ fun CozyPomoNavHost(onLogout: () -> Unit) {
                         }
                     }
                     CurrencyBubble(state = currencyState, modifier = Modifier.align(Alignment.CenterEnd))
+                    // Góc trên-trái luôn trống (2 IconButton bên dưới đều căn CenterStart) — không
+                    // đè lên Cài đặt/Hộp thư/CurrencyBubble dù màn hình xoay hay đổi mật độ điểm ảnh.
+                    NetworkStatusDot(
+                        isOnline = isOnline,
+                        modifier = Modifier.align(Alignment.TopStart),
+                    )
                 }
             },
             bottomBar = {
