@@ -13,11 +13,14 @@ export const ADMIN_VI_TRANSLATIONS = {
     appVersion: 'Ứng dụng: {{version}}',
     dashboard: 'Trang chủ',
     // Tên resource hiển thị trên sidebar / breadcrumb (khoá = resource.id = tên model Prisma).
-    Species: 'Loài',
+    // T-132/T-135 — Species là "vật mang" sidebar link "Quản Lý Item" (trang 3 tab Loài/Loại
+    // Trứng/Vật phẩm hỗ trợ, xem `ItemManagementList.tsx` + comment ở resource Species trong
+    // `admin.module.ts`) — nhãn ở đây vì vậy KHÔNG còn là "Loài" nữa.
+    Species: 'Quản Lý Item',
     EggType: 'Loại trứng',
-    EggDropEntry: 'Bảng rơi trứng',
+    EggDropEntry: 'Tỉ lệ rơi trứng',
     EggRarityWeight: 'Trọng số cấp bậc theo trứng',
-    ShopItem: 'Vật phẩm cửa hàng',
+    ShopItem: 'Vật Phẩm Hỗ Trợ',
     User: 'Người dùng',
     UserSettings: 'Cài đặt người dùng',
     Session: 'Phiên tập trung',
@@ -197,6 +200,7 @@ export const ADMIN_VI_TRANSLATIONS = {
         'category.EGG': 'Trứng',
         'category.JAR_SKIN': 'Vỏ bình',
         'category.MUSIC': 'Nhạc nền',
+        'category.BOOST': 'Vật phẩm hỗ trợ',
       },
     },
     User: {

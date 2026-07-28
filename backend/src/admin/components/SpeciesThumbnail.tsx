@@ -13,7 +13,7 @@ type Props = {
 /**
  * Ảnh loài sinh bằng SVG (đồng bộ với Creature Atlas / wireframe), có vầng hào quang
  * theo cấp bậc phía sau và hiệu ứng lơ lửng nhẹ — y hệt thẻ loài trong wireframe.
- * Trang cha cần bơm sẵn `CARD_FX_CSS` (SpeciesList/SpeciesShow làm việc này).
+ * Trang cha cần bơm sẵn `CARD_FX_CSS` (ItemManagementList/SpeciesShow làm việc này).
  */
 const SpeciesThumbnail: React.FC<Props> = ({ category, archetype, paletteIdx, name, rarity, size = 64 }) => {
   const icon = renderSpeciesArt({ category, archetype, paletteIdx, name });

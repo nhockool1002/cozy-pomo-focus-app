@@ -8,7 +8,7 @@
  *     (purchasable:false, chỉ phát sự kiện) đổi hẳn sang trăng lưỡi liềm + sao, tông vàng kim như
  *     trứng Huyền thoại (egg-art.ts) để nổi bật đúng vị thế "hàng hiếm".
  */
-import { rndFor } from './species-art.js';
+import { rndFor, PALETTE } from './species-art.js';
 
 const AMBER = '#F4B942';
 const AMBER_DARK = '#B9761F';
@@ -140,3 +140,39 @@ export const BOOST_TIER_BADGE: Record<BoostTier, { fg: string; bg: string }> = {
   giant: { fg: '#8A6A10', bg: '#FFE29A' },
   legendary: { fg: GOLD, bg: '#2A1F16' },
 };
+
+// --- Vỏ bình (JAR_SKIN) / Nhạc nền (MUSIC) — chỉ dùng làm thumbnail nhỏ ở danh sách ShopItem
+// (T-130), không cần cả bộ hào quang/tier như BOOST/EGG. `ShopItem` không có cột màu riêng cho
+// JAR_SKIN — suy màu ổn định từ tên qua cùng `PALETTE` 14 màu của species-art.ts (cùng cách Android
+// `jarTintFor` suy màu từ `SPECIES_PALETTE`, xem ShopScreen.kt/JarMark.kt) để 1 tên luôn ra 1 màu.
+function hashStr(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (Math.imul(h, 31) + s.charCodeAt(i)) | 0;
+  return h;
+}
+
+function paletteFor(name: string) {
+  return PALETTE[Math.abs(hashStr(name)) % PALETTE.length];
+}
+
+/** Bình lọ đơn giản (thân bo tròn + tay cầm vòm) — chỉ để nhận diện nhanh trong danh sách, không
+ * cần phân biệt chất liệu Gốm/Thuỷ Tinh/Pha Lê như JarMark.kt bên Android. */
+export function renderJarArt(name: string): string {
+  const { base, dark, light } = paletteFor(name);
+  return `<svg class="sp-anim" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="50" cy="90" rx="18" ry="4.5" fill="${dark}" opacity="0.16"/>
+    <path d="M40 26 L40 18 Q50 12 60 18 L60 26" stroke="${dark}" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M30 34 C30 30 34 27 40 27 L60 27 C66 27 70 30 70 34 L74 58 C76 76 66 90 50 90 C34 90 24 76 26 58 Z" fill="${base}"/>
+    <ellipse cx="40" cy="50" rx="8" ry="13" fill="${light}" opacity="0.55"/>
+  </svg>`;
+}
+
+/** Nhạc nền — không có nghệ thuật riêng theo từng bài ở Android (`ShopScreen.kt` chỉ vẽ 1 icon nốt
+ * nhạc chung, không phân biệt màu theo bài), giữ y hệt bên Admin thay vì bịa thêm chi tiết không
+ * đồng bộ 2 nền tảng. */
+export function renderMusicArt(): string {
+  return `<svg class="sp-anim" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="55" r="30" fill="#E4D8C2"/>
+    <path d="M44 38 L44 66 A8 8 0 1 1 40 59 L40 46 L60 41 L60 62 A8 8 0 1 1 56 55 L56 34 Z" fill="#8A7A6C"/>
+  </svg>`;
+}

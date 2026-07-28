@@ -41,9 +41,18 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
   AdminJS.registerAdapter({ Database, Resource });
 
   const componentLoader = new ComponentLoader();
-  const SpeciesList = componentLoader.add('SpeciesList', path.join(COMPONENTS_DIR, 'SpeciesList'));
   const SpeciesShow = componentLoader.add('SpeciesShow', path.join(COMPONENTS_DIR, 'SpeciesShow'));
-  const EggTypeList = componentLoader.add('EggTypeList', path.join(COMPONENTS_DIR, 'EggTypeList'));
+  // T-132 — 1 component chung cho cả 3 resource Loài/Loại Trứng/Vật phẩm hỗ trợ (Dev1002 yêu cầu
+  // gộp 3 mục sidebar riêng thành 1 menu "Quản Lý Item" 3 tab) — xem comment đầu file component.
+  const ItemManagementList = componentLoader.add('ItemManagementList', path.join(COMPONENTS_DIR, 'ItemManagementList'));
+  // T-133 — color picker cho "Mã màu" + thumbnail đầu form Sửa (property ẢO, xem comment đầu mỗi file).
+  const ColorHexEdit = componentLoader.add('ColorHexEdit', path.join(COMPONENTS_DIR, 'ColorHexEdit'));
+  const SpeciesThumbnailPreview = componentLoader.add('SpeciesThumbnailPreview', path.join(COMPONENTS_DIR, 'SpeciesThumbnailPreview'));
+  const EggTypeThumbnailPreview = componentLoader.add('EggTypeThumbnailPreview', path.join(COMPONENTS_DIR, 'EggTypeThumbnailPreview'));
+  const ShopItemThumbnailPreview = componentLoader.add('ShopItemThumbnailPreview', path.join(COMPONENTS_DIR, 'ShopItemThumbnailPreview'));
+  // T-134 — lưới thẻ + sửa trọng số trực tiếp cho Tỉ lệ rơi trứng/Trọng số cấp bậc (xem comment đầu mỗi file).
+  const EggDropEntryList = componentLoader.add('EggDropEntryList', path.join(COMPONENTS_DIR, 'EggDropEntryList'));
+  const EggRarityWeightList = componentLoader.add('EggRarityWeightList', path.join(COMPONENTS_DIR, 'EggRarityWeightList'));
   const ApiExplorer = componentLoader.add('ApiExplorer', path.join(COMPONENTS_DIR, 'ApiExplorer'));
   const GiftPage = componentLoader.add('GiftPage', path.join(COMPONENTS_DIR, 'GiftPage'));
   const StreakRewardEditPage = componentLoader.add('StreakRewardEditPage', path.join(COMPONENTS_DIR, 'StreakRewardEditPage'));
@@ -77,12 +86,25 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
           availableLanguages: ['vi'],
           translations: { vi: ADMIN_VI_TRANSLATIONS },
         },
+        // T-135 — Dev1002 yêu cầu font "ra dáng gaming, mập mạp một tý" cho TOÀN bộ trang Admin —
+        // nạp Google Font "Baloo 2" (rounded/chunky, có subset Việt) qua thẻ <link>, áp dụng qua
+        // `branding.theme.font` (design-system dùng 1 biến `font` DUY NHẤT cho mọi component, xem
+        // `@adminjs/design-system` — không tách riêng heading/body).
+        assets: {
+          styles: ['https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&display=swap'],
+        },
         branding: {
           companyName: 'CozyPomo Admin',
           softwareBrothers: false,
           logo: '/branding/logo.png',
           favicon: '/branding/favicon.png',
           theme: {
+            // `ThemeOverride['font']` khai sai kiểu thành object (bug kiểu của @adminjs/design-system
+            // — generic `NonNullishPartialRecord<T[key]>` áp `keyof string` cho field `font`, ra 1
+            // object map thay vì `string`) trong khi runtime thực tế CHỈ nhận 1 chuỗi CSS
+            // font-family phẳng (xem `@adminjs/design-system/src/theme.ts#font`) — ép kiểu `as any`
+            // để qua tsc, giá trị runtime vẫn đúng là chuỗi.
+            font: "'Baloo 2', 'Nunito', sans-serif" as any,
             colors: {
               primary100: BRAND_COLORS.primary,
               primary80: '#6E9857',
@@ -117,37 +139,98 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
         },
         resources: [
           {
+            // T-132 — Dev1002 yêu cầu gộp HẲN 3 mục sidebar Loài/Loại Trứng/Vật phẩm hỗ trợ thành 1
+            // màn hình DUY NHẤT "Quản Lý Item" chia 3 tab (không phải 1 nhóm sidebar còn hiện 3 mục
+            // con). EggType/ShopItem bên dưới `navigation: false` (ẩn khỏi sidebar hoàn toàn); RIÊNG
+            // Species làm "vật mang" link sidebar DUY NHẤT — AdminJS không cho 1 `page` độc lập gia
+            // nhập nhóm sidebar của resource (đã thử ở lần T-132 đầu, xem lịch sử) nên phải dùng
+            // chính 1 resource thật làm điểm vào, đổi nhãn `labels.Species` → "Quản Lý Item" trong
+            // `admin-i18n.ts` (T-135, theo yêu cầu "Move Quản Lý Item vào Nội Dung Game"). Vẫn giữ
+            // `list`/`edit.showInDrawer` ở cả 3 resource — cần cho việc route
+            // `/admin/resources/<id>/records/:id/edit` (bấm thẻ trong `ItemManagementList` link tới
+            // đây) tự vẽ lại đúng `ItemManagementList` (đúng tab) làm nền phía sau Drawer.
             resource: { model: getModelByName('Species'), client: prisma },
             options: {
-              navigation: { name: 'Nội dung game' },
+              // T-135 — icon nhóm sidebar lấy từ resource ĐẦU TIÊN khai báo `navigation.name` này
+              // trong mảng `resources` (xem `node_modules/adminjs/lib/frontend/hooks/
+              // use-navigation-resources.js` — các resource sau trong cùng nhóm không tự hiện icon
+              // riêng, chỉ icon của nhóm cha là hiện), Species đứng đầu nhóm "Nội dung game" nên đặt ở đây.
+              navigation: { name: 'Nội dung game', icon: 'Box' },
               actions: {
-                list: { component: SpeciesList },
+                list: { component: ItemManagementList },
                 show: { component: SpeciesShow },
+                edit: { showInDrawer: true },
+              },
+              properties: {
+                // T-133 — thumbnail đầu form Sửa: property ẢO, không có cột DB thật (không match
+                // field nào của Species) nên AdminJS tự coi là `isVirtual`, không bao giờ gửi lên
+                // server khi Lưu — chỉ ẩn khỏi Xem/Danh sách/Bộ lọc, chỉ hiện ở Sửa.
+                thumbnailPreview: {
+                  isVisible: { edit: true, show: false, list: false, filter: false },
+                  components: { edit: SpeciesThumbnailPreview },
+                  position: -1,
+                },
               },
             },
           },
           {
             resource: { model: getModelByName('EggType'), client: prisma },
             options: {
-              navigation: { name: 'Nội dung game' },
+              navigation: false,
               actions: {
-                list: { component: EggTypeList },
+                list: { component: ItemManagementList },
+                edit: { showInDrawer: true },
+              },
+              properties: {
+                thumbnailPreview: {
+                  isVisible: { edit: true, show: false, list: false, filter: false },
+                  components: { edit: EggTypeThumbnailPreview },
+                  position: -1,
+                },
+                // T-133 — "Mã màu" hiện thêm color picker cạnh ô text thay vì chỉ gõ tay mã hex.
+                colorHex: { components: { edit: ColorHexEdit } },
               },
             },
           },
           {
+            // T-134 — "Tỉ lệ rơi trứng": lưới thẻ (thumbnail loài + Sửa trọng số TRỰC TIẾP trên
+            // thẻ, không cần trang chi tiết) thay bảng liệt kê mặc định — xem `EggDropEntryList.tsx`.
             resource: { model: getModelByName('EggDropEntry'), client: prisma },
-            options: { navigation: { name: 'Nội dung game' } },
+            options: {
+              navigation: { name: 'Nội dung game' },
+              actions: { list: { component: EggDropEntryList } },
+            },
           },
           {
             // T-116 — trọng số cấp bậc RIÊNG theo từng loại trứng (thay `RarityWeight` toàn cục
             // cũ) — admin lọc theo `eggTypeId` để sửa từng "đường cong" tỉ lệ 1 loại trứng.
+            // T-134 — chuyển sang lưới thẻ chia TAB theo Loại trứng, sửa trọng số trực tiếp trên
+            // thẻ — xem `EggRarityWeightList.tsx`.
             resource: { model: getModelByName('EggRarityWeight'), client: prisma },
-            options: { navigation: { name: 'Nội dung game' } },
+            options: {
+              navigation: { name: 'Nội dung game' },
+              actions: { list: { component: EggRarityWeightList } },
+            },
           },
           {
+            // T-130/T-132 — thumbnail theo danh mục (Trứng/Vỏ bình/Nhạc nền/Vật phẩm hỗ trợ) + click
+            // vào thẻ mở form Sửa ngay trong Drawer; ẩn khỏi sidebar riêng, gộp vào màn "Quản Lý
+            // Item" chung với Species/EggType (sidebar link thật là resource Species, xem comment ở đó).
             resource: { model: getModelByName('ShopItem'), client: prisma },
-            options: { navigation: { name: 'Nội dung game' } },
+            options: {
+              navigation: false,
+              actions: {
+                list: { component: ItemManagementList },
+                edit: { showInDrawer: true },
+              },
+              properties: {
+                thumbnailPreview: {
+                  isVisible: { edit: true, show: false, list: false, filter: false },
+                  components: { edit: ShopItemThumbnailPreview },
+                  position: -1,
+                },
+              },
+            },
           },
           {
             resource: { model: getModelByName('GameSettings'), client: prisma },
@@ -179,12 +262,12 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
             // action `new` để làm việc này) + duyệt tin PENDING_APPROVAL của user (SSR/MYTHIC) qua
             // đúng form edit chuẩn, chỉ cần đổi field `status` sang ACTIVE hoặc REJECTED.
             resource: { model: getModelByName('MarketListing'), client: prisma },
-            options: { navigation: { name: 'Chợ' } },
+            options: { navigation: { name: 'Chợ', icon: 'ShoppingCart' } },
           },
           {
             resource: { model: getModelByName('User'), client: prisma },
             options: {
-              navigation: { name: 'Người dùng' },
+              navigation: { name: 'Người dùng', icon: 'Users' },
               properties: { passwordHash: { isVisible: false } },
               ...readOnly,
             },
@@ -433,6 +516,7 @@ async function buildAdminJsModule(): Promise<DynamicModule> {
         pages: {
           'api-explorer': {
             component: ApiExplorer,
+            icon: 'Codesandbox',
           },
         },
       },
