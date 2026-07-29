@@ -87,8 +87,16 @@ class HomeViewModel @Inject constructor(
         loadOwnedEggs()
         loadEquippedJarSkin()
         // Trang bị bình mới ở Kho đồ (T-099) trong lúc Trang chủ đã mở sẵn — tự tải lại để hình
-        // bình đổi màu ngay, không cần rời tab rồi quay lại mới thấy.
-        collectionEventBus.changes.onEach { loadEquippedJarSkin() }.launchIn(viewModelScope)
+        // bình đổi màu ngay, không cần rời tab rồi quay lại mới thấy. Cũng tải lại danh sách trứng
+        // sở hữu — trước đây chỉ có loadEquippedJarSkin() ở đây nên trứng cấp qua cheat menu
+        // (TesterCheatViewModel.cheatGrantEgg cũng gọi notifyChanged() đúng như bên dưới) không
+        // bao giờ hiện trong EggPickerDialog: HomeViewModel sống suốt vòng đời NavHost (không bị
+        // tạo lại khi đổi tab) nên rời rồi quay lại Trang chủ cũng không tự tải lại — bug thật đã
+        // gặp khi Dev1002 tự kiểm thử.
+        collectionEventBus.changes.onEach {
+            loadEquippedJarSkin()
+            loadOwnedEggs()
+        }.launchIn(viewModelScope)
         viewModelScope.launch {
             timerRepository.completionEvents.collect { result ->
                 // Vá ngay tiến trình ấp từ chính response vừa nhận được (đồng bộ, không cần

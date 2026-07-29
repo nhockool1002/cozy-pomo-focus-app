@@ -18,9 +18,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.HourglassBottom
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -53,6 +51,7 @@ import com.cozypomo.app.ui.common.jarTintFor
 import com.cozypomo.app.ui.common.parseEggColor
 import com.cozypomo.app.ui.home.EggPickerDialog
 import com.cozypomo.app.ui.home.SessionResultDialog
+import com.cozypomo.app.ui.shop.BoostShopIcon
 
 /** T-099 — S-07b Kho đồ (5th tab): xem + trang bị bình/nhạc, xem tiến trình trứng đang ấp —
  * bố trí dạng lưới thẻ theo từng tab danh mục, thay cho danh sách hàng rời rạc trước đây ở
@@ -258,16 +257,7 @@ private fun BoostItemCard(item: InventoryItemDto, using: Boolean, onUse: () -> U
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f), modifier = Modifier.size(56.dp)) {
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                        Icon(
-                            if (item.shopItem.boostType == "HATCH_MINUTES") Icons.Filled.HourglassBottom else Icons.Filled.Bolt,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.tertiary,
-                            modifier = Modifier.size(28.dp),
-                        )
-                    }
-                }
+                BoostShopIcon(item = item.shopItem, size = 56.dp)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     item.shopItem.name,

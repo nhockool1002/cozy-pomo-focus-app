@@ -320,7 +320,7 @@ private fun sparkleMark(cx: Float, cy: Float, r: Float): Path {
  * khớp chính xác bản đã duyệt qua mockup, chỉ đổi từ `<path>` tĩnh sang Canvas + animation
  * (bồng bềnh có sẵn qua [FloatingIcon] ở nơi gọi, thêm mạch đập/tia sét/xoay riêng ở đây). */
 @Composable
-private fun BoostShopIcon(item: ShopItemDto, size: Dp) {
+fun BoostShopIcon(item: ShopItemDto, size: Dp) {
     val tier = boostTierFor(item)
     val infiniteTransition = rememberInfiniteTransition(label = "boostAura")
     val pulse by infiniteTransition.animateFloat(
