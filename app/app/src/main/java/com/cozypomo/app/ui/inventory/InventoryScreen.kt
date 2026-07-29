@@ -52,6 +52,7 @@ import com.cozypomo.app.ui.common.jarMaterialFor
 import com.cozypomo.app.ui.common.jarTintFor
 import com.cozypomo.app.ui.common.parseEggColor
 import com.cozypomo.app.ui.home.EggPickerDialog
+import com.cozypomo.app.ui.home.SessionResultDialog
 
 /** T-099 — S-07b Kho đồ (5th tab): xem + trang bị bình/nhạc, xem tiến trình trứng đang ấp —
  * bố trí dạng lưới thẻ theo từng tab danh mục, thay cho danh sách hàng rời rạc trước đây ở
@@ -146,6 +147,10 @@ fun InventoryScreen(viewModel: InventoryViewModel = hiltViewModel()) {
 
     uiState.useMessage?.let { message ->
         MessageDialog(message = message, onDismiss = viewModel::dismissUseMessage)
+    }
+
+    uiState.hatchResult?.let { result ->
+        SessionResultDialog(result = result, onDismiss = viewModel::dismissHatchResult)
     }
 }
 

@@ -8,6 +8,9 @@ import com.cozypomo.app.data.network.CreateEggListingRequest
 import com.cozypomo.app.data.network.InventoryItemDto
 import com.cozypomo.app.data.network.OwnedEggDto
 import com.cozypomo.app.data.network.UseItemRequest
+import com.cozypomo.app.data.sound.SoundManager
+import com.cozypomo.app.data.timer.SessionCompletionResult
+import com.cozypomo.app.ui.home.SessionResultUi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,6 +46,10 @@ data class InventoryUiState(
     val useItemPickerFor: InventoryItemDto? = null,
     val usingItem: Boolean = false,
     val useMessage: String? = null,
+    /** Trứng vừa nở nhờ vật phẩm bổ trợ HATCH_MINUTES — hiện modal hoạt ảnh giống hệt lúc hoàn
+     * thành phiên tập trung ([com.cozypomo.app.ui.home.SessionResultDialog]) thay vì chỉ text
+     * thường, xem [confirmUseItem]. null = không mở. */
+    val hatchResult: SessionResultUi? = null,
 )
 
 /** T-099 — Kho đồ (5th tab): gom bình/trứng/nhạc sở hữu vào 1 màn riêng, trước đây rải rác ở
@@ -53,6 +60,7 @@ data class InventoryUiState(
 class InventoryViewModel @Inject constructor(
     private val apiService: ApiService,
     private val collectionEventBus: CollectionEventBus,
+    private val soundManager: SoundManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(InventoryUiState())
@@ -150,17 +158,44 @@ class InventoryViewModel @Inject constructor(
         _uiState.update { it.copy(useItemPickerFor = null, usingItem = true) }
         viewModelScope.launch {
             val result = runCatching { apiService.useInventoryItem(item.id, UseItemRequest(ownedEggId)) }
-            val message = result.fold(
+            result.fold(
                 onSuccess = { res ->
-                    when {
-                        res.hatched -> "${item.shopItem.name}: trứng vừa nở ra ${res.resultSpecies?.name}!"
-                        res.kind == "FOCUS_MINUTES" -> "+${res.amount} phút Giờ tích luỹ!"
-                        else -> "Đã ấp thêm ${res.amount} phút cho trứng."
+                    if (res.hatched) {
+                        // Trứng nở nhờ vật phẩm bổ trợ (HATCH_MINUTES đủ giờ) — hiện ĐÚNG modal
+                        // hoạt ảnh + âm thanh dùng chung với lúc hoàn thành phiên tập trung
+                        // (SessionResultDialog), không phải chỉ text như trước. Vật phẩm bổ trợ
+                        // không cộng Xu Lá/Giờ tích luỹ nên coinsEarned/minutesAccumulated = 0 —
+                        // ResultStatsRow đã tự ẩn dòng Xu Lá khi = 0, không cần xử lý riêng.
+                        soundManager.playCompletionChime()
+                        val species = res.resultSpecies
+                        _uiState.update {
+                            it.copy(
+                                usingItem = false,
+                                hatchResult = SessionResultUi.Completed(
+                                    SessionCompletionResult.Hatched(
+                                        speciesName = species?.name,
+                                        speciesRarity = species?.rarity,
+                                        speciesCategory = species?.category,
+                                        speciesArchetype = species?.archetype,
+                                        speciesPaletteIdx = species?.paletteIdx,
+                                        coinsEarned = 0,
+                                        minutesAccumulated = 0,
+                                    ),
+                                ),
+                            )
+                        }
+                    } else {
+                        val message = when (res.kind) {
+                            "FOCUS_MINUTES" -> "+${res.amount} phút Giờ tích luỹ!"
+                            else -> "Đã ấp thêm ${res.amount} phút cho trứng."
+                        }
+                        _uiState.update { it.copy(usingItem = false, useMessage = message) }
                     }
                 },
-                onFailure = { "Không dùng được vật phẩm này — thử lại sau." },
+                onFailure = {
+                    _uiState.update { it.copy(usingItem = false, useMessage = "Không dùng được vật phẩm này — thử lại sau.") }
+                },
             )
-            _uiState.update { it.copy(usingItem = false, useMessage = message) }
             if (result.isSuccess) {
                 collectionEventBus.notifyChanged()
                 load()
@@ -169,4 +204,5 @@ class InventoryViewModel @Inject constructor(
     }
 
     fun dismissUseMessage() = _uiState.update { it.copy(useMessage = null) }
+    fun dismissHatchResult() = _uiState.update { it.copy(hatchResult = null) }
 }

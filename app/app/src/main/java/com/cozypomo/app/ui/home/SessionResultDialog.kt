@@ -1,6 +1,7 @@
 package com.cozypomo.app.ui.home
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
@@ -38,16 +39,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.cozypomo.app.data.timer.SessionCompletionResult
 import com.cozypomo.app.ui.common.EggIcon
 import com.cozypomo.app.ui.common.SpeciesArtIcon
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -121,10 +130,51 @@ private fun hatchTier(rarity: String?): Int = when (rarity) {
     else -> 0
 }
 
+/** Các giai đoạn hoạt cảnh "sắp nở" (yêu cầu Dev1002: lắc lắc → nứt → phát sáng → hoàn thành,
+ * chậm và đẹp mắt) — chạy TRƯỚC khi hiện kết quả loài thay vì hiện thẳng như bản cũ. */
+private enum class HatchPhase { APPEARING, WOBBLING, CRACKING, GLOWING, REVEALED }
+
 @Composable
 private fun HatchedContent(hatch: SessionCompletionResult.Hatched, appeared: Boolean) {
     val ringColor = rarityColor(hatch.speciesRarity)
     val tier = hatchTier(hatch.speciesRarity)
+
+    var phase by remember { mutableStateOf(HatchPhase.APPEARING) }
+    var crackCount by remember { mutableStateOf(0) }
+    LaunchedEffect(appeared) {
+        if (!appeared) return@LaunchedEffect
+        phase = HatchPhase.APPEARING
+        delay(350)
+        phase = HatchPhase.WOBBLING
+        delay(1000)
+        phase = HatchPhase.CRACKING
+        crackCount = 1
+        delay(500)
+        crackCount = 2
+        delay(500)
+        crackCount = 3
+        delay(500)
+        phase = HatchPhase.GLOWING
+        delay(800)
+        phase = HatchPhase.REVEALED
+    }
+    val revealed = phase == HatchPhase.REVEALED
+
+    // Chớp sáng đúng lúc chuyển từ trứng sang loài — quầng sáng mềm (radial gradient, không phải
+    // khối trắng đặc) vừa nở to vừa mờ dần, tinh tế hơn 1 vòng tròn trắng phẳng bật/tắt.
+    val flashAlpha = remember { Animatable(0f) }
+    val flashScale = remember { Animatable(0.8f) }
+    LaunchedEffect(phase) {
+        if (phase == HatchPhase.REVEALED) {
+            flashAlpha.snapTo(0.9f)
+            flashScale.snapTo(0.8f)
+            coroutineScope {
+                launch { flashScale.animateTo(1.6f, tween(700, easing = FastOutSlowInEasing)) }
+                launch { flashAlpha.animateTo(0f, tween(700, easing = FastOutSlowInEasing)) }
+            }
+        }
+    }
+
     val infiniteTransition = rememberInfiniteTransition(label = "hatchPulse")
     val pulse by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -139,85 +189,255 @@ private fun HatchedContent(hatch: SessionCompletionResult.Hatched, appeared: Boo
         label = "auraRotation",
     )
     val animatedCoins by animateIntAsState(
-        targetValue = if (appeared) hatch.coinsEarned else 0,
+        targetValue = if (revealed) hatch.coinsEarned else 0,
         animationSpec = tween(durationMillis = 700),
         label = "coins",
     )
+    // Crossfade trứng↔loài thủ công bằng 2 alpha đối nhau (không cần thêm phụ thuộc Crossfade/
+    // AnimatedContent — cả app hiện chưa dùng 2 API đó ở đâu, animation-core sẵn có là đủ).
+    val eggAlpha by animateFloatAsState(targetValue = if (revealed) 0f else 1f, animationSpec = tween(500), label = "eggAlpha")
+    val revealAlpha by animateFloatAsState(targetValue = if (revealed) 1f else 0f, animationSpec = tween(500), label = "revealAlpha")
+    val revealScale by animateFloatAsState(
+        targetValue = if (revealed) 1f else 0.7f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "revealScale",
+    )
+
     val ringSize = when (tier) { 2 -> 132.dp; 1 -> 112.dp; else -> 96.dp }
     val iconSize = when (tier) { 2 -> 84.dp; 1 -> 76.dp; else -> 68.dp }
+    val boxSize = ringSize + 28.dp
 
     Box(
-        modifier = Modifier.size(ringSize + 28.dp),
+        modifier = Modifier.size(boxSize),
         contentAlignment = Alignment.Center,
     ) {
-        // Tia hào quang toả xoay — chỉ SS/SSR mới có, đúng yêu cầu "hiệu ứng đặc biệt hơn" cho
-        // trứng Bí Ẩn/Truyền Thuyết (2 nhóm trứng DUY NHẤT có thể cho kết quả cấp này).
-        if (tier >= 1) {
-            RadianceRays(
-                sizeDp = ringSize + 28.dp,
-                rayCount = if (tier == 2) 16 else 10,
-                color = ringColor,
-                rotationDeg = rotation,
+        if (eggAlpha > 0f) {
+            EggHatchCanvas(
+                sizeDp = boxSize,
+                phase = phase,
+                crackCount = crackCount,
+                glowColor = ringColor,
+                modifier = Modifier.graphicsLayer { alpha = eggAlpha },
             )
         }
-        Box(
-            modifier = Modifier
-                .size(ringSize)
-                .graphicsLayer { scaleX = pulse; scaleY = pulse }
-                .background(ringColor.copy(alpha = 0.18f), CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (hatch.speciesCategory != null && hatch.speciesArchetype != null) {
-                SpeciesArtIcon(
-                    category = hatch.speciesCategory,
-                    archetype = hatch.speciesArchetype,
-                    paletteIdx = hatch.speciesPaletteIdx ?: 0,
-                    seed = hatch.speciesName ?: "?",
-                    rarity = hatch.speciesRarity,
-                    size = iconSize,
-                )
-            } else {
-                // Dữ liệu loài không đủ (VD phiên cũ trước bản fix này) — vẫn hiện gì đó thay vì
-                // để trống hoàn toàn.
-                Box(modifier = Modifier.size(64.dp).background(ringColor, CircleShape))
+        if (revealAlpha > 0f) {
+            Box(
+                modifier = Modifier
+                    .size(boxSize)
+                    .graphicsLayer { alpha = revealAlpha; scaleX = revealScale; scaleY = revealScale },
+                contentAlignment = Alignment.Center,
+            ) {
+                // Tia hào quang toả xoay — chỉ SS/SSR mới có, đúng yêu cầu "hiệu ứng đặc biệt hơn"
+                // cho trứng Bí Ẩn/Truyền Thuyết (2 nhóm trứng DUY NHẤT có thể cho kết quả cấp này).
+                if (tier >= 1) {
+                    RadianceRays(
+                        sizeDp = boxSize,
+                        rayCount = if (tier == 2) 16 else 10,
+                        color = ringColor,
+                        rotationDeg = rotation,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(ringSize)
+                        .graphicsLayer { scaleX = pulse; scaleY = pulse }
+                        .background(ringColor.copy(alpha = 0.18f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (hatch.speciesCategory != null && hatch.speciesArchetype != null) {
+                        SpeciesArtIcon(
+                            category = hatch.speciesCategory,
+                            archetype = hatch.speciesArchetype,
+                            paletteIdx = hatch.speciesPaletteIdx ?: 0,
+                            seed = hatch.speciesName ?: "?",
+                            rarity = hatch.speciesRarity,
+                            size = iconSize,
+                        )
+                    } else {
+                        // Dữ liệu loài không đủ (VD phiên cũ trước bản fix này) — vẫn hiện gì đó
+                        // thay vì để trống hoàn toàn.
+                        Box(modifier = Modifier.size(64.dp).background(ringColor, CircleShape))
+                    }
+                }
+                // Lấp lánh quay ngược chiều quanh viền — chỉ cấp huyền thoại (SSR/Thần Thú).
+                if (tier == 2) {
+                    SparkleOrbit(sizeDp = ringSize + 20.dp, color = ringColor, rotationDeg = -rotation * 1.4f)
+                }
             }
         }
-        // Lấp lánh quay ngược chiều quanh viền — chỉ cấp huyền thoại (SSR/Thần Thú).
-        if (tier == 2) {
-            SparkleOrbit(sizeDp = ringSize + 20.dp, color = ringColor, rotationDeg = -rotation * 1.4f)
+        if (flashAlpha.value > 0f) {
+            Box(
+                modifier = Modifier
+                    .size(ringSize)
+                    .graphicsLayer {
+                        alpha = flashAlpha.value
+                        scaleX = flashScale.value
+                        scaleY = flashScale.value
+                    }
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color.White,
+                                Color.White.copy(alpha = 0.55f),
+                                Color.White.copy(alpha = 0f),
+                            ),
+                        ),
+                        CircleShape,
+                    ),
+            )
         }
     }
 
     Spacer(modifier = Modifier.height(20.dp))
-    Text(
-        text = when (tier) {
-            2 -> "🌟 Huyền thoại! Thần Thú xuất hiện!"
-            1 -> "✨ Cực hiếm! Trứng đã nở"
-            else -> "Chúc mừng! Trứng đã nở"
-        },
-        style = MaterialTheme.typography.titleLarge,
-        textAlign = TextAlign.Center,
+    if (revealed) {
+        Text(
+            text = when (tier) {
+                2 -> "🌟 Huyền thoại! Thần Thú xuất hiện!"
+                1 -> "✨ Cực hiếm! Trứng đã nở"
+                else -> "Chúc mừng! Trứng đã nở"
+            },
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = hatch.speciesName ?: "Một loài bí ẩn",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center,
+        )
+        hatch.speciesRarity?.let { rarity ->
+            Spacer(modifier = Modifier.height(6.dp))
+            Surface(shape = RoundedCornerShape(50), color = ringColor.copy(alpha = 0.2f)) {
+                Text(
+                    text = "Cấp $rarity",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = ringColor,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(14.dp))
+        ResultStatsRow(coinsEarned = animatedCoins, minutesAccumulated = hatch.minutesAccumulated)
+    } else {
+        // Câu dẫn đổi theo từng giai đoạn — giữ khoảng trống tương đương phần badge+ResultStatsRow
+        // bên nhánh revealed để dialog không "nhảy" cao đột ngột đúng lúc nở xong.
+        Text(
+            text = when (phase) {
+                HatchPhase.APPEARING -> "Có gì đó đang chuyển động…"
+                HatchPhase.WOBBLING -> "Trứng đang lắc lư…"
+                HatchPhase.CRACKING -> "Trứng bắt đầu nứt…"
+                HatchPhase.GLOWING, HatchPhase.REVEALED -> "Ánh sáng đang bừng lên…"
+            },
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(48.dp))
+    }
+}
+
+/**
+ * Vẽ trứng "sắp nở": lắc lư dần mạnh hơn theo giai đoạn, nứt dần (1→3 vết, [crackCount] điều
+ * khiển từ ngoài để đồng bộ với mốc thời gian ở [HatchedContent]), rồi phát sáng theo đúng màu cấp
+ * bậc loài sắp nở ([glowColor] = [rarityColor]) — dự báo độ hiếm bằng ánh sáng mà không lộ hẳn loài,
+ * chậm và có nhịp điệu rõ ràng thay vì hiện thẳng kết quả như bản cũ.
+ */
+@Composable
+private fun EggHatchCanvas(sizeDp: Dp, phase: HatchPhase, crackCount: Int, glowColor: Color, modifier: Modifier = Modifier) {
+    val ink = MaterialTheme.colorScheme.onBackground
+    val shell = MaterialTheme.colorScheme.surfaceContainerHighest
+
+    val infinite = rememberInfiniteTransition(label = "eggWobble")
+    val wobbleRaw by infinite.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(340, easing = LinearEasing), repeatMode = RepeatMode.Reverse),
+        label = "wobbleRaw",
     )
-    Spacer(modifier = Modifier.height(8.dp))
-    Text(
-        text = hatch.speciesName ?: "Một loài bí ẩn",
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-        textAlign = TextAlign.Center,
+    val wobbleAmplitude = when (phase) {
+        HatchPhase.APPEARING -> 0f
+        HatchPhase.WOBBLING -> 4f
+        HatchPhase.CRACKING -> 10f
+        HatchPhase.GLOWING -> 2f
+        HatchPhase.REVEALED -> 0f
+    }
+    val wobbleDeg = (wobbleRaw * 2f - 1f) * wobbleAmplitude
+
+    val glowIntensity by animateFloatAsState(
+        targetValue = if (phase == HatchPhase.GLOWING || phase == HatchPhase.REVEALED) 1f else 0f,
+        animationSpec = tween(750),
+        label = "glowIntensity",
     )
-    hatch.speciesRarity?.let { rarity ->
-        Spacer(modifier = Modifier.height(6.dp))
-        Surface(shape = RoundedCornerShape(50), color = ringColor.copy(alpha = 0.2f)) {
-            Text(
-                text = "Cấp $rarity",
-                style = MaterialTheme.typography.labelLarge,
-                color = ringColor,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+    val appearScale by animateFloatAsState(
+        targetValue = if (phase == HatchPhase.APPEARING) 0.6f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "appearScale",
+    )
+
+    Canvas(
+        modifier = modifier
+            .size(sizeDp)
+            .graphicsLayer {
+                rotationZ = wobbleDeg
+                scaleX = appearScale
+                scaleY = appearScale
+            },
+    ) {
+        val w = size.width
+        val h = size.height
+        val cx = w / 2f
+        val cy = h / 2f
+
+        if (glowIntensity > 0f) {
+            val glowRadius = w * (0.45f + 0.25f * glowIntensity)
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(glowColor.copy(alpha = 0.55f * glowIntensity), glowColor.copy(alpha = 0f)),
+                    center = Offset(cx, cy),
+                    radius = glowRadius,
+                ),
+                radius = glowRadius,
+                center = Offset(cx, cy),
             )
         }
+
+        val eggTopLeft = Offset(w * 0.12f, h * 0.04f)
+        val eggSize = Size(w * 0.76f, h * 0.92f)
+        val shellColor = lerp(shell, Color.White, glowIntensity * 0.7f)
+        drawOval(color = shellColor, topLeft = eggTopLeft, size = eggSize)
+        drawOval(
+            color = Color.White.copy(alpha = 0.4f),
+            topLeft = Offset(w * 0.32f, h * 0.18f),
+            size = Size(w * 0.2f, h * 0.26f),
+        )
+        drawOval(color = ink, topLeft = eggTopLeft, size = eggSize, style = Stroke(width = w * 0.025f))
+
+        if (crackCount > 0) {
+            val rx = eggSize.width / 2f
+            val ry = eggSize.height / 2f
+            val cracks = listOf(
+                Path().apply {
+                    moveTo(cx - rx * 0.25f, cy - ry * 0.75f)
+                    lineTo(cx - rx * 0.02f, cy - ry * 0.2f)
+                    lineTo(cx - rx * 0.3f, cy + ry * 0.15f)
+                    lineTo(cx - rx * 0.05f, cy + ry * 0.6f)
+                },
+                Path().apply {
+                    moveTo(cx + rx * 0.45f, cy - ry * 0.55f)
+                    lineTo(cx + rx * 0.1f, cy - ry * 0.02f)
+                    lineTo(cx + rx * 0.45f, cy + ry * 0.5f)
+                },
+                Path().apply {
+                    moveTo(cx - rx * 0.5f, cy - ry * 0.05f)
+                    lineTo(cx + rx * 0.5f, cy + ry * 0.2f)
+                },
+            )
+            for (i in 0 until crackCount.coerceAtMost(cracks.size)) {
+                drawPath(cracks[i], ink, style = Stroke(width = w * 0.018f, cap = StrokeCap.Round))
+            }
+        }
     }
-    Spacer(modifier = Modifier.height(14.dp))
-    ResultStatsRow(coinsEarned = animatedCoins, minutesAccumulated = hatch.minutesAccumulated)
 }
 
 /** Tia hào quang xoay quanh vòng loài — độ "long trọng" của hiệu ứng nở (T-117), chỉ dùng cho kết
