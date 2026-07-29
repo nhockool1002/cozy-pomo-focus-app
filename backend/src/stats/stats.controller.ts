@@ -36,4 +36,13 @@ export class StatsController {
     ]);
     return { streak, totalFocusMinutes };
   }
+
+  @Get('by-label')
+  getByLabel(
+    @CurrentUser() user: { userId: string },
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    return this.statsService.getByLabel(user.userId, start ? new Date(start) : undefined, end ? new Date(end) : undefined);
+  }
 }

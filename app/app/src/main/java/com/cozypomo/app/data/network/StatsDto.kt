@@ -17,3 +17,11 @@ data class StatsSummaryDto(
     val streak: Int,
     val totalFocusMinutes: Int,
 )
+
+/** 1 dòng trong `GET /stats/by-label` — [label] null = phiên không gắn nhãn ("Chưa gắn nhãn"),
+ * chỉ tính phiên COMPLETED (xem StatsService.getByLabel). */
+@Serializable
+data class LabelStatsDto(
+    val label: String? = null,
+    val totalFocusMinutes: Int,
+)

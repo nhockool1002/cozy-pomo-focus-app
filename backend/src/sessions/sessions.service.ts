@@ -40,6 +40,7 @@ export class SessionsService {
         rewardCurrency: dto.rewardCurrency ?? CurrencyType.COIN,
         plannedMin: dto.plannedMin,
         strictMode: dto.strictMode,
+        label: dto.label,
         clientEventId: dto.clientEventId,
       },
     });

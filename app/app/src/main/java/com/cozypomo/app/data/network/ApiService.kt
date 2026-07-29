@@ -76,6 +76,10 @@ interface ApiService {
     suspend fun getStatsSummary(): StatsSummaryDto
 
     @Headers("Requires-Auth: true")
+    @GET("stats/by-label")
+    suspend fun getStatsByLabel(@Query("start") start: String? = null, @Query("end") end: String? = null): List<LabelStatsDto>
+
+    @Headers("Requires-Auth: true")
     @GET("settings")
     suspend fun getSettings(): SettingsDto
 

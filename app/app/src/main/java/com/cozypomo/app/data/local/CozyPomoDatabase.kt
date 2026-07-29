@@ -12,7 +12,7 @@ import com.cozypomo.app.data.local.sync.SyncOutboxEntity
  * (T-030). Bảng `sync_outbox` (T-043) là hàng đợi đồng bộ offline→online cho các thao tác phiên
  * gọi backend thất bại lúc mất mạng — xem [com.cozypomo.app.data.sync.SyncOutboxWorker].
  */
-@Database(entities = [SessionEntity::class, SyncOutboxEntity::class], version = 4, exportSchema = false)
+@Database(entities = [SessionEntity::class, SyncOutboxEntity::class], version = 5, exportSchema = false)
 abstract class CozyPomoDatabase : RoomDatabase() {
     abstract fun sessionDao(): SessionDao
     abstract fun syncOutboxDao(): SyncOutboxDao

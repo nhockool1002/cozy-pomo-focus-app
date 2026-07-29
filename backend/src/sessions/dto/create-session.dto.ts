@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { CurrencyType } from '@prisma/client';
+import { CurrencyType, SessionLabel } from '@prisma/client';
 import { IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 
 export class CreateSessionDto {
@@ -43,6 +43,15 @@ export class CreateSessionDto {
   @ApiProperty({ default: true })
   @IsBoolean()
   strictMode: boolean = true;
+
+  @ApiProperty({
+    required: false,
+    enum: SessionLabel,
+    description: 'Nhãn tuỳ chọn cho phiên (VD "Học tập") — không bắt buộc, dùng để gom thống kê ở GET stats/by-label.',
+  })
+  @IsOptional()
+  @IsEnum(SessionLabel)
+  label?: SessionLabel;
 
   @ApiProperty({ required: false, description: 'Dùng để chống trùng khi app đồng bộ lại lúc mất mạng' })
   @IsOptional()

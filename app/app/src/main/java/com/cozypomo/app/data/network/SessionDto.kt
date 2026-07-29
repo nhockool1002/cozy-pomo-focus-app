@@ -9,6 +9,8 @@ data class CreateSessionRequest(
     val rewardCurrency: String? = null,
     val plannedMin: Int,
     val strictMode: Boolean,
+    /** Nhãn tuỳ chọn cho phiên (VD "STUDY") — null = không gắn nhãn, khớp enum SessionLabel backend. */
+    val label: String? = null,
     val clientEventId: String? = null,
 )
 

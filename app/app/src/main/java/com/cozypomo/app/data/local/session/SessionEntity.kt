@@ -30,6 +30,8 @@ data class SessionEntity(
     val rewardCurrency: String = "COIN",
     val plannedMin: Int,
     val strictMode: Boolean,
+    /** Nhãn tuỳ chọn cho phiên (VD "STUDY") — null = chưa gắn nhãn, khớp enum `SessionLabel` backend. */
+    val label: String? = null,
     val status: String,
     val startedAtEpochMs: Long,
     val startElapsedRealtimeMs: Long,

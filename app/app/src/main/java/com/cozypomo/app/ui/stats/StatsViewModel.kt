@@ -3,6 +3,7 @@ package com.cozypomo.app.ui.stats
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cozypomo.app.data.network.ApiService
+import com.cozypomo.app.data.network.LabelStatsDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +28,8 @@ data class StatsUiState(
     val streak: Int = 0,
     val totalFocusMinutesAllTime: Int = 0,
     val days: List<DailyStatEntry> = emptyList(),
+    /** Phân bổ tổng phút tập trung (mọi thời điểm, chỉ phiên COMPLETED) theo nhãn — sắp giảm dần. */
+    val labelBreakdown: List<LabelStatsDto> = emptyList(),
 ) {
     val weekCompletedCount: Int get() = days.sumOf { it.completedCount }
     val weekGivenUpCount: Int get() = days.sumOf { it.givenUpCount }
@@ -54,6 +57,7 @@ class StatsViewModel @Inject constructor(
             val start = today.minusDays(6)
             val rangeResult = runCatching { apiService.getStatsRange(start.toString(), today.toString()) }
             val summaryResult = runCatching { apiService.getStatsSummary() }
+            val labelResult = runCatching { apiService.getStatsByLabel() }
             val byDate = rangeResult.getOrNull()?.associateBy { it.date } ?: emptyMap()
 
             val days = (0..6).map { offset ->
@@ -73,6 +77,7 @@ class StatsViewModel @Inject constructor(
                     days = days,
                     streak = summaryResult.getOrNull()?.streak ?: state.streak,
                     totalFocusMinutesAllTime = summaryResult.getOrNull()?.totalFocusMinutes ?: state.totalFocusMinutesAllTime,
+                    labelBreakdown = labelResult.getOrDefault(state.labelBreakdown),
                 )
             }
         }

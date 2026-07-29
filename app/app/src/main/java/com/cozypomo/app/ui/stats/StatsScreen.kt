@@ -1,6 +1,8 @@
 package com.cozypomo.app.ui.stats
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +37,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.cozypomo.app.data.network.LabelStatsDto
+import com.cozypomo.app.ui.home.SessionLabelOption
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -60,7 +64,7 @@ fun StatsScreen(viewModel: StatsViewModel = hiltViewModel()) {
                 CircularProgressIndicator()
             }
         } else {
-            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 20.dp).verticalScroll(rememberScrollState())) {
                 StreakCard(streak = uiState.streak)
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -93,6 +97,23 @@ fun StatsScreen(viewModel: StatsViewModel = hiltViewModel()) {
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         WeeklyBarChart(days = uiState.days)
+                    }
+                }
+
+                if (uiState.labelBreakdown.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                            Text("Phân bổ theo nhãn", style = MaterialTheme.typography.labelLarge)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "Tổng phút tập trung (mọi thời điểm) theo từng nhãn phiên",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            LabelBreakdownList(entries = uiState.labelBreakdown)
+                        }
                     }
                 }
 
@@ -186,6 +207,50 @@ private fun WeeklyBarChart(days: List<DailyStatEntry>) {
         }
     }
 }
+
+/** Mỗi nhãn 1 hàng ngang: tên + thanh ngang tỉ lệ theo phút (cùng kỹ thuật `Box` tỉ lệ đã dùng ở
+ * [WeeklyBarChart], chỉ đổi hướng thanh sang ngang) + số phút. [entries] đã sắp giảm dần từ backend. */
+@Composable
+private fun LabelBreakdownList(entries: List<LabelStatsDto>) {
+    val maxMinutes = remember(entries) { (entries.maxOfOrNull { it.totalFocusMinutes } ?: 0).coerceAtLeast(1) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        entries.forEach { entry ->
+            val fraction = (entry.totalFocusMinutes / maxMinutes.toFloat()).coerceIn(0f, 1f)
+            val displayName = labelDisplayName(entry.label)
+
+            Column {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(displayName, style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "${entry.totalFocusMinutes} phút",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .clip(RoundedCornerShape(5.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(fraction.coerceAtLeast(0.03f))
+                            .height(10.dp)
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(MaterialTheme.colorScheme.primary),
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun labelDisplayName(backendValue: String?): String =
+    SessionLabelOption.entries.firstOrNull { it.backendValue == backendValue }?.label ?: "Chưa gắn nhãn"
 
 private fun weekdayAbbreviation(date: LocalDate): String = when (date.dayOfWeek) {
     DayOfWeek.MONDAY -> "T2"

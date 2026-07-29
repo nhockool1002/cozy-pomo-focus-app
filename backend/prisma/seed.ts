@@ -13,6 +13,7 @@ import {
   OwnedEggStatus,
   PrismaClient,
   Rarity,
+  SessionLabel,
   SessionStatus,
   ShopCategory,
   SpeciesCategory,
@@ -395,6 +396,22 @@ async function main() {
   const PASSWORD = 'Tester123!';
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
   const DURATIONS = [10, 15, 20, 25, 25, 30, 45, 60];
+  // ~30% không gắn nhãn (null) — để dữ liệu tester phản ánh đúng thực tế "nhãn là tuỳ chọn".
+  const SESSION_LABELS: (SessionLabel | null)[] = [
+    null,
+    null,
+    null,
+    SessionLabel.STUDY,
+    SessionLabel.STUDY,
+    SessionLabel.WORK,
+    SessionLabel.WORK,
+    SessionLabel.READING,
+    SessionLabel.CREATIVE,
+    SessionLabel.OTHER,
+  ];
+  function pickLabel(rnd: () => number): SessionLabel | null {
+    return SESSION_LABELS[Math.floor(rnd() * SESSION_LABELS.length)];
+  }
 
   /** Sinh dữ liệu demo (phiên/Xu Lá/trứng ấp/bộ sưu tập) cho 1 tester đã tồn tại. */
   async function seedDemoDataForUser(user: { id: string; email: string }, sessionCount: number) {
@@ -460,6 +477,7 @@ async function main() {
             rewardCurrency,
             plannedMin,
             strictMode: true,
+            label: pickLabel(rnd),
             status: SessionStatus.COMPLETED,
             startedAt: cursor,
             endedAt: new Date(cursor.getTime() + plannedMin * 60 * 1000),
@@ -513,6 +531,7 @@ async function main() {
             ownedEggId: activeEggId[pool.egg.id],
             plannedMin,
             strictMode: true,
+            label: pickLabel(rnd),
             status: SessionStatus.GIVEN_UP,
             startedAt: cursor,
             endedAt: new Date(cursor.getTime() + Math.floor(plannedMin * rnd()) * 60 * 1000),

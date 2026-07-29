@@ -6,6 +6,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -194,6 +195,27 @@ fun HomeScreen(
                             label = { Text("Giờ tích luỹ") },
                             colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary),
                         )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        text = "Nhãn phiên (tuỳ chọn)",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    ) {
+                        SessionLabelOption.entries.forEach { option ->
+                            FilterChip(
+                                selected = uiState.selectedLabel == option,
+                                onClick = { viewModel.selectLabel(option) },
+                                enabled = !isRunning,
+                                label = { Text(option.label) },
+                            )
+                        }
                     }
 
                     if (selectedEgg != null) {

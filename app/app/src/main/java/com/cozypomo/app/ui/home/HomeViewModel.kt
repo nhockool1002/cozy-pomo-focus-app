@@ -23,6 +23,17 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/** Nhãn tuỳ chọn cho phiên tập trung — bộ cố định (không cho tự đặt tên), khớp enum `SessionLabel`
+ * phía backend. Đặt ngay trong file này, đúng khuôn `ShopCategoryTab`/`InventoryTab` khai trong
+ * ViewModel tương ứng của chúng thay vì 1 file enum dùng chung riêng. */
+enum class SessionLabelOption(val label: String, val backendValue: String) {
+    STUDY("Học tập", "STUDY"),
+    WORK("Công việc", "WORK"),
+    READING("Đọc sách", "READING"),
+    CREATIVE("Sáng tạo", "CREATIVE"),
+    OTHER("Khác", "OTHER"),
+}
+
 /** Kết quả để hiện modal — bọc thêm case Bỏ cuộc (không đến từ TimerRepository.completionEvents). */
 sealed interface SessionResultUi {
     data class Completed(val result: SessionCompletionResult) : SessionResultUi
@@ -38,6 +49,8 @@ data class HomeUiState(
     val incubationRatio: Float = 1f,
     /** "COIN" hoặc "FOCUS_MINUTE" — phần thời gian không dành cho ấp trứng chỉ nhận CHỈ 1 loại tiền này, người dùng chọn trước khi bắt đầu. */
     val rewardCurrency: String = "COIN",
+    /** Nhãn phiên tuỳ chọn — null = không gắn nhãn, không chặn Bắt đầu. */
+    val selectedLabel: SessionLabelOption? = null,
     val showEggPicker: Boolean = false,
     val showGiveUpConfirm: Boolean = false,
     val sessionResult: SessionResultUi? = null,
@@ -135,6 +148,10 @@ class HomeViewModel @Inject constructor(
     fun onIncubationRatioChange(ratio: Float) = _uiState.update { it.copy(incubationRatio = ratio) }
     fun onRewardCurrencyChange(currency: String) = _uiState.update { it.copy(rewardCurrency = currency) }
 
+    /** Chạm lại đúng nhãn đang chọn = bỏ chọn (quay về null, "không gắn nhãn"). */
+    fun selectLabel(option: SessionLabelOption?) =
+        _uiState.update { it.copy(selectedLabel = if (it.selectedLabel == option) null else option) }
+
     fun openEggPicker() = _uiState.update { it.copy(showEggPicker = true) }
     fun closeEggPicker() = _uiState.update { it.copy(showEggPicker = false) }
 
@@ -166,6 +183,7 @@ class HomeViewModel @Inject constructor(
                 incubationRatio = state.selectedOwnedEgg?.let { state.incubationRatio },
                 rewardCurrency = state.rewardCurrency,
                 strictMode = true,
+                label = state.selectedLabel?.backendValue,
             )
         }
     }

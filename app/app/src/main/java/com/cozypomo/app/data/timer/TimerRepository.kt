@@ -157,6 +157,7 @@ class TimerRepository @Inject constructor(
         incubationRatio: Float?,
         rewardCurrency: String,
         strictMode: Boolean,
+        label: String? = null,
     ): String {
         val id = UUID.randomUUID().toString()
         val clientEventId = UUID.randomUUID().toString()
@@ -167,6 +168,7 @@ class TimerRepository @Inject constructor(
             rewardCurrency = rewardCurrency,
             plannedMin = durationMin,
             strictMode = strictMode,
+            label = label,
             status = SessionStatus.RUNNING,
             startedAtEpochMs = System.currentTimeMillis(),
             startElapsedRealtimeMs = SystemClock.elapsedRealtime(),
@@ -179,7 +181,15 @@ class TimerRepository @Inject constructor(
 
         runCatching {
             apiService.createSession(
-                CreateSessionRequest(ownedEggId, entity.incubationRatio, rewardCurrency, durationMin, strictMode, clientEventId),
+                CreateSessionRequest(
+                    ownedEggId = ownedEggId,
+                    incubationRatio = entity.incubationRatio,
+                    rewardCurrency = rewardCurrency,
+                    plannedMin = durationMin,
+                    strictMode = strictMode,
+                    label = label,
+                    clientEventId = clientEventId,
+                ),
             )
         }.onSuccess { remote ->
             sessionDao.upsert(entity.copy(remoteId = remote.id))

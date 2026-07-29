@@ -73,4 +73,29 @@ export class StatsService {
     });
     return result._sum.plannedMin ?? 0;
   }
+
+  /**
+   * Phân bổ phút tập trung theo nhãn phiên (SessionLabel) — chỉ tính phiên COMPLETED (khớp cách
+   * coinsEarned/streak hiện chỉ tính khi hoàn thành), cộng plannedMin giống hệt getRange() để
+   * nhất quán con số với biểu đồ tuần. `label: null` = phiên không gắn nhãn ("Chưa gắn nhãn").
+   */
+  async getByLabel(userId: string, start?: Date, end?: Date) {
+    const sessions = await this.prisma.session.findMany({
+      where: {
+        userId,
+        status: SessionStatus.COMPLETED,
+        ...(start && end ? { startedAt: { gte: start, lte: end } } : {}),
+      },
+      select: { label: true, plannedMin: true },
+    });
+
+    const byLabel = new Map<string | null, number>();
+    for (const s of sessions) {
+      byLabel.set(s.label, (byLabel.get(s.label) ?? 0) + s.plannedMin);
+    }
+
+    return Array.from(byLabel.entries())
+      .map(([label, totalFocusMinutes]) => ({ label, totalFocusMinutes }))
+      .sort((a, b) => b.totalFocusMinutes - a.totalFocusMinutes);
+  }
 }

@@ -47,6 +47,17 @@ enum SessionStatus {
   GIVEN_UP
 }
 
+/// Nhãn tuỳ chọn gắn cho 1 phiên tập trung (VD "Học tập") — bộ cố định, không cho user tự đặt tên
+/// (giữ đơn giản, khớp độ phức tạp hiện có của Settings — mọi setting khác đều là giá trị cố định,
+/// không có màn "quản lý danh sách tự tạo" nào trong app).
+enum SessionLabel {
+  STUDY
+  WORK
+  READING
+  CREATIVE
+  OTHER
+}
+
 enum LedgerReason {
   SESSION_REWARD
   PURCHASE
@@ -129,12 +140,12 @@ model User {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  settings   UserSettings?
-  sessions   Session[]
-  ledger     LedgerEntry[]
-  collection CollectionEntry[]
-  inventory  InventoryItem[]
-  ownedEggs  OwnedEgg[]
+  settings         UserSettings?
+  sessions         Session[]
+  ledger           LedgerEntry[]
+  collection       CollectionEntry[]
+  inventory        InventoryItem[]
+  ownedEggs        OwnedEgg[]
   giftLogsReceived GiftLog[]
   inboxMessages    InboxMessage[]
   streakClaims     StreakClaim[]
@@ -193,10 +204,10 @@ model EggType {
   /// Thời gian ấp cần thiết (phút) để trứng loại này nở — mỗi loại khác nhau, admin cấu hình.
   hatchDurationMin Int    @default(60)
 
-  drops        EggDropEntry[]
+  drops         EggDropEntry[]
   rarityWeights EggRarityWeight[]
-  shopItems    ShopItem[]
-  ownedEggs    OwnedEgg[]
+  shopItems     ShopItem[]
+  ownedEggs     OwnedEgg[]
 
   @@map("egg_types")
 }
@@ -225,14 +236,14 @@ model OwnedEgg {
 
 /// Cấu hình toàn cục do admin quản lý — 1 dòng duy nhất (id cố định = 1).
 model GameSettings {
-  id                  Int   @id @default(1)
+  id                       Int   @id @default(1)
   /// Số Xu Lá nhận được cho mỗi phút tập trung hoàn thành (khi người dùng chọn nhận Xu Lá) —
   /// khớp tỉ giá quy đổi 1 phút Giờ tích luỹ = 10 Xu Lá dùng trong Cửa hàng.
-  coinsPerFocusMinute Float @default(10)
+  coinsPerFocusMinute      Float @default(10)
   /// % phí giao dịch Chợ (T-106) — trừ vào phần người bán nhận được, không hoàn ai (currency sink).
-  marketFeePercent Float @default(10)
+  marketFeePercent         Float @default(10)
   /// Số tin đăng bán ACTIVE tối đa/user cùng lúc trên Chợ (T-106) — chống spam thị trường.
-  maxActiveListingsPerUser Int @default(10)
+  maxActiveListingsPerUser Int   @default(10)
 
   @@map("game_settings")
 }
@@ -321,6 +332,9 @@ model Session {
   rewardCurrency     CurrencyType  @default(COIN)
   plannedMin         Int
   strictMode         Boolean       @default(true)
+  /// Nhãn tuỳ chọn (VD "Học tập") — không bắt buộc, null = chưa gắn nhãn. Dùng để gom thống kê
+  /// theo nhãn ở GET stats/by-label (chỉ tính phiên COMPLETED, xem StatsService.getByLabel).
+  label              SessionLabel?
   status             SessionStatus @default(RUNNING)
   startedAt          DateTime      @default(now())
   endedAt            DateTime?
@@ -336,17 +350,17 @@ model Session {
 }
 
 model LedgerEntry {
-  id            String       @id @default(uuid())
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId        String
-  amount        Int
-  currency      CurrencyType @default(COIN)
-  reason        LedgerReason
-  refSessionId  String?
-  refShopItemId String?
+  id                 String       @id @default(uuid())
+  user               User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String
+  amount             Int
+  currency           CurrencyType @default(COIN)
+  reason             LedgerReason
+  refSessionId       String?
+  refShopItemId      String?
   refMarketListingId String?
-  clientEventId String?      @unique
-  createdAt     DateTime     @default(now())
+  clientEventId      String?      @unique
+  createdAt          DateTime     @default(now())
 
   @@index([userId, currency, createdAt])
   @@map("currency_ledger")
@@ -374,23 +388,23 @@ model CollectionEntry {
 /// Chợ (T-106, docs/wireframes/market-feature.html) — user bán bản sao dư loài/thực vật/trứng,
 /// Admin bán vật phẩm siêu hiếm. `itemType` quyết định speciesId hay ownedEggId có giá trị.
 model MarketListing {
-  id         String                  @id @default(uuid())
-  itemType   MarketItemType
-  sellerType MarketListingSellerType @default(USER)
-  seller     User?                   @relation("MarketListingsSold", fields: [sellerId], references: [id])
-  sellerId   String?
-  species    Species?                @relation(fields: [speciesId], references: [id])
-  speciesId  String?
-  ownedEgg   OwnedEgg?               @relation(fields: [ownedEggId], references: [id])
-  ownedEggId String?
-  priceCoin  Int
-  status     MarketListingStatus    @default(ACTIVE)
-  buyer      User?                   @relation("MarketListingsBought", fields: [buyerId], references: [id])
-  buyerId    String?
-  clientEventId String?              @unique
-  createdAt  DateTime                @default(now())
-  soldAt     DateTime?
-  cancelledAt DateTime?
+  id            String                  @id @default(uuid())
+  itemType      MarketItemType
+  sellerType    MarketListingSellerType @default(USER)
+  seller        User?                   @relation("MarketListingsSold", fields: [sellerId], references: [id])
+  sellerId      String?
+  species       Species?                @relation(fields: [speciesId], references: [id])
+  speciesId     String?
+  ownedEgg      OwnedEgg?               @relation(fields: [ownedEggId], references: [id])
+  ownedEggId    String?
+  priceCoin     Int
+  status        MarketListingStatus     @default(ACTIVE)
+  buyer         User?                   @relation("MarketListingsBought", fields: [buyerId], references: [id])
+  buyerId       String?
+  clientEventId String?                 @unique
+  createdAt     DateTime                @default(now())
+  soldAt        DateTime?
+  cancelledAt   DateTime?
 
   @@index([status, itemType])
   @@index([sellerId, status])
@@ -421,12 +435,12 @@ model GiftLog {
 /// release app cần ép người dùng cập nhật. `GET /app-version` không cần JWT (gọi được ngay ở
 /// Splash trước khi có token) — xem `app-version.service.ts`.
 model AppVersionConfig {
-  id                     Int    @id @default(1)
-  latestVersionCode      Int    @default(1)
-  minSupportedVersionCode Int   @default(1)
-  updateUrl              String @default("https://play.google.com/store/apps/details?id=com.cozypomo.app")
-  updateTitle            String @default("Cần cập nhật phiên bản mới")
-  updateMessage          String @default("Phiên bản bạn đang dùng đã quá cũ, vui lòng cập nhật để tiếp tục sử dụng CozyPomo.")
+  id                      Int    @id @default(1)
+  latestVersionCode       Int    @default(1)
+  minSupportedVersionCode Int    @default(1)
+  updateUrl               String @default("https://play.google.com/store/apps/details?id=com.cozypomo.app")
+  updateTitle             String @default("Cần cập nhật phiên bản mới")
+  updateMessage           String @default("Phiên bản bạn đang dùng đã quá cũ, vui lòng cập nhật để tiếp tục sử dụng CozyPomo.")
 
   @@map("app_version_config")
 }
